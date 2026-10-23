@@ -1,0 +1,18 @@
+# test data (large, not versioned)
+samples/
+.work/
+
+# generated outputs
+out/
+mockups/static_compare_mockup.html
+mockups/_shots/
+mockups/vendor/
+
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+build/
+dist/
