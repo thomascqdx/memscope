@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<style>
+:root{
+  --c-a:#3b82f6; --c-b:#f59e0b;
+  --bg:#f1f5f9; --card:#ffffff; --line:#e2e8f0; --txt:#0f172a; --sub:#64748b;
+  --red:#dc2626; --green:#16a34a; --grey:#94a3b8;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:"Segoe UI","Microsoft YaHei","PingFang SC",system-ui,sans-serif;background:var(--bg);color:var(--txt);font-size:14px}
+#topbar{position:sticky;top:0;z-index:50;background:#fff;border-bottom:1px solid var(--line);box-shadow:0 1px 4px rgba(15,23,42,.06)}
+.bar-row{max-width:1400px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.bar-row h1{font-size:17px;margin:0;white-space:nowrap}
+.bar-row h1 .sub{font-size:12px;color:var(--sub);font-weight:400}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{padding:4px 10px;border-radius:14px;font-size:12px;border:1px solid var(--line);background:#f8fafc}
+.chip-a{border-left:4px solid var(--c-a)}
+.chip-b{border-left:4px solid var(--c-b)}
+.chip b{font-weight:600}
+.toggles{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--sub)}
+.seg{border:1px solid var(--line);background:#fff;color:var(--sub);padding:4px 14px;cursor:pointer;font-size:13px}
+.seg:first-of-type{border-radius:6px 0 0 6px}
+.seg:last-of-type{border-radius:0 6px 6px 0;margin-left:-1px}
+.seg.active{background:#0f172a;color:#fff;border-color:#0f172a}
+#tabnav{max-width:1400px;margin:0 auto;padding:0 20px;display:flex;gap:2px;overflow-x:auto}
+#tabnav button{border:none;background:none;padding:10px 14px;font-size:14px;color:var(--sub);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
+#tabnav button:hover{color:var(--txt)}
+#tabnav button.active{color:var(--c-a);border-bottom-color:var(--c-a);font-weight:600}
+main{max-width:1400px;margin:0 auto;padding:18px 20px 60px}
+.tab-page{display:none}
+.tab-page.active{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:16px}
+.card h3{margin:0 0 12px;font-size:15px}
+.card h3 .sub{font-size:12px;color:var(--sub);font-weight:400;margin-left:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-kpi{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.kpi .t{font-size:12px;color:var(--sub);margin-bottom:6px}
+.kpi .v{font-size:13px;display:flex;justify-content:space-between}
+.kpi .gap{margin-top:6px;font-size:13px;font-weight:600}
+.kpi .src{font-size:11px;color:var(--grey)}
+.tbl-wrap{overflow:auto;max-height:560px;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{position:sticky;top:0;background:#f8fafc;text-align:left;z-index:2;font-weight:600}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+tr:hover td{background:#f8fafc}
+tr.lvl-row td{cursor:pointer;background:#fafcff;font-weight:600}
+tr.lvl-row td:first-child::before{content:'▸ ';color:var(--sub)}
+tr.lvl-row.open td:first-child::before{content:'▾ '}
+tr.proc-row td{padding-left:26px;font-weight:400}
+tr.diff td{background:#fff7ed}
+tr.phaseboot td{color:var(--sub);background:#fafafa}
+tr.viol td{background:#fef2f2}
+.tag{display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;margin-right:4px;border:1px solid var(--line)}
+.tag-a{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}
+.tag-b{background:#fffbeb;color:#b45309;border-color:#fde68a}
+.tag-lv{background:#f5f3ff;color:#6d28d9;border-color:#ddd6fe}
+.tag-ih{background:#ecfdf5;color:#047857;border-color:#a7f3d0}
+.tag-sig{background:#fef2f2;color:#b91c1c;border-color:#fecaca}
+.tag-cached{background:#f1f5f9;color:#64748b;border-color:#e2e8f0}
+.gap-pos{color:var(--red);font-weight:600}
+.gap-neg{color:var(--green);font-weight:600}
+.muted{color:var(--sub)}
+.note{font-size:12px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;margin-bottom:12px}
+.warn{font-size:12px;color:#991b1b;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:8px 12px;margin-bottom:12px}
+.controls{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:12px;font-size:13px}
+.controls input[type=text]{padding:5px 9px;border:1px solid var(--line);border-radius:6px;font-size:13px}
+.controls input[type=number]{width:80px;padding:5px 8px;border:1px solid var(--line);border-radius:6px}
+.controls select{padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:13px}
+.chart{width:100%;height:340px}
+.chart-tall{height:460px}
+.mono{font-family:Consolas,"Courier New",monospace;font-size:12px}
+.strip{display:flex;gap:2px;align-items:center;margin:3px 0}
+.strip .cell{width:22px;height:16px;border-radius:3px;display:inline-block}
+.strip .cell.empty{background:#f1f5f9;border:1px dashed #cbd5e1}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--sub);margin:6px 0}
+.legend .lg{display:flex;align-items:center;gap:4px}
+.legend .sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+.kw-lists{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.kw-lists ul{margin:0;padding-left:18px;font-size:13px}
+.kw-lists li{margin:3px 0}
+#procOverlay{position:fixed;inset:0;background:rgba(248,250,252,.98);z-index:100;overflow:auto;display:none}
+#procOverlay.open{display:block}
+#procOverlay .inner{max-width:1400px;margin:0 auto;padding:20px}
+.backbtn{border:1px solid var(--line);background:#fff;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:13px;margin-bottom:12px}
+.mdraw{white-space:pre-wrap;font-family:Consolas,monospace;font-size:12.5px;background:#0f172a;color:#e2e8f0;padding:16px;border-radius:8px;overflow:auto;max-height:640px}
+.mdview h1{font-size:20px;border-bottom:2px solid var(--line);padding-bottom:6px}
+.mdview h2{font-size:17px;margin-top:20px;border-bottom:1px solid var(--line);padding-bottom:4px}
+.mdview h3{font-size:15px}
+.wake{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:start;margin-top:10px}
+.wake .mid{text-align:center;font-weight:600;padding:8px 16px;background:#eef2ff;border-radius:8px;border:1px solid #c7d2fe;align-self:center}
+.wake .box{background:#f8fafc;border:1px solid var(--line);border-radius:8px;padding:10px;font-size:12.5px}
+.wake .box h5{margin:0 0 6px;font-size:12.5px;color:var(--sub)}
+.wake .box ul{margin:0;padding-left:16px}
+.wake .box li{margin:3px 0}
+select[multiple]{min-width:340px}
+.pill{display:inline-block;background:#f1f5f9;border:1px solid var(--line);border-radius:12px;padding:2px 10px;font-size:12px;margin:2px 4px 2px 0}
+ul.findings{margin:0;padding-left:20px}
+ul.findings li{margin:5px 0}
+</style>
+</head>
+<body>
+<header id="topbar">
+  <div class="bar-row">
+    <h1>静态内存对比分析 <span class="sub">memscope</span></h1>
+    <div class="chips">
+      <span class="chip chip-a">基线 A：<b id="chipA"></b></span>
+      <span class="chip chip-b">对比 B：<b id="chipB"></b></span>
+    </div>
+    <div class="toggles">
+      <span>指标：</span>
+      <span><button class="seg active" data-m="pss">PSS</button><button class="seg" data-m="rss">RSS</button></span>
+      <label><input type="checkbox" id="incCached"> 包含 Cached</label>
+    </div>
+  </div>
+  <nav id="tabnav"></nav>
+</header>
+<main id="main">
+  <section class="tab-page" id="page-overview"></section>
+  <section class="tab-page" id="page-system"></section>
+  <section class="tab-page" id="page-levels"></section>
+  <section class="tab-page" id="page-procs"></section>
+  <section class="tab-page" id="page-inhouse"></section>
+  <section class="tab-page" id="page-events"></section>
+  <section class="tab-page" id="page-risk"></section>
+  <section class="tab-page" id="page-report"></section>
+</main>
+<div id="procOverlay"><div class="inner" id="procInner"></div></div>
+
+<script>//__ECHARTS_INLINE//</script>
+<script>const DATA = /*__RESULT_JSON__*/null;</script>
+<script>
+'use strict';
+/* ============ 基础 ============ */
+const LA = DATA.labels[0], LB = DATA.labels[1];
+const DS = DATA.datasets;
+let metric = 'pss';
+let includeCached = false;
+const MV = () => DATA.metrics[metric];
+const N = i => DS[i].n;
+const LEVEL_COLORS = {'Native':'#64748b','System':'#0ea5e9','Persistent':'#8b5cf6','Persistent Service':'#a78bfa','Foreground':'#22c55e','Visible':'#84cc16','Perceptible':'#eab308','Perceptible Medium':'#f59e0b','Perceptible Low':'#f97316','Backup':'#a16207','Heavy Weight':'#78350f','A Services':'#ec4899','Home':'#10b981','Previous':'#78716c','B Services':'#14b8a6','Cached':'#94a3b8'};
+const PROC_PALETTE = ['#0ea5e9','#e11d48','#8b5cf6','#16a34a','#f97316','#0891b2','#be185d','#65a30d','#7c3aed','#b45309'];
+const lvColor = l => LEVEL_COLORS[l] || '#475569';
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const fmt = v => v==null ? '—' : (+v).toFixed(2);
+const cnt = v => v.reduce((s,x)=>s+(x!=null?1:0),0);
+const rmean = (v,n) => v.reduce((s,x)=>s+(x||0),0)/n;
+const vmean = v => { const a=v.filter(x=>x!=null); return a.length ? a.reduce((s,x)=>s+x,0)/a.length : null; };
+const vmin = v => { const a=v.filter(x=>x!=null); return a.length?Math.min(...a):null; };
+const vmax = v => { const a=v.filter(x=>x!=null); return a.length?Math.max(...a):null; };
+function gapCls(gap, reversed){
+  if (gap==null || gap===0) return '';
+  const worse = reversed ? gap<0 : gap>0;
+  return worse ? 'gap-pos' : 'gap-neg';
+}
+function gapTxt(p){ return p.gapt || (p.gapp==null?'—':(p.gapp>0?'+':'')+p.gapp.toFixed(1)+'%'); }
+function gapCells(ra, rb, gapt, gapp, reversed){
+  const gap = rb-ra;
+  const cls = gapCls(gap, reversed) || (gapt==='新增'?'gap-pos':gapt==='消失'?'gap-neg':'');
+  return '<td class="num '+cls+'">'+fmt(gap)+'</td><td class="num '+cls+'">'+esc(gapt||(gapp==null?'—':(gapp>0?'+':'')+gapp.toFixed(1)+'%'))+'</td>';
+}
+const LIVE_CHARTS = new Set();
+function makeChart(el){
+  const old = echarts.getInstanceByDom(el);
+  if (old) old.dispose();
+  const ch = echarts.init(el);
+  LIVE_CHARTS.add(ch);
+  requestAnimationFrame(()=>ch.resize());
+  return ch;
+}
+window.addEventListener('resize', ()=>LIVE_CHARTS.forEach(c=>c.resize()));
+const roundCats = n => Array.from({length:n},(_,i)=>'第'+(i+1)+'轮');
+const IH_NOTE = '<div class="note">自研应用判定：' +
+  (DATA.inhouse.whitelist_src ? '白名单 <b>'+esc(DATA.inhouse.whitelist_src)+'</b>（'+DATA.inhouse.whitelist_count+' 项）+ ' : '未提供白名单，') +
+  '前缀匹配（'+esc(DATA.inhouse.prefixes_src||'')+'：'+DATA.inhouse.prefixes.join(' ')+'）。进程名按 <code>包名:子进程</code> 取包名匹配。</div>';
+
+/* ============ 数据派生 ============ */
+function procList(){
+  return MV().top.map(n=>MV().procs[n]);
+}
+function tags(p){
+  const t = [];
+  if (p.ka>0 && p.kb===0) t.push('<span class="tag tag-a">仅A</span>');
+  if (p.kb>0 && p.ka===0) t.push('<span class="tag tag-b">仅B</span>');
+  if (p.level_changed) t.push('<span class="tag tag-lv">层级变化</span>');
+  if (p.inhouse) t.push('<span class="tag tag-ih">自研'+(p.ih_src==='whitelist'?'·白':'')+'</span>');
+  if (p.cached_only) t.push('<span class="tag tag-cached">Cached</span>');
+  if (p.sig) t.push('<span class="tag tag-sig">显著</span>');
+  return t.join('');
+}
+const showProc = p => includeCached || !p.cached_only;
+
+/* ============ 路由 ============ */
+const PAGES = {overview:'概览', system:'整机内存', levels:'层级内存', procs:'进程分析',
+               inhouse:'自研应用', events:'启动/唤醒', risk:'标准与风险', report:'Markdown 报告'};
+const RENDER = {};
+const state = {tab:'overview', evQ:'', lvHideCached:false, lvGapMin:DATA.meta.gap_abs,
+               pkKw:'', pkLevel:'', pkInhouse:false, pkGapMin:DATA.meta.gap_abs, pkSigOnly:false,
+               sysSel:null, trSel:null, mdRaw:false, expanded:new Set(), lvInit:false};
+function parseHash(){
+  const q = new URLSearchParams(location.hash.replace(/^#/,''));
+  return {tab:q.get('tab'), proc:q.get('proc'), q:q.get('q'), metric:q.get('metric')};
+}
+function setHash(patch){
+  const q = new URLSearchParams(location.hash.replace(/^#/,''));
+  for (const k in patch){ if(patch[k]==null) q.delete(k); else q.set(k, patch[k]); }
+  const h = q.toString();
+  if (location.hash.slice(1) !== h) location.hash = h;
+}
+function applyMetric(m){
+  if (!DATA.metrics[m]) return;
+  metric = m;
+  document.querySelectorAll('.metric-toggle .seg,.toggles .seg').forEach(x=>x.classList.toggle('active', x.dataset.m===m));
+}
+function route(){
+  const p = parseHash();
+  if (p.metric) applyMetric(p.metric);
+  if (p.proc){ openProc(p.proc); return; }
+  document.getElementById('procOverlay').classList.remove('open');
+  const tab = (p.tab && PAGES[p.tab]) ? p.tab : 'overview';
+  state.tab = tab;
+  if (tab==='events' && p.q!=null) state.evQ = p.q;
+  document.querySelectorAll('#tabnav button').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+  document.querySelectorAll('.tab-page').forEach(s=>s.classList.toggle('active', s.id==='page-'+tab));
+  RENDER[tab]();
+  window.scrollTo(0,0);
+}
+window.addEventListener('hashchange', route);
+const nav = document.getElementById('tabnav');
+for (const id in PAGES){
+  const b = document.createElement('button');
+  b.textContent = PAGES[id]; b.dataset.tab = id;
+  b.onclick = ()=>{ setHash({tab:id, proc:null}); };
+  nav.appendChild(b);
+}
+document.getElementById('chipA').textContent = LA;
+document.getElementById('chipB').textContent = LB;
+document.querySelectorAll('.toggles .seg').forEach(b=>{
+  b.onclick = ()=>{ if(b.dataset.m!==metric) setHash({metric:b.dataset.m}); };
+});
+document.getElementById('incCached').onchange = e=>{
+  includeCached = e.target.checked;
+  if (document.getElementById('procOverlay').classList.contains('open')) return;
+  RENDER[state.tab]();
+};
+
+/* ============ 1. 概览 ============ */
+const KPI_NAMES = ['Free RAM','Used RAM','used pss','kernel','MemAvailable','ZRAM physical','in swap','Lost RAM'];
+function findings(){
+  const m = MV(), out = [];
+  const lg = m.level_rows.filter(r=>r.level!=='Cached').sort((x,y)=>Math.abs(y.gap)-Math.abs(x.gap)).slice(0,3);
+  out.push('层级 GAP Top3（不含 Cached）：' + lg.map(r=>esc(r.level)+' <b class="'+gapCls(r.gap)+'">'+(r.gap>0?'+':'')+fmt(r.gap)+' MB</b>').join('，'));
+  const pg = procList().filter(showProc).slice(0,5);
+  out.push('进程 GAP Top5：' + pg.map(p=>'<a href="#proc='+encodeURIComponent(p.name)+'">'+esc(p.name)+'</a> <b class="'+gapCls(p.gap)+'">'+(p.gap>0?'+':'')+fmt(p.gap)+' MB</b>').join('，'));
+  const ng = (m.new_top||[]).map(e=>'<a href="#proc='+encodeURIComponent(e.name)+'">'+esc(e.name)+'</a> <b class="gap-pos">'+fmt(e.v)+' MB</b>').join('，') || '无';
+  const gn = (m.gone_top||[]).map(e=>'<a href="#proc='+encodeURIComponent(e.name)+'">'+esc(e.name)+'</a> <b class="gap-neg">'+fmt(e.v)+' MB</b>').join('，') || '无';
+  out.push('新增进程 Top3（按轮次均值，含 Cached）：' + ng + '；消失进程 Top3：' + gn + '。');
+  out.push('独有进程：仅 A <b>'+m.only_a.length+'</b> 个，仅 B <b>'+m.only_b.length+'</b> 个；层级变化进程 <b>'+m.level_changed.length+'</b> 个。');
+  const sys = {}; DATA.system.forEach(r=>sys[r.name]=r);
+  const dm = sys['DMA-BUF'], gp = sys['GPU'];
+  out.push('DMA-BUF 均值变化 <b class="'+gapCls(dm.gap)+'">'+(dm.gap>0?'+':'')+fmt(dm.gap)+' MB</b>，GPU 均值变化 <b class="'+gapCls(gp.gap)+'">'+(gp.gap>0?'+':'')+fmt(gp.gap)+' MB</b>。');
+  if (DATA.growth.length) out.push('疑似增长（提示，非泄漏结论）：<b>'+DATA.growth.length+'</b> 项，见「标准与风险」。');
+  return out;
+}
+RENDER.overview = function(){
+  const el = document.getElementById('page-overview');
+  let h = '';
+  const warns = DS.map((d,i)=>d.warnings.map(w=>String.fromCharCode(65+i)+'：'+w)).flat();
+  if (warns.length) h += '<div class="warn">'+warns.map(esc).join('<br>')+'</div>';
+  h += '<div class="card"><h3>设备与测试信息对比 <span class="sub">差异行高亮</span></h3><div class="tbl-wrap"><table><thead><tr><th>字段</th><th>基线 A</th><th>对比 B</th></tr></thead><tbody>';
+  DATA.device_diff.forEach(r=>{
+    h += '<tr'+(r.diff?' class="diff"':'')+'><td>'+esc(r.field)+'</td><td>'+esc(r.a)+'</td><td>'+esc(r.b)+'</td></tr>';
+  });
+  h += '</tbody></table></div></div>';
+  const sys = {}; DATA.system.forEach(r=>sys[r.name]=r);
+  h += '<div class="card"><h3>KPI 指标（轮次均值，MB）<span class="sub">红=变差 绿=改善；Free RAM/MemAvailable 方向相反</span></h3><div class="grid-kpi">';
+  KPI_NAMES.forEach(t=>{
+    const r = sys[t]; if(!r) return;
+    const cls = gapCls(r.gap, r.hb) || (r.gapt==='新增'?'gap-pos':r.gapt==='消失'?'gap-neg':'');
+    h += '<div class="kpi"><div class="t">'+esc(t)+' <span class="src">'+esc(r.src)+'</span></div>'
+      +'<div class="v"><span style="color:var(--c-a)">A '+fmt(r.ra)+'</span><span style="color:var(--c-b)">B '+fmt(r.rb)+'</span></div>'
+      +'<div class="gap '+cls+'">GAP '+(r.gap>0?'+':'')+fmt(r.gap)+'（'+esc(gapTxt(r))+'）</div></div>';
+  });
+  h += '</div></div>';
+  const pd = DATA.pkg_diff;
+  h += '<div class="card"><h3>预装包差异 <span class="sub">A '+DS[0].packages.length+' 个 / B '+DS[1].packages.length+' 个</span></h3><div class="kw-lists">'
+    +'<div><b>仅 A（'+pd.a.length+'）</b><ul>'+(pd.a.map(x=>'<li class="mono">'+esc(x)+'</li>').join('')||'<li class="muted">无</li>')+'</ul></div>'
+    +'<div><b>仅 B（'+pd.b.length+'）</b><ul>'+(pd.b.map(x=>'<li class="mono">'+esc(x)+'</li>').join('')||'<li class="muted">无</li>')+'</ul></div>'
+    +'</div></div>';
+  h += '<div class="card"><h3>自动发现 <span class="sub">基于 '+metric.toUpperCase()+' 轮次均值'+(includeCached?'（含 Cached）':'')+'</span></h3><ul class="findings">'
+    + findings().map(x=>'<li>'+x+'</li>').join('') + '</ul></div>';
+  el.innerHTML = h;
+};
+
+/* ============ 2. 整机内存 ============ */
+RENDER.system = function(){
+  const el = document.getElementById('page-system');
+  const defs = DATA.system;
+  if (!state.sysSel) state.sysSel = ['Free RAM','MemAvailable','in swap'];
+  let h = '<div class="card"><h3>整机内存指标 <span class="sub">轮次均值 / MB</span></h3><div class="tbl-wrap"><table><thead><tr>'
+    +'<th>指标</th><th>来源</th><th class="num">A 均值</th><th class="num">B 均值</th><th class="num">GAP</th><th class="num">GAP%</th>'
+    +'<th class="num">A 最小</th><th class="num">A 最大</th><th class="num">B 最小</th><th class="num">B 最大</th></tr></thead><tbody>';
+  defs.forEach(d=>{
+    h += '<tr><td>'+esc(d.name)+'</td><td class="muted">'+esc(d.src)+'</td><td class="num">'+fmt(d.ra)+'</td><td class="num">'+fmt(d.rb)+'</td>'
+      + gapCells(d.ra,d.rb,d.gapt,d.gapp,d.hb)
+      + '<td class="num">'+fmt(d.mina)+'</td><td class="num">'+fmt(d.maxa)+'</td><td class="num">'+fmt(d.minb)+'</td><td class="num">'+fmt(d.maxb)+'</td></tr>';
+  });
+  h += '</tbody></table></div></div>';
+  h += '<div class="card"><h3>逐轮走势 <span class="sub">按住 Ctrl 多选指标；实线=A，虚线=B</span></h3>'
+    +'<div class="controls"><select id="sysSel" multiple size="6">'
+    + defs.map(d=>'<option'+(state.sysSel.includes(d.name)?' selected':'')+'>'+esc(d.name)+'</option>').join('')
+    +'</select></div><div id="sysChart" class="chart chart-tall"></div></div>';
+  el.innerHTML = h;
+  const sel = document.getElementById('sysSel');
+  const draw = ()=>{
+    state.sysSel = [...sel.selectedOptions].map(o=>o.value);
+    const series=[];
+    state.sysSel.forEach((t,idx)=>{
+      const d = defs.find(x=>x.name===t); if(!d) return;
+      const col = PROC_PALETTE[idx%PROC_PALETTE.length];
+      series.push({name:t+' · A', type:'line', data:d.a, itemStyle:{color:col}, lineStyle:{type:'solid',color:col}, symbolSize:5});
+      series.push({name:t+' · B', type:'line', data:d.b, itemStyle:{color:col}, lineStyle:{type:'dashed',color:col}, symbolSize:5});
+    });
+    makeChart(document.getElementById('sysChart')).setOption({
+      tooltip:{trigger:'axis'}, legend:{type:'scroll',top:0},
+      grid:{top:40,left:60,right:20,bottom:30},
+      xAxis:{type:'category',data:roundCats(Math.max(N(0),N(1)))},
+      yAxis:{type:'value',name:'MB'}, series
+    });
+  };
+  sel.onchange = draw; draw();
+};
+
+/* ============ 3. 层级内存 ============ */
+RENDER.levels = function(){
+  const el = document.getElementById('page-levels');
+  const m = MV();
+  const levels = m.levels;
+  if (!state.lvInit){
+    state.lvInit = true;
+    let best=null,bg=-1;
+    m.level_rows.forEach(r=>{const g=Math.abs(r.gap);if(g>bg){bg=g;best=r.level;}});
+    if (best) state.expanded.add(best);
+  }
+  let h = IH_NOTE;
+  h += '<div class="card"><h3>层级内存对比（'+metric.toUpperCase()+' 轮次均值，MB）</h3><div id="lvChart" class="chart"></div></div>';
+  h += '<div class="card"><h3>层级 / 进程明细 <span class="sub">点击层级行展开进程；点击进程名查看详情</span></h3>'
+    +'<div class="controls"><label><input type="checkbox" id="lvHideCached"'+(state.lvHideCached?' checked':'')+'> 隐藏 Cached 层级</label>'
+    +'<label>GAP 阈值(MB) <input type="number" id="lvGapMin" min="0" step="1" value="'+state.lvGapMin+'"></label></div>'
+    +'<div class="tbl-wrap"><table><thead><tr><th>层级 / 进程</th><th class="num">出现 A</th><th class="num">出现 B</th><th class="num">轮均 A</th><th class="num">轮均 B</th><th class="num">值均 A</th><th class="num">值均 B</th><th class="num">GAP</th><th class="num">GAP%</th><th class="num">进程数 A/B</th><th>标签</th></tr></thead><tbody id="lvBody"></tbody></table></div></div>';
+  el.innerHTML = h;
+  makeChart(document.getElementById('lvChart')).setOption({
+    tooltip:{trigger:'axis'}, legend:{top:0},
+    grid:{top:36,left:60,right:20,bottom:60},
+    xAxis:{type:'category',data:levels,axisLabel:{rotate:30}},
+    yAxis:{type:'value',name:'MB'},
+    series:[
+      {name:'A '+LA, type:'bar', data:m.level_rows.map(r=>+r.ra.toFixed(2)), itemStyle:{color:'#3b82f6'}},
+      {name:'B '+LB, type:'bar', data:m.level_rows.map(r=>+r.rb.toFixed(2)), itemStyle:{color:'#f59e0b'}}
+    ]
+  });
+  const body = document.getElementById('lvBody');
+  const fill = ()=>{
+    let rows='';
+    m.level_rows.forEach(lr=>{
+      const L = lr.level;
+      if (state.lvHideCached && L==='Cached') return;
+      const open = state.expanded.has(L);
+      rows += '<tr class="lvl-row'+(open?' open':'')+'" data-lv="'+esc(L)+'"><td>'+esc(L)+'</td><td class="num"></td><td class="num"></td><td class="num">'+fmt(lr.ra)+'</td><td class="num">'+fmt(lr.rb)+'</td><td class="num"></td><td class="num"></td>'
+        + gapCells(lr.ra,lr.rb,lr.gapt,lr.gapp) + '<td class="num">'+lr.ca+' / '+lr.cb+'</td><td></td></tr>';
+      if (open){
+        const prows=[];
+        for (const name in m.procs){
+          const p = m.procs[name];
+          const sa = p.sa[L], sb = p.sb[L];
+          if (!sa && !sb) continue;
+          const a = sa||new Array(N(0)).fill(null), b = sb||new Array(N(1)).fill(null);
+          const ra=rmean(a,N(0)), rb=rmean(b,N(1));
+          const g = {gap:rb-ra, gapt: ra===0&&rb===0?null:(ra===0?'新增':rb===0?'消失':null), gapp:(ra!==0&&rb!==0)?(rb-ra)/ra*100:null};
+          prows.push({p, ka:cnt(a), kb:cnt(b), ra, rb, va:vmean(a), vb:vmean(b), g});
+        }
+        prows.filter(r=>Math.abs(r.g.gap)>=state.lvGapMin)
+             .sort((x,y)=>Math.abs(y.g.gap)-Math.abs(x.g.gap))
+             .forEach(r=>{
+          rows += '<tr class="proc-row"><td><a href="#proc='+encodeURIComponent(r.p.name)+'">'+esc(r.p.name)+'</a></td>'
+            +'<td class="num">'+r.ka+'/'+N(0)+'</td><td class="num">'+r.kb+'/'+N(1)+'</td>'
+            +'<td class="num">'+fmt(r.ra)+'</td><td class="num">'+fmt(r.rb)+'</td>'
+            +'<td class="num">'+fmt(r.va)+'</td><td class="num">'+fmt(r.vb)+'</td>'
+            + gapCells(r.ra,r.rb,r.g.gapt,r.g.gapp) + '<td></td><td>'+tags(r.p)+'</td></tr>';
+        });
+      }
+    });
+    body.innerHTML = rows;
+    body.querySelectorAll('tr.lvl-row').forEach(tr=>{
+      tr.onclick = ()=>{ const L=tr.dataset.lv; state.expanded.has(L)?state.expanded.delete(L):state.expanded.add(L); fill(); };
+    });
+  };
+  document.getElementById('lvHideCached').onchange = e=>{ state.lvHideCached=e.target.checked; fill(); };
+  document.getElementById('lvGapMin').oninput = e=>{ state.lvGapMin=+e.target.value||0; fill(); };
+  fill();
+};
+
+/* ============ 4. 进程分析 ============ */
+function stripHtml(pr){
+  let s='<div class="strip">';
+  pr.forEach((lv,r)=>{
+    s += lv ? '<span class="cell" style="background:'+lvColor(lv)+'" title="第'+(r+1)+'轮 '+esc(lv)+'"></span>'
+            : '<span class="cell empty" title="第'+(r+1)+'轮 未出现"></span>';
+  });
+  return s+'</div>';
+}
+RENDER.procs = function(){
+  const el = document.getElementById('page-procs');
+  const m = MV();
+  const list = procList().filter(showProc);
+  const top20 = list.slice(0,20);
+  const onlyA = m.only_a.map(n=>m.procs[n]), onlyB = m.only_b.map(n=>m.procs[n]);
+  const changed = m.level_changed.map(n=>m.procs[n]);
+  let h = IH_NOTE;
+  h += '<div class="card"><h3>GAP Top 20 <span class="sub">'+metric.toUpperCase()+' 进程合计轮次均值，红=增加 绿=减少'+(includeCached?'':'（不含仅 Cached 进程）')+'</span></h3>'
+    +'<div id="topChart" class="chart chart-tall"></div>'
+    +'<div class="tbl-wrap" style="margin-top:12px"><table><thead><tr><th>进程</th><th class="num">轮均 A</th><th class="num">轮均 B</th><th class="num">GAP</th><th class="num">GAP%</th><th>标签</th></tr></thead><tbody>'
+    + top20.map(p=>'<tr><td><a href="#proc='+encodeURIComponent(p.name)+'">'+esc(p.name)+'</a></td><td class="num">'+fmt(p.ra)+'</td><td class="num">'+fmt(p.rb)+'</td>'+gapCells(p.ra,p.rb,p.gapt,p.gapp)+'<td>'+tags(p)+'</td></tr>').join('')
+    +'</tbody></table></div></div>';
+  const utab = (plist,i)=>'<div class="tbl-wrap" style="max-height:320px"><table><thead><tr><th>进程</th><th>所在层级</th><th class="num">出现次数</th><th class="num">数值均值</th><th class="num">轮次均值</th></tr></thead><tbody>'
+    + plist.map(p=>'<tr><td><a href="#proc='+encodeURIComponent(p.name)+'">'+esc(p.name)+'</a></td><td>'+esc((i?p.lb:p.la).join('、'))+'</td><td class="num">'+(i?p.kb:p.ka)+'/'+N(i)+'</td><td class="num">'+fmt(i?p.vb:p.va)+'</td><td class="num">'+fmt(i?p.rb:p.ra)+'</td></tr>').join('')
+    +'</tbody></table></div>';
+  h += '<div class="card"><h3>独有进程</h3><div class="grid2"><div><b>仅 A 出现（'+onlyA.length+'）</b>'+utab(onlyA,0)+'</div><div><b>仅 B 出现（'+onlyB.length+'）</b>'+utab(onlyB,1)+'</div></div></div>';
+  const lvUsed = new Set(); changed.forEach(p=>{p.la.forEach(x=>lvUsed.add(x));p.lb.forEach(x=>lvUsed.add(x));});
+  h += '<div class="card"><h3>层级变化进程（'+changed.length+'）<span class="sub">每格一轮：A/B 各一条，空=未出现</span></h3>'
+    +'<div class="legend">'+[...lvUsed].map(L=>'<span class="lg"><span class="sw" style="background:'+lvColor(L)+'"></span>'+esc(L)+'</span>').join('')+'<span class="lg"><span class="sw" style="background:#f1f5f9;border:1px dashed #cbd5e1"></span>未出现</span></div>'
+    +'<div class="tbl-wrap"><table><thead><tr><th style="min-width:260px">进程</th><th>A 各轮层级</th><th>B 各轮层级</th><th>标签</th></tr></thead><tbody>'
+    + changed.map(p=>'<tr><td><a href="#proc='+encodeURIComponent(p.name)+'">'+esc(p.name)+'</a></td><td>'+stripHtml(p.pra)+'</td><td>'+stripHtml(p.prb)+'</td><td>'+tags(p)+'</td></tr>').join('')
+    +'</tbody></table></div></div>';
+  h += '<div class="card"><h3>全量进程表（'+list.length+'）</h3>'
+    +'<div class="controls"><input type="text" id="pkKw" placeholder="关键词，多个用逗号分隔" value="'+esc(state.pkKw)+'" style="width:240px">'
+    +'<select id="pkLevel"><option value="">全部层级</option>'+m.levels.map(L=>'<option'+(state.pkLevel===L?' selected':'')+'>'+esc(L)+'</option>').join('')+'</select>'
+    +'<label><input type="checkbox" id="pkInhouse"'+(state.pkInhouse?' checked':'')+'> 仅自研</label>'
+    +'<label><input type="checkbox" id="pkSigOnly"'+(state.pkSigOnly?' checked':'')+'> 仅显著</label>'
+    +'<label>|GAP| ≥ <input type="number" id="pkGapMin" min="0" step="1" value="'+state.pkGapMin+'"> MB</label></div>'
+    +'<div class="tbl-wrap"><table><thead><tr><th>进程</th><th>层级 A</th><th>层级 B</th><th class="num">出现 A</th><th class="num">出现 B</th><th class="num">轮均 A</th><th class="num">轮均 B</th><th class="num">值均 A</th><th class="num">值均 B</th><th class="num">GAP</th><th class="num">GAP%</th><th>标签</th></tr></thead><tbody id="pkBody"></tbody></table></div></div>';
+  h += '<div class="card"><h3>逐轮走势对比 <span class="sub">默认 |GAP| Top5；实线=A 虚线=B</span></h3>'
+    +'<div class="controls"><select id="trSel" multiple size="7">'+list.map(p=>'<option'+(state.trSel&&state.trSel.includes(p.name)?' selected':'')+'>'+esc(p.name)+'</option>').join('')+'</select></div>'
+    +'<div id="trChart" class="chart chart-tall"></div></div>';
+  el.innerHTML = h;
+  const t20 = [...top20].sort((a,b)=>a.gap-b.gap);
+  makeChart(document.getElementById('topChart')).setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'},formatter:ps=>{const p=t20[ps[0].dataIndex];return esc(p.name)+'<br>GAP '+fmt(p.gap)+' MB<br>A '+fmt(p.ra)+' / B '+fmt(p.rb);}},
+    grid:{top:10,left:10,right:60,bottom:20,containLabel:true},
+    xAxis:{type:'value',name:'MB'},
+    yAxis:{type:'category',data:t20.map(p=>p.name),axisLabel:{fontSize:11}},
+    series:[{type:'bar',data:t20.map(p=>({value:+p.gap.toFixed(2),itemStyle:{color:p.gap>0?'#dc2626':'#16a34a'}})),label:{show:true,position:'right',formatter:d=>fmt(d.value)}}]
+  });
+  const pkBody = document.getElementById('pkBody');
+  const fillPk = ()=>{
+    const kws = state.pkKw.split(/[,，]/).map(s=>s.trim()).filter(Boolean);
+    const rows = list.filter(p=>{
+      if (kws.length && !kws.some(k=>p.name.includes(k))) return false;
+      if (state.pkLevel && !p.la.includes(state.pkLevel) && !p.lb.includes(state.pkLevel)) return false;
+      if (state.pkInhouse && !p.inhouse) return false;
+      if (state.pkSigOnly && !p.sig) return false;
+      if (Math.abs(p.gap) < state.pkGapMin) return false;
+      return true;
+    });
+    pkBody.innerHTML = rows.map(p=>'<tr><td><a href="#proc='+encodeURIComponent(p.name)+'">'+esc(p.name)+'</a></td>'
+      +'<td>'+esc(p.la.join('、')||'—')+'</td><td>'+esc(p.lb.join('、')||'—')+'</td>'
+      +'<td class="num">'+p.ka+'/'+N(0)+'</td><td class="num">'+p.kb+'/'+N(1)+'</td>'
+      +'<td class="num">'+fmt(p.ra)+'</td><td class="num">'+fmt(p.rb)+'</td><td class="num">'+fmt(p.va)+'</td><td class="num">'+fmt(p.vb)+'</td>'
+      + gapCells(p.ra,p.rb,p.gapt,p.gapp) + '<td>'+tags(p)+'</td></tr>').join('');
+  };
+  document.getElementById('pkKw').oninput = e=>{state.pkKw=e.target.value;fillPk();};
+  document.getElementById('pkLevel').onchange = e=>{state.pkLevel=e.target.value;fillPk();};
+  document.getElementById('pkInhouse').onchange = e=>{state.pkInhouse=e.target.checked;fillPk();};
+  document.getElementById('pkSigOnly').onchange = e=>{state.pkSigOnly=e.target.checked;fillPk();};
+  document.getElementById('pkGapMin').oninput = e=>{state.pkGapMin=+e.target.value||0;fillPk();};
+  fillPk();
+  const trSel = document.getElementById('trSel');
+  if (!state.trSel) state.trSel = list.slice(0,5).map(p=>p.name);
+  [...trSel.options].forEach(o=>{ o.selected = state.trSel.includes(o.value); });
+  const drawTr = ()=>{
+    state.trSel = [...trSel.selectedOptions].map(o=>o.value);
+    const series=[];
+    state.trSel.forEach((name,idx)=>{
+      const p = m.procs[name]; if(!p) return;
+      const col = PROC_PALETTE[idx%PROC_PALETTE.length];
+      series.push({name:name+' · A',type:'line',data:p.ta,itemStyle:{color:col},lineStyle:{color:col},symbolSize:5,connectNulls:false});
+      series.push({name:name+' · B',type:'line',data:p.tb,itemStyle:{color:col},lineStyle:{color:col,type:'dashed'},symbolSize:5,connectNulls:false});
+    });
+    makeChart(document.getElementById('trChart')).setOption({
+      tooltip:{trigger:'axis'}, legend:{type:'scroll',top:0},
+      grid:{top:40,left:60,right:20,bottom:30},
+      xAxis:{type:'category',data:roundCats(Math.max(N(0),N(1)))},
+      yAxis:{type:'value',name:'MB'}, series
+    });
+  };
+  trSel.onchange = drawTr; drawTr();
+};
+
+/* ============ 5. 自研应用 ============ */
+RENDER.inhouse = function(){
+  const el = document.getElementById('page-inhouse');
+  const m = MV();
+  const rows = procList().filter(p=>p.inhouse);
+  const nA = rows.filter(p=>p.ka>0).length, nB = rows.filter(p=>p.kb>0).length;
+  const sumA = rows.reduce((s,p)=>s+p.ra,0), sumB = rows.reduce((s,p)=>s+p.rb,0);
+  const g = sumB - sumA;
+  let h = IH_NOTE;
+  h += '<div class="grid-kpi">'
+    +'<div class="kpi"><div class="t">自研进程数（'+metric.toUpperCase()+'）</div><div class="v"><span style="color:var(--c-a)">A '+nA+'</span><span style="color:var(--c-b)">B '+nB+'</span></div><div class="gap '+(nB>nA?'gap-pos':nB<nA?'gap-neg':'')+'">GAP '+(nB-nA>0?'+':'')+(nB-nA)+'</div></div>'
+    +'<div class="kpi"><div class="t">自研总轮次均值</div><div class="v"><span style="color:var(--c-a)">A '+fmt(sumA)+' MB</span><span style="color:var(--c-b)">B '+fmt(sumB)+' MB</span></div><div class="gap '+gapCls(g)+'">GAP '+(g>0?'+':'')+fmt(g)+' MB</div></div>'
+    +'</div>';
+  h += '<div class="card" style="margin-top:16px"><h3>自研进程明细</h3><div class="tbl-wrap"><table><thead><tr>'
+    +'<th>进程</th><th>判定</th><th>层级 A</th><th>层级 B</th><th class="num">出现 A</th><th class="num">出现 B</th><th class="num">轮均 A</th><th class="num">轮均 B</th><th class="num">值均 A</th><th class="num">值均 B</th><th class="num">GAP</th><th class="num">GAP%</th><th>标签</th></tr></thead><tbody>'
+    + rows.map(p=>'<tr><td><a href="#proc='+encodeURIComponent(p.name)+'">'+esc(p.name)+'</a></td>'
+      +'<td class="muted">'+(p.ih_src==='whitelist'?'白名单':'前缀')+'</td>'
+      +'<td>'+esc(p.la.join('、')||'—')+'</td><td>'+esc(p.lb.join('、')||'—')+'</td>'
+      +'<td class="num">'+p.ka+'/'+N(0)+'</td><td class="num">'+p.kb+'/'+N(1)+'</td>'
+      +'<td class="num">'+fmt(p.ra)+'</td><td class="num">'+fmt(p.rb)+'</td><td class="num">'+fmt(p.va)+'</td><td class="num">'+fmt(p.vb)+'</td>'
+      +gapCells(p.ra,p.rb,p.gapt,p.gapp)+'<td>'+tags(p)+'</td></tr>').join('')
+    +'</tbody></table></div></div>';
+  el.innerHTML = h;
+};
+
+/* ============ 6. 启动/唤醒 ============ */
+RENDER.events = function(){
+  const el = document.getElementById('page-events');
+  let h = '<div class="card"><h3>启动原因分布 <span class="sub">仅统计 test 阶段（测试窗口内）的 start 事件</span></h3><div id="evChart" class="chart"></div></div>';
+  h += '<div class="card"><h3>唤醒链 <span class="sub">输入进程名或关键词：被谁拉起 → 进程 → 拉起了谁</span></h3>'
+    +'<div class="controls"><input type="text" id="evKw" placeholder="进程关键词（如 atomicbrain）" value="'+esc(state.evQ)+'" style="width:280px"></div>'
+    +'<div id="wakePanel"></div></div>';
+  h += '<div class="card"><h3>事件明细 <span class="sub">灰色 = boot 阶段（开机至第 1 轮前）</span></h3>'
+    +'<div class="tbl-wrap"><table><thead><tr><th>数据集</th><th>时间</th><th>阶段</th><th>类型</th><th>进程</th><th>原因</th><th>组件</th><th>调用方</th><th>adj</th></tr></thead><tbody id="evBody"></tbody></table></div></div>';
+  el.innerHTML = h;
+  const reasons = new Map();
+  DS.forEach(d=>{ for (const r in d.reason_counts) reasons.set(r,(reasons.get(r)||0)+d.reason_counts[r]); });
+  const rlist = [...reasons.keys()].sort((a,b)=>reasons.get(b)-reasons.get(a));
+  makeChart(document.getElementById('evChart')).setOption({
+    tooltip:{trigger:'axis'}, legend:{type:'scroll',top:0},
+    grid:{top:36,left:50,right:20,bottom:30},
+    xAxis:{type:'category',data:['A '+LA,'B '+LB]},
+    yAxis:{type:'value',name:'次数'},
+    series:rlist.map(r=>({name:r,type:'bar',stack:'s',data:[DS[0].reason_counts[r]||0,DS[1].reason_counts[r]||0]}))
+  });
+  const kw = document.getElementById('evKw'), evBody = document.getElementById('evBody'), wake = document.getElementById('wakePanel');
+  const fill = ()=>{
+    state.evQ = kw.value.trim();
+    const k = state.evQ;
+    let rows='';
+    DS.forEach((d,i)=>d.events.forEach(e=>{
+      if (k && !(e.proc||'').includes(k) && !(e.comp||'').includes(k) && !(e.caller||'').includes(k)) return;
+      rows += '<tr'+(e.phase==='boot'?' class="phaseboot"':'')+'><td>'+(i?'B':'A')+'</td><td class="mono">'+esc(e.t.slice(5))+'</td><td>'+esc(e.phase)+'</td><td>'+esc(e.kind)+'</td><td>'+esc(e.proc||'')+'</td><td>'+esc(e.reason||'')+'</td><td class="mono">'+esc(e.comp||'')+'</td><td>'+esc(e.caller||'')+'</td><td>'+esc(e.adj||'')+'</td></tr>';
+    }));
+    evBody.innerHTML = rows || '<tr><td colspan="9" class="muted">无匹配事件</td></tr>';
+    if (!k){ wake.innerHTML='<div class="muted">输入进程关键词以查看唤醒链。</div>'; return; }
+    const procs = new Set();
+    DS.forEach(d=>d.events.forEach(e=>{ if(e.proc) procs.add(e.proc); if(e.caller) procs.add(e.caller); }));
+    let target = procs.has(k) ? k : [...procs].find(p=>p.includes(k));
+    if (!target){ wake.innerHTML='<div class="muted">未在事件中找到匹配进程。</div>'; return; }
+    const box = i=>{
+      const pulledBy = DS[i].events.filter(e=>e.kind==='start' && e.proc===target);
+      const pulls = DS[i].events.filter(e=>e.kind==='start' && e.caller===target && e.proc!==target);
+      const tag = e => e.phase==='boot' ? '（启动期）' : '';
+      const li1 = pulledBy.map(e=>'<li><b>'+esc(e.caller||'(未知)')+'</b> · '+esc(e.reason||'')+' · '+esc(e.t.slice(5))+tag(e)+'</li>').join('')||'<li class="muted">无</li>';
+      const li2 = pulls.map(e=>'<li><b>'+esc(e.proc)+'</b> · '+esc(e.reason||'')+' · '+esc(e.t.slice(5))+tag(e)+'</li>').join('')||'<li class="muted">无</li>';
+      return '<div class="box"><h5>被谁拉起（'+(i?'B':'A')+'）</h5><ul>'+li1+'</ul></div>'
+        +'<div class="mid">'+(i?'B':'A')+'<br>'+esc(target)+'</div>'
+        +'<div class="box"><h5>拉起了谁（'+(i?'B':'A')+'）</h5><ul>'+li2+'</ul></div>';
+    };
+    wake.innerHTML = '<div class="wake">'+box(0)+'</div><div class="wake" style="margin-top:14px">'+box(1)+'</div>';
+  };
+  kw.oninput = fill; fill();
+};
+
+/* ============ 7. 标准与风险 ============ */
+RENDER.risk = function(){
+  const el = document.getElementById('page-risk');
+  let h = '';
+  ['a','b'].forEach((side,i)=>{
+    const st = DATA.standards[side];
+    h += '<div class="card"><h3>健康标准对照 — '+String.fromCharCode(65+i)+' <span class="sub">RSS 口径；Free RAM 为下限，其余为上限</span></h3>';
+    if (!st){ h += '<div class="muted">无阈值数据（缺少或无法解析 all_memory_data.xls）</div></div>'; return; }
+    if (st.levels.length || st.free_ram){
+      h += '<div class="tbl-wrap"><table><thead><tr><th>层级/指标</th><th class="num">阈值 MB</th><th class="num">均值</th><th class="num">峰值'+(st.free_ram?'(最低)':'')+'</th><th>均值判定</th><th>峰值判定</th></tr></thead><tbody>';
+      if (st.free_ram){
+        const r = st.free_ram;
+        h += '<tr'+(r.viol||r.peak_viol?' class="viol"':'')+'><td>Free RAM（下限）</td><td class="num">'+fmt(r.thr)+'</td><td class="num">'+fmt(r.mean)+'</td><td class="num">'+fmt(r.low)+'</td><td>'+(r.viol?'<b class="gap-pos">超标</b>':'达标')+'</td><td>'+(r.peak_viol?'<b class="gap-pos">峰值超标</b>':'—')+'</td></tr>';
+      }
+      st.levels.forEach(r=>{
+        h += '<tr'+(r.viol||r.peak_viol?' class="viol"':'')+'><td>'+esc(r.name)+'</td><td class="num">'+fmt(r.thr)+'</td><td class="num">'+fmt(r.mean)+'</td><td class="num">'+fmt(r.peak)+'</td><td>'+(r.viol?'<b class="gap-pos">超标</b>':'达标')+'</td><td>'+(r.peak_viol?'<b class="gap-pos">峰值超标</b>':'—')+'</td></tr>';
+      });
+      h += '</tbody></table></div>';
+    }
+    if (st.procs.length){
+      h += '<div class="tbl-wrap" style="margin-top:12px"><table><thead><tr><th>进程（RSS）</th><th>层级</th><th class="num">阈值 MB</th><th class="num">数值均值</th><th class="num">峰值</th><th>均值判定</th><th>峰值判定</th></tr></thead><tbody>';
+      st.procs.forEach(r=>{
+        h += '<tr'+(r.viol||r.peak_viol?' class="viol"':'')+'><td>'+esc(r.name)+'</td><td>'+esc(r.level)+'</td><td class="num">'+fmt(r.thr)+'</td><td class="num">'+fmt(r.mean)+'</td><td class="num">'+fmt(r.peak)+'</td><td>'+(r.viol?'<b class="gap-pos">超标</b>':'达标')+'</td><td>'+(r.peak_viol?'<b class="gap-pos">峰值超标</b>':'—')+'</td></tr>';
+      });
+      h += '</tbody></table></div>';
+    }
+    h += '</div>';
+  });
+  h += '<div class="card"><h3>疑似增长（提示，非泄漏结论）<span class="sub">逐轮线性回归：进程斜率 ≥ '+DATA.meta.growth_slope+' MB/轮，整机 ≥ '+DATA.meta.sys_growth_slope+' MB/轮，R² ≥ '+DATA.meta.growth_r2+'</span></h3>';
+  if (DATA.growth.length){
+    h += '<div class="tbl-wrap"><table><thead><tr><th>数据集</th><th>对象</th><th>类型</th><th class="num">斜率 MB/轮</th><th class="num">R²</th></tr></thead><tbody>'
+      + DATA.growth.map(g=>'<tr><td>'+g.ds+'</td><td>'+(g.kind==='proc'?'<a href="#proc='+encodeURIComponent(g.name)+'">'+esc(g.name)+'</a>':esc(g.name))+'</td><td>'+(g.kind==='proc'?'进程(PSS)':'整机')+'</td><td class="num">'+(g.slope>0?'+':'')+fmt(g.slope)+'</td><td class="num">'+g.r2.toFixed(2)+'</td></tr>').join('')
+      +'</tbody></table></div>';
+  } else h += '<div class="muted">未发现疑似增长项。</div>';
+  h += '</div>';
+  el.innerHTML = h;
+};
+
+/* ============ 8. Markdown 报告 ============ */
+function mdToHtml(md){
+  const lines = md.split('\n');
+  const inline = s => esc(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/`(.+?)`/g,'<code>$1</code>');
+  let html='', i=0;
+  const parseRow = r => r.trim().replace(/^\|/,'').replace(/\|$/,'').split('|').map(c=>c.trim());
+  while (i<lines.length){
+    const l = lines[i];
+    if (/^\s*\|/.test(l)){
+      const rows=[];
+      while(i<lines.length && /^\s*\|/.test(lines[i])){rows.push(lines[i]);i++;}
+      const head=parseRow(rows[0]);
+      const body=rows.slice(2).map(parseRow);
+      html += '<div class="tbl-wrap"><table><thead><tr>'+head.map(c=>'<th>'+inline(c)+'</th>').join('')+'</tr></thead><tbody>'
+        + body.map(r=>'<tr>'+r.map(c=>'<td>'+inline(c)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
+      continue;
+    }
+    let mm;
+    if ((mm=l.match(/^###\s+(.*)/))){html+='<h3>'+inline(mm[1])+'</h3>';i++;continue;}
+    if ((mm=l.match(/^##\s+(.*)/))){html+='<h2>'+inline(mm[1])+'</h2>';i++;continue;}
+    if ((mm=l.match(/^#\s+(.*)/))){html+='<h1>'+inline(mm[1])+'</h1>';i++;continue;}
+    if (/^\s*-\s+/.test(l)){
+      html+='<ul>';
+      while(i<lines.length && /^\s*-\s+/.test(lines[i])){html+='<li>'+inline(lines[i].replace(/^\s*-\s+/,''))+'</li>';i++;}
+      html+='</ul>';continue;
+    }
+    if (l.trim()===''){i++;continue;}
+    html+='<p>'+inline(l)+'</p>';i++;
+  }
+  return html;
+}
+RENDER.report = function(){
+  const el = document.getElementById('page-report');
+  const md = DATA.report_md || '';
+  el.innerHTML = '<div class="card"><h3>Markdown 报告 <span class="sub">与 report.md 内容一致</span></h3>'
+    +'<div class="controls"><button class="seg" id="mdToggle">'+(state.mdRaw?'查看渲染效果':'查看原始 Markdown')+'</button></div>'
+    +(state.mdRaw ? '<div class="mdraw">'+esc(md)+'</div>' : '<div class="mdview">'+mdToHtml(md)+'</div>')
+    +'</div>';
+  document.getElementById('mdToggle').onclick = ()=>{state.mdRaw=!state.mdRaw;RENDER.report();};
+};
+
+/* ============ 进程详情 ============ */
+function openProc(name){
+  const ov = document.getElementById('procOverlay');
+  ov.classList.add('open');
+  const inner = document.getElementById('procInner');
+  const p = MV().procs[name];
+  if (!p){
+    inner.innerHTML = '<button class="backbtn" id="procBack">← 返回</button><div class="card">当前指标（'+metric.toUpperCase()+'）下无进程 <b>'+esc(name)+'</b></div>';
+    document.getElementById('procBack').onclick = ()=>setHash({proc:null, tab:state.tab});
+    return;
+  }
+  let h = '<button class="backbtn" id="procBack">← 返回 '+(PAGES[state.tab]||'')+'</button>'
+    +'<div class="card"><h3 style="font-size:16px">'+esc(name)+' <span class="sub">'+tags(p)+'　'+metric.toUpperCase()+'：A 轮均 '+fmt(p.ra)+' / B 轮均 '+fmt(p.rb)+' / GAP '+(p.gap>0?'+':'')+fmt(p.gap)+'（'+esc(gapTxt(p))+'）</span></h3>'
+    +'<div id="pdChart" class="chart"></div>'
+    +'<div class="tbl-wrap" style="margin-top:12px"><table><thead><tr><th>轮次</th><th>A 层级</th><th class="num">A '+metric.toUpperCase()+' (MB)</th><th>B 层级</th><th class="num">B '+metric.toUpperCase()+' (MB)</th></tr></thead><tbody>';
+  const nR = Math.max(N(0),N(1));
+  for(let r=0;r<nR;r++){
+    const la=p.pra[r], lb=p.prb[r];
+    h += '<tr><td>第'+(r+1)+'轮</td><td>'+(la?'<span class="pill" style="border-left:4px solid '+lvColor(la)+'">'+esc(la)+'</span>':'<span class="muted">—</span>')+'</td><td class="num">'+fmt(p.ta[r])+'</td>'
+      +'<td>'+(lb?'<span class="pill" style="border-left:4px solid '+lvColor(lb)+'">'+esc(lb)+'</span>':'<span class="muted">—</span>')+'</td><td class="num">'+fmt(p.tb[r])+'</td></tr>';
+  }
+  h += '</tbody></table></div></div>';
+  h += '<div class="card"><h3>相关事件 <span class="sub">含该进程启动/消亡，及作为调用方拉起其他进程</span></h3>'
+    +'<div class="tbl-wrap"><table><thead><tr><th>数据集</th><th>时间</th><th>阶段</th><th>类型</th><th>进程</th><th>原因</th><th>组件</th><th>调用方</th></tr></thead><tbody>';
+  let any=false;
+  DS.forEach((d,i)=>d.events.forEach(e=>{
+    if (e.proc!==name && e.caller!==name) return;
+    any=true;
+    h += '<tr'+(e.phase==='boot'?' class="phaseboot"':'')+'><td>'+(i?'B':'A')+'</td><td class="mono">'+esc(e.t.slice(5))+'</td><td>'+esc(e.phase)+'</td><td>'+esc(e.kind)+'</td><td>'+esc(e.proc||'')+'</td><td>'+esc(e.reason||'')+'</td><td class="mono">'+esc(e.comp||'')+'</td><td>'+esc(e.caller||'')+'</td></tr>';
+  }));
+  h += (any?'':'<tr><td colspan="8" class="muted">无相关事件</td></tr>')+'</tbody></table></div></div>';
+  inner.innerHTML = h;
+  document.getElementById('procBack').onclick = ()=>setHash({proc:null, tab:state.tab});
+  makeChart(document.getElementById('pdChart')).setOption({
+    tooltip:{trigger:'axis'}, legend:{top:0},
+    grid:{top:36,left:60,right:20,bottom:30},
+    xAxis:{type:'category',data:roundCats(nR)},
+    yAxis:{type:'value',name:'MB'},
+    series:[
+      {name:'A '+LA,type:'line',data:p.ta,itemStyle:{color:'#3b82f6'},lineStyle:{color:'#3b82f6'},symbolSize:6,connectNulls:false},
+      {name:'B '+LB,type:'line',data:p.tb,itemStyle:{color:'#f59e0b'},lineStyle:{color:'#f59e0b',type:'dashed'},symbolSize:6,connectNulls:false}
+    ]
+  });
+  ov.scrollTop = 0;
+}
+
+route();
+</script>
+</body>
+</html>

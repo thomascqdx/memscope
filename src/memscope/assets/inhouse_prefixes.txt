@@ -1,0 +1,11 @@
+# 自研应用包名前缀（示例规则，正式版以白名单为准）
+com.transsion.
+com.rlk.
+tech.palm.
+com.sh.smart.
+com.transsnet.
+com.scorpio.
+com.geniex.
+com.idea.
+com.xui.
+com.tran.
