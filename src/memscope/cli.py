@@ -1,4 +1,4 @@
-"""memscope compare BASE TARGET —— 生成 report.md / report.html / data.xlsx。"""
+"""memscope static compare BASE TARGET —— 生成 report.md / report.html / data.xlsx。"""
 from __future__ import annotations
 
 import argparse
@@ -24,14 +24,25 @@ def _default_labels(dsa, dsb):
     return la, lb
 
 
-def build_parser():
-    p = argparse.ArgumentParser(prog='memscope',
-                                description='静态内存健康测试 A/B 对比分析')
-    sub = p.add_subparsers(dest='cmd', required=True)
-    c = sub.add_parser('compare', help='对比两个测试包（zip 或已解压目录）')
+def _add_compare_args(c):
     c.add_argument('base', help='基线 A：平台 zip 或已解压目录')
     c.add_argument('target', help='对比 B：平台 zip 或已解压目录')
-    c.add_argument('-o', '--out', default=None, help='输出目录（默认 out/<A>_vs_<B>）')
+
+
+def build_parser():
+    p = argparse.ArgumentParser(
+        prog='memscope',
+        description='Android 内存健康测试包 A/B 对比分析工具')
+    sub = p.add_subparsers(dest='test_type', required=True,
+                           metavar='{static,dynamic}',
+                           help='测试类型')
+
+    sp = sub.add_parser('static', help='静态内存测试包（整机静置采集）')
+    ssub = sp.add_subparsers(dest='cmd', required=True, metavar='{compare}')
+    c = ssub.add_parser('compare', help='对比两个静态内存测试包，生成报告')
+    _add_compare_args(c)
+    c.add_argument('-o', '--out', default=None,
+                   help='输出目录（默认 out/static/<A>_vs_<B>）')
     c.add_argument('--labels', nargs=2, metavar=('A', 'B'), help='自定义两侧标签')
     c.add_argument('--whitelist', help='自研白名单文件（默认 config/internal_dev_package.txt，若存在）')
     c.add_argument('--prefixes', help='自研包名前缀文件（默认 config/inhouse_prefixes.txt 或内置）')
@@ -39,18 +50,28 @@ def build_parser():
     c.add_argument('--gap-pct', type=float, default=10.0, help='显著差异百分比阈值 %%（默认 10）')
     c.add_argument('--growth-slope', type=float, default=1.0, help='进程增长斜率阈值 MB/轮（默认 1）')
     c.add_argument('--sys-growth-slope', type=float, default=5.0, help='整机增长斜率阈值 MB/轮（默认 5）')
-    c.add_argument('--growth-r2', type=float, default=0.6, help='增长判定 R² 阈值（默认 0.6）')
+    c.add_argument('--growth-r2', type=float, default=0.6, help='增长判定 R2 阈值（默认 0.6）')
+
+    dp = sub.add_parser('dynamic', help='动态内存测试包（尚未实现）')
+    dsub = dp.add_subparsers(dest='cmd', required=True, metavar='{compare}')
+    dc = dsub.add_parser('compare', help='对比两个动态内存测试包（尚未实现）')
+    _add_compare_args(dc)
     return p
 
 
 def main(argv=None):
     args = build_parser().parse_args(argv)
+    if args.test_type == 'dynamic':
+        if args.cmd == 'compare':
+            print('[memscope] 动态内存分析尚未实现', file=sys.stderr)
+            return 2
+        return 2
     if args.cmd == 'compare':
-        return _cmd_compare(args)
+        return _cmd_static_compare(args)
     return 2
 
 
-def _cmd_compare(args):
+def _cmd_static_compare(args):
     try:
         whitelist, wl_src = inhouse.load_whitelist(args.whitelist)
         prefixes, px_src = inhouse.load_prefixes(args.prefixes)
@@ -67,6 +88,12 @@ def _cmd_compare(args):
     except zipfile.BadZipFile as e:
         print(f'[memscope] 嵌套 zip 损坏: {e}', file=sys.stderr)
         return 2
+
+    for ds in (dsa, dsb):
+        err = loader.check_test_type(ds, 'static')
+        if err:
+            print(f'[memscope] {err}', file=sys.stderr)
+            return 2
 
     if args.labels:
         la, lb = args.labels
@@ -85,7 +112,8 @@ def _cmd_compare(args):
     md = markdown.render(result)
     result['report_md'] = md
 
-    out = Path(args.out) if args.out else Path('out') / f'{_sanitize(la)}_vs_{_sanitize(lb)}'
+    out = (Path(args.out) if args.out
+           else Path('out') / 'static' / f'{_sanitize(la)}_vs_{_sanitize(lb)}')
     out.mkdir(parents=True, exist_ok=True)
     (out / 'report.md').write_text(md, encoding='utf-8')
     html.render(result, out / 'report.html')

@@ -127,7 +127,7 @@ def test_result_json_serializable(result):
 def test_cli_end_to_end(tmp_path):
     from memscope.cli import main
     out = tmp_path / 'o'
-    rc = main(['compare', PA, PB, '-o', str(out)])
+    rc = main(['static', 'compare', PA, PB, '-o', str(out)])
     assert rc == 0
     for f in ('report.md', 'report.html', 'data.xlsx'):
         assert (out / f).exists() and (out / f).stat().st_size > 1000

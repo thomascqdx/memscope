@@ -17,13 +17,14 @@ pip install -e .
 ## 使用
 
 ```powershell
-memscope compare <基线A.zip> <对比B.zip> [-o 输出目录] [--labels A B] \
+memscope static compare <基线A.zip> <对比B.zip> [-o 输出目录] [--labels A B] \
     [--whitelist 白名单.txt] [--prefixes 前缀.txt] \
     [--gap-abs 5] [--gap-pct 10] [--growth-slope 1] [--sys-growth-slope 5] [--growth-r2 0.6]
 ```
 
-- 输入为平台 `内存健康测试报告_*.zip` 或其解压目录。
-- 默认输出到 `out/<A标签>_vs_<B标签>/`；标签默认取 `Rom Version`，相同则追加 `#SN`。
+- `static`：静态内存测试包（当前实现）；`dynamic`：动态内存测试包（占位，尚未实现）。
+- 输入为平台 `内存健康测试报告_*.zip` 或其解压目录；`Test Type` 字段非 `static` 时拒绝运行。
+- 默认输出到 `out/static/<A标签>_vs_<B标签>/`；标签默认取 `Rom Version`，相同则追加 `#SN`。
 - 自研进程判定：`--whitelist` 优先（命中记 `whitelist`），否则按 `--prefixes`（默认 `config/inhouse_prefixes.txt`）前缀匹配。
 
 ## 口径速览

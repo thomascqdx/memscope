@@ -20,6 +20,21 @@ class LoadError(Exception):
     pass
 
 
+def check_test_type(ds: Dataset, expected: str = 'static'):
+    """校验 Test Type（大小写/首尾空白不敏感）。
+
+    返回错误消息字符串；匹配或缺失时返回 None。缺失时附加一条 warning。
+    """
+    v = ds.device.get('Test Type')
+    if v is None or not str(v).strip():
+        ds.warnings.append('device_info.txt 中无 Test Type 字段，无法校验测试类型')
+        return None
+    if str(v).strip().lower() != expected.lower():
+        return (f'{ds.label} 的 Test Type 为 {str(v).strip()}，'
+                f'不是静态内存测试包，请使用对应子命令')
+    return None
+
+
 def zip_name(zi: zipfile.ZipInfo) -> str:
     if zi.flag_bits & 0x800:
         return zi.filename

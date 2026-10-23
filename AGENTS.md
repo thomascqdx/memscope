@@ -22,10 +22,10 @@ Integration tests require `samples/static_memory_datas/*.zip` and are skipped wh
 ## Run
 
 ```powershell
-memscope compare <baseline.zip> <target.zip> [-o outdir] [--labels A B]
+memscope static compare <baseline.zip> <target.zip> [-o outdir] [--labels A B]
 ```
 
-Outputs `report.md`, `report.html`, `data.xlsx` into `out/<labelA>_vs_<labelB>/` by default.
+Outputs `report.md`, `report.html`, `data.xlsx` into `out/static/<labelA>_vs_<labelB>/` by default. `memscope dynamic compare` is a placeholder (exit 2).
 
 ## Screenshot verification of report.html
 
