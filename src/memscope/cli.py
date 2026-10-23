@@ -60,6 +60,12 @@ def build_parser():
 
 
 def main(argv=None):
+    for s in (sys.stdout, sys.stderr):
+        try:
+            if hasattr(s, 'reconfigure'):
+                s.reconfigure(errors='replace')
+        except Exception:
+            pass
     args = build_parser().parse_args(argv)
     if args.test_type == 'dynamic':
         if args.cmd == 'compare':

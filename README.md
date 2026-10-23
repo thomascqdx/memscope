@@ -27,6 +27,18 @@ memscope static compare <基线A.zip> <对比B.zip> [-o 输出目录] [--labels 
 - 默认输出到 `out/static/<A标签>_vs_<B标签>/`；标签默认取 `Rom Version`，相同则追加 `#SN`。
 - 自研进程判定：`--whitelist` 优先（命中记 `whitelist`），否则按 `--prefixes`（默认 `config/inhouse_prefixes.txt`）前缀匹配。
 
+## 构建单文件 exe
+
+```bat
+build_exe.bat
+```
+
+在隔离环境 `.venv-build\` 中安装 PyInstaller 并打包，产物为 `dist\memscope.exe`。用法与 CLI 相同：
+
+```powershell
+memscope.exe static compare A.zip B.zip -o outdir
+```
+
 ## 口径速览
 
 - **PSS** 来自 dumpsys meminfo OOM 段（含 swap），为主口径；**RSS** 来自 procStatus 的 VmRSS+VmSwap，OomScore 映射层级，用于标准对照。

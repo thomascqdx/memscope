@@ -27,6 +27,14 @@ memscope static compare <baseline.zip> <target.zip> [-o outdir] [--labels A B]
 
 Outputs `report.md`, `report.html`, `data.xlsx` into `out/static/<labelA>_vs_<labelB>/` by default. `memscope dynamic compare` is a placeholder (exit 2).
 
+## Build single-file exe
+
+```powershell
+cmd /c build_exe.bat
+```
+
+Produces `dist\memscope.exe` (isolated venv `.venv-build\`, PyInstaller, entry `packaging\memscope_entry.py`).
+
 ## Screenshot verification of report.html
 
 ```powershell
