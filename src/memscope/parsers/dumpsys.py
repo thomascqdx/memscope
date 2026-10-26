@@ -69,13 +69,9 @@ def _parse_tail(lines: list) -> dict:
         return {}
     t = '\n'.join(lines[i:])
 
-    def g(p, required=True):
+    def g(p):
         m = re.search(p, t)
-        if not m:
-            if required:
-                raise ValueError(f'dumpsys tail 缺少字段: {p}')
-            return None
-        return _num(m.group(1))
+        return _num(m.group(1)) if m else None
 
     return {
         'Total RAM': g(r'Total RAM:\s*' + _NUM),

@@ -397,7 +397,7 @@ def analyze(dsa: Dataset, dsb: Dataset, opts: Options) -> dict:
     return {
         'labels': [dsa.label, dsb.label],
         'meta': {
-            'tool': 'memscope 0.1.0',
+            'tool': 'memscope 0.2.0',
             'gap_abs': opts.gap_abs, 'gap_pct': opts.gap_pct,
             'growth_slope': opts.growth_slope,
             'sys_growth_slope': opts.sys_growth_slope,

@@ -25,10 +25,10 @@ def test_check_test_type():
     assert any('Test Type' in w for w in ds4.warnings)
 
 
-def test_dynamic_compare_not_implemented(capsys):
+def test_dynamic_compare_bad_input(capsys):
     rc = main(['dynamic', 'compare', 'x', 'y'])
     assert rc == 2
-    assert '尚未实现' in capsys.readouterr().err
+    assert '无法识别的输入' in capsys.readouterr().err
 
 
 def test_old_top_level_compare_removed():

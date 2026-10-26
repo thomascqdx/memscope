@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<style>
+:root{
+  --c-a:#3b82f6; --c-b:#f59e0b;
+  --bg:#f5f7fb; --card:#fff; --line:#e6eaf2; --line-soft:#eef2f7;
+  --txt:#0f172a; --sub:#64748b; --brand:#4f46e5; --brand-soft:#eef2ff;
+  --red:#e11d48; --red-soft:#fff1f2; --green:#059669; --green-soft:#ecfdf5;
+  --font:"Segoe UI Variable","Segoe UI","Microsoft YaHei UI","Microsoft YaHei","PingFang SC",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--txt);font-size:14px;line-height:1.5}
+a{color:var(--brand);text-decoration:none}
+a:hover{text-decoration:underline}
+a[href^="#proc="]{font-weight:500}
+
+/* ---------- 顶栏 ---------- */
+#topbar{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.bar-row{max-width:1400px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(79,70,229,.3)}
+.bar-row h1{font-size:16px;margin:0;white-space:nowrap;font-weight:600}
+.bar-row h1 .sub{font-size:12px;color:var(--sub);font-weight:400;margin-left:6px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:4px 12px;border-radius:999px;font-size:12px;border:1px solid var(--line);background:#fff;color:var(--sub)}
+.chip .dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
+.chip-a .dot{background:var(--c-a)}
+.chip-b .dot{background:var(--c-b)}
+.chip b{font-weight:600;color:var(--txt)}
+.toggles{margin-left:auto;display:flex;align-items:center;gap:14px;font-size:13px;color:var(--sub)}
+.segtrack{display:flex;background:#f1f5f9;border-radius:999px;padding:3px}
+.seg{border:none;background:transparent;padding:4px 16px;border-radius:999px;cursor:pointer;font-size:13px;color:var(--sub);font-family:var(--font)}
+.seg.active{background:#fff;color:var(--txt);box-shadow:0 1px 3px rgba(16,24,40,.14);font-weight:500}
+.switch{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--sub);user-select:none}
+.switch input{position:absolute;opacity:0;width:0;height:0}
+.switch .sl{width:36px;height:20px;border-radius:999px;background:#cbd5e1;position:relative;transition:background .15s;flex:none}
+.switch .sl::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+.switch input:checked+.sl{background:var(--brand)}
+.switch input:checked+.sl::after{transform:translateX(16px)}
+#tabnav{max-width:1400px;margin:0 auto;padding:0 20px;display:flex;gap:4px;overflow-x:auto}
+#tabnav button{border:none;background:none;padding:10px 14px;font-size:14px;color:var(--sub);cursor:pointer;white-space:nowrap;position:relative;font-family:var(--font)}
+#tabnav button:hover{color:var(--txt);background:#f6f8fc}
+#tabnav button::after{content:'';position:absolute;left:12px;right:12px;bottom:0;height:2px;border-radius:2px;background:transparent}
+#tabnav button.active{color:var(--brand);font-weight:600}
+#tabnav button.active::after{background:var(--brand)}
+
+/* ---------- 布局 / 卡片 ---------- */
+main{max-width:1400px;margin:0 auto;padding:20px 20px 48px}
+.tab-page{display:none}
+.tab-page.active{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:16px;box-shadow:0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.06)}
+.card-hd{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
+.card-hd h3{margin:0;font-size:15px;font-weight:600}
+.card-hd .sub{font-size:12px;color:var(--sub);font-weight:400;margin-top:3px}
+.card-hd-r{display:flex;gap:8px;align-items:center;flex:none}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid2>*{min-width:0}
+.row-2col{display:grid;grid-template-columns:3fr 2fr;gap:16px;margin-bottom:16px}
+.row-2col>*{min-width:0}
+.row-2col .card{margin-bottom:0}
+@media(max-width:1000px){.row-2col{grid-template-columns:1fr}}
+@media(max-width:1100px){.grid2{grid-template-columns:1fr}}
+.grid-kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media(max-width:999px){.grid-kpi{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.grid-kpi{grid-template-columns:1fr}}
+.grid-kpi.auto{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.kpi-hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.kpi-name{font-size:13px;font-weight:600}
+.kpi-src{font-size:11px;color:var(--sub)}
+.kpi-v{font-size:26px;font-weight:600;margin-top:6px;font-variant-numeric:tabular-nums;line-height:1.2}
+.kpi-v .u{font-size:12px;color:var(--sub);font-weight:400;margin-left:4px}
+.kpi-ab{font-size:12.5px;margin-top:2px;font-variant-numeric:tabular-nums}
+.kpi-ab .arr{color:var(--sub);margin:0 5px}
+.kpi-delta{margin-top:7px}
+.spark{display:block;width:100%;height:36px;margin-top:8px}
+
+/* ---------- delta 徽标 / 标签 / 状态 ---------- */
+.delta{display:inline-flex;align-items:center;gap:2px;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;background:#f1f5f9;color:#475569;font-variant-numeric:tabular-nums;white-space:nowrap}
+.delta.bad{background:var(--red-soft);color:var(--red)}
+.delta.good{background:var(--green-soft);color:var(--green)}
+.tag{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;margin:0 4px 2px 0;font-weight:500}
+.tag-a{background:#eff6ff;color:#1d4ed8}
+.tag-b{background:#fffbeb;color:#b45309}
+.tag-lv{background:#f5f3ff;color:#6d28d9}
+.tag-ih{background:var(--green-soft);color:#047857}
+.tag-sig{background:var(--red-soft);color:#be123c}
+.tag-cached{background:#f1f5f9;color:#64748b}
+.st{display:inline-block;padding:1px 10px;border-radius:999px;font-size:12px;font-weight:500}
+.st-ok{background:var(--green-soft);color:var(--green)}
+.st-bad{background:var(--red-soft);color:var(--red)}
+.sc{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:1px 9px;border-radius:999px;background:#f1f5f9;color:#475569;margin-right:6px;vertical-align:1px}
+.sc::before{content:'';width:6px;height:6px;border-radius:50%}
+.sc-a::before{background:var(--c-a)}
+.sc-b::before{background:var(--c-b)}
+.cnt{display:inline-block;min-width:20px;text-align:center;background:var(--brand-soft);color:var(--brand);border-radius:999px;font-size:11px;font-weight:600;padding:1px 7px;margin-left:6px}
+.gap-pos{color:var(--red);font-weight:600}
+.gap-neg{color:var(--green);font-weight:600}
+.muted{color:var(--sub)}
+.sec-h{font-size:13px;font-weight:600;margin-bottom:8px}
+
+/* ---------- 表格 ---------- */
+.tbl-wrap{overflow:auto;max-height:560px;border:1px solid var(--line);border-radius:10px}
+.tbl-wrap.no-max{max-height:none}
+.tbl-wrap.h320{max-height:320px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:9px 12px;border-bottom:1px solid var(--line-soft);white-space:nowrap;text-align:left;height:40px}
+th{position:sticky;top:0;background:#f8fafc;color:var(--sub);font-size:12px;font-weight:600;z-index:2;height:auto}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+td.name{white-space:normal;word-break:break-all;min-width:220px;max-width:420px}
+td.bv{font-weight:600}
+tbody tr:hover td{background:#f8faff}
+tr.lvl-row td{cursor:pointer;background:#f6f8fe;font-weight:600}
+tr.lvl-row td:first-child{position:relative;padding-left:30px}
+tr.lvl-row td:first-child::before{content:'›';position:absolute;left:13px;top:50%;margin-top:-10px;font-size:15px;color:var(--sub);display:inline-block;transform:rotate(0);transition:transform .15s}
+tr.lvl-row.open td:first-child::before{transform:rotate(90deg)}
+tr.proc-row td{font-weight:400}
+tr.proc-row td:first-child{padding-left:30px}
+tr.diff td{background:#fffbeb}
+tr.diff td:first-child{box-shadow:inset 3px 0 0 #f59e0b}
+tr.viol td{background:var(--red-soft)}
+tr.viol td:first-child{box-shadow:inset 3px 0 0 var(--red)}
+tr.phaseboot td{color:var(--sub);background:#fafbfc}
+
+/* ---------- 控件 ---------- */
+.controls{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:12px;font-size:13px;color:var(--sub)}
+.controls label{display:inline-flex;align-items:center;gap:6px}
+input[type=text],input[type=number],select{height:32px;border:1px solid var(--line);border-radius:8px;padding:0 10px;font-size:13px;background:#fff;color:var(--txt);font-family:var(--font)}
+input[type=number]{width:84px}
+input[type=text]:focus,input[type=number]:focus,select:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+input[type=checkbox]{accent-color:var(--brand);width:15px;height:15px}
+.btn{height:32px;border:1px solid var(--line);border-radius:8px;padding:0 14px;font-size:13px;background:#fff;color:var(--txt);cursor:pointer;font-family:var(--font)}
+.btn:hover{border-color:#c7cfdd;background:#f8fafc}
+.btn.ghost{background:#fff}
+.btn:focus-visible{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+
+/* ---------- 多选选择器 ---------- */
+.mp{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:6px;border:1px solid var(--line);border-radius:10px;background:#fff;padding:6px 8px;min-height:44px;margin-bottom:12px}
+.mp:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+.mp-chip{display:inline-flex;align-items:center;gap:6px;background:var(--brand-soft);color:#3730a3;border-radius:999px;padding:3px 6px 3px 10px;font-size:12px;font-weight:500}
+.mp-chip i{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
+.mp-chip b{cursor:pointer;color:#818cf8;font-weight:600;padding:0 4px;line-height:1}
+.mp-chip b:hover{color:var(--red)}
+.mp-input{flex:1;min-width:150px;border:none;outline:none;height:28px;font-size:13px;background:transparent;color:var(--txt);font-family:var(--font);padding:0 4px}
+.mp-clear{border:none;background:none;color:var(--sub);font-size:12px;cursor:pointer;padding:2px 6px;font-family:var(--font)}
+.mp-clear:hover{color:var(--red)}
+.mp-menu{position:absolute;top:calc(100% + 4px);left:0;right:0;max-height:280px;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(16,24,40,.12);z-index:60;display:none}
+.mp-menu.open{display:block}
+.mp-it{padding:7px 12px;font-size:13px;cursor:pointer}
+.mp-it:hover{background:#f8faff}
+.mp-it.muted{cursor:default}
+.mp-it.muted:hover{background:none}
+
+/* ---------- 图表 / 其它 ---------- */
+.chart{width:100%;height:340px}
+.chart-tall{height:460px}
+.mono{font-family:Consolas,"Courier New",monospace;font-size:12px}
+.strip{display:flex;gap:2px;align-items:center;margin:3px 0}
+.strip .cell{width:18px;height:14px;border-radius:4px;display:inline-block}
+.strip .cell.empty{background:#f1f5f9;border:1px dashed #cbd5e1}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--sub);margin:6px 0 10px}
+.legend .lg{display:flex;align-items:center;gap:5px}
+.legend .sw{width:12px;height:12px;border-radius:4px;display:inline-block}
+.pkg-cols{display:grid;gap:14px}
+.mono-list{list-style:none;margin:8px 0 0;padding:0;font-family:Consolas,"Courier New",monospace;font-size:12px;max-height:200px;overflow:auto}
+.mono-list li{padding:3px 0;border-bottom:1px dashed var(--line-soft);word-break:break-all}
+ul.findings{list-style:none;margin:0;padding:0}
+ul.findings li{position:relative;padding-left:16px;margin:10px 0;line-height:1.6;overflow-wrap:anywhere}
+ul.findings li::before{content:'';position:absolute;left:2px;top:9px;width:6px;height:6px;border-radius:50%;background:var(--brand)}
+details.info{border:1px solid var(--line);background:#fbfcfe;border-radius:10px;margin-bottom:16px;font-size:12.5px;color:var(--sub)}
+details.info summary{cursor:pointer;padding:9px 14px;font-weight:500;list-style:none;display:flex;align-items:center;user-select:none}
+details.info summary::-webkit-details-marker{display:none}
+details.info summary::before{content:'ⓘ';color:var(--brand);margin-right:7px}
+details.info summary::after{content:'▸';margin-left:auto;color:#94a3b8;transition:transform .15s}
+details.info[open] summary::after{transform:rotate(90deg)}
+details.info .info-body{padding:10px 14px;border-top:1px dashed var(--line);line-height:1.6}
+details.info .info-body code{background:#eef2f7;padding:1px 5px;border-radius:4px;font-family:Consolas,monospace}
+.warn{position:relative;background:var(--red-soft);border:1px solid #fecdd3;color:#9f1239;border-radius:10px;padding:10px 14px 10px 34px;font-size:13px;margin-bottom:16px;line-height:1.6}
+.warn::before{content:'⚠';position:absolute;left:13px;top:10px}
+.wake{display:grid;grid-template-columns:1fr auto auto auto 1fr;gap:10px;align-items:center;margin-top:10px}
+.wake .mid{display:flex;align-items:center;background:var(--brand-soft);color:#3730a3;border-radius:999px;padding:8px 18px;font-weight:600;font-size:13px;white-space:nowrap}
+.wake .warr{color:#94a3b8;font-size:15px}
+.wake .box{background:#fbfcfe;border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:12.5px;align-self:stretch}
+.wake .box h5{margin:0 0 8px;font-size:12.5px;color:var(--sub);font-weight:600}
+.wake .box ul{margin:0;padding-left:16px}
+.wake .box li{margin:4px 0;line-height:1.5}
+.pill{display:inline-flex;align-items:center;background:#f8fafc;border:1px solid var(--line-soft);border-radius:999px;padding:1px 10px;font-size:12px;margin:2px 4px 2px 0}
+.pill i{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;flex:none}
+td.comp{white-space:normal;word-break:break-all;min-width:220px;max-width:380px}
+#procOverlay{position:fixed;inset:0;background:var(--bg);z-index:100;overflow:auto;display:none}
+#procOverlay.open{display:block}
+#procOverlay .inner{max-width:1400px;margin:0 auto;padding:20px}
+.pd-head{margin:14px 0 14px}
+.pd-head h2{font-size:20px;margin:0 0 8px;word-break:break-all;font-weight:600}
+.pd-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+@media(max-width:800px){.pd-stats{grid-template-columns:repeat(2,1fr)}}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.stat .t{font-size:12px;color:var(--sub);margin-bottom:5px}
+.stat .v{font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+.stat .v .uu{font-size:12px;color:var(--sub);font-weight:400}
+.stat .v .delta{font-size:13px}
+.mdraw{white-space:pre-wrap;font-family:Consolas,"Courier New",monospace;font-size:12.5px;background:#f8fafc;color:var(--txt);border:1px solid var(--line);padding:16px;border-radius:10px;overflow:auto;max-height:640px}
+.mdview{max-width:980px}
+.mdview h1{font-size:20px;margin:24px 0 10px;border-bottom:1px solid var(--line);padding-bottom:8px}
+.mdview h2{font-size:17px;margin:22px 0 8px;border-bottom:1px solid var(--line-soft);padding-bottom:6px}
+.mdview h3{font-size:15px;margin:18px 0 6px}
+.mdview p{margin:8px 0;line-height:1.7}
+.mdview ul{margin:8px 0;padding-left:20px}
+.mdview li{margin:4px 0}
+.mdview .tbl-wrap{margin:10px 0}
+.mdview code{background:#f1f5f9;padding:1px 5px;border-radius:4px;font-family:Consolas,monospace;font-size:12.5px}
+.foot{color:var(--sub);font-size:12px;text-align:center;padding:10px 0 0}
+
+.sev{display:inline-block;padding:1px 9px;border-radius:999px;font-size:11px;font-weight:600;margin-right:6px}
+.sev-high{background:var(--red-soft);color:var(--red)}
+.sev-mid{background:#fffbeb;color:#b45309}
+.sev-low{background:#f5f3ff;color:#6d28d9}
+.sev-info{background:#eff6ff;color:#1d4ed8}
+th.sort:hover{background:#eef2ff}
+.pname{max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pname a{display:block;overflow:hidden;text-overflow:ellipsis}
+.lvcell{white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis}
+</style>
+</head>
+<body>
+<header id="topbar">
+  <div class="bar-row">
+    <div class="brand"><span class="logo">M</span><h1>动态内存对比分析<span class="sub">memscope</span></h1></div>
+    <div class="chips">
+      <span class="chip chip-a"><i class="dot"></i>基线 A：<b id="chipA"></b></span>
+      <span class="chip chip-b"><i class="dot"></i>对比 B：<b id="chipB"></b></span>
+    </div>
+    <div class="toggles">
+      <span class="segtrack"><button class="seg" data-m="pss">PSS</button><button class="seg active" data-m="rss">RSS</button></span>
+      <label class="switch"><input type="checkbox" id="incCached"><span class="sl"></span><span>包含 Cached</span></label>
+    </div>
+  </div>
+  <nav id="tabnav"></nav>
+</header>
+<main id="main">
+  <section class="tab-page" id="page-overview"></section>
+  <section class="tab-page" id="page-system"></section>
+  <section class="tab-page" id="page-levels"></section>
+  <section class="tab-page" id="page-procs"></section>
+  <section class="tab-page" id="page-inhouse"></section>
+  <section class="tab-page" id="page-events"></section>
+  <section class="tab-page" id="page-pressure"></section>
+  <section class="tab-page" id="page-risk"></section>
+  <section class="tab-page" id="page-report"></section>
+  <div class="foot" id="foot"></div>
+</main>
+<div id="procOverlay"><div class="inner" id="procInner"></div></div>
+
+<script>//__ECHARTS_INLINE//</script>
+<script>const DATA = /*__RESULT_JSON__*/null;</script>
+<script>
+'use strict';
+/* ============ 基础 ============ */
+const LA = DATA.labels[0], LB = DATA.labels[1];
+const DS = DATA.datasets;
+let metric = 'rss';
+let includeCached = false;
+const MV = () => DATA.metrics[metric];
+const FONT = '"Segoe UI Variable","Segoe UI","Microsoft YaHei UI","Microsoft YaHei","PingFang SC",system-ui,sans-serif';
+const LEVEL_COLORS = {'Native':'#64748b','System':'#0ea5e9','Persistent':'#8b5cf6','Persistent Service':'#a78bfa','Foreground':'#22c55e','Visible':'#84cc16','Perceptible':'#eab308','Perceptible Medium':'#f59e0b','Perceptible Low':'#f97316','Backup':'#a16207','Heavy Weight':'#78350f','A Services':'#ec4899','Home':'#10b981','Previous':'#78716c','B Services':'#14b8a6','Cached':'#94a3b8'};
+const PROC_PALETTE = ['#0ea5e9','#e11d48','#8b5cf6','#16a34a','#f97316','#0891b2','#be185d','#65a30d','#7c3aed','#b45309'];
+const CA = '#3b82f6', CB = '#f59e0b';
+const lvColor = l => LEVEL_COLORS[l] || '#475569';
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const fmt = (v,d) => v==null ? '—' : (+v).toFixed(d==null?2:d);
+const fmt0 = v => v==null ? '—' : Math.round(v).toLocaleString();
+const cardHd = (t,s,r)=>'<div class="card-hd"><div><h3>'+t+'</h3>'+(s?'<div class="sub">'+s+'</div>':'')+'</div>'+(r?'<div class="card-hd-r">'+r+'</div>':'')+'</div>';
+function gapCls(gap, reversed){
+  if (gap==null || gap===0) return '';
+  const worse = reversed ? gap<0 : gap>0;
+  return worse ? 'gap-pos' : 'gap-neg';
+}
+function deltaCls(gap, reversed, gapt){
+  if (gapt==='新增') return 'bad';
+  if (gapt==='消失') return 'good';
+  if (gap==null || gap===0) return '';
+  return (reversed ? gap<0 : gap>0) ? 'bad' : 'good';
+}
+function deltaBadge(txt, cls, gap){
+  const arrow = (gap==null || gap===0) ? '' : (gap>0?'▲ ':'▼ ');
+  return '<span class="delta'+(cls?' '+cls:'')+'">'+arrow+esc(txt)+'</span>';
+}
+function gapCells(ra, rb, gapt, gapp, reversed){
+  const gap = rb-ra;
+  const txt = gapt || (gapp==null?'—':(gapp>0?'+':'')+gapp.toFixed(1)+'%');
+  const cls = gapCls(gap, reversed) || (gapt==='新增'?'gap-pos':gapt==='消失'?'gap-neg':'');
+  const badge = txt==='—' ? '<span class="muted">—</span>' : deltaBadge(txt, deltaCls(gap, reversed, gapt), gap);
+  return '<td class="num '+cls+'">'+fmt(gap)+'</td><td class="num">'+badge+'</td>';
+}
+function gapCellP(p, reversed){ return gapCells(p.da.mi, p.db.mi, p.gapt, p.gapp, reversed); }
+function sevBadge(sev){ const cn={high:'高',mid:'中',low:'低',info:'参考'}[sev]||sev;
+  return '<span class="sev sev-'+sev+'">'+cn+'</span>'; }
+const _thrLv = {a:{}, b:{}};
+const _thrProc = {a:{}, b:{}};
+['a','b'].forEach(sd=>{ const st=DATA.standards[sd]; if(!st) return;
+  st.levels.forEach(r=>_thrLv[sd][r.name]=r.thr);
+  if(st.free_ram) _thrLv[sd]['Free RAM']=st.free_ram.thr;
+  st.procs.forEach(r=>_thrProc[sd][r.name]=r.thr);
+});
+const IH_NOTE = '<details class="info"><summary>自研应用判定规则</summary><div class="info-body">自研应用判定：' +
+  (DATA.inhouse.whitelist_src ? '白名单 <b>'+esc(DATA.inhouse.whitelist_src)+'</b>（'+DATA.inhouse.whitelist_count+' 项）+ ' : '未提供白名单，') +
+  '前缀匹配（'+esc(DATA.inhouse.prefixes_src||'')+'：'+DATA.inhouse.prefixes.join(' ')+'）。进程名按 <code>包名:子进程</code> 取包名匹配。</div></details>';
+
+/* ============ 多选 / 图表 ============ */
+function multiPicker(o){
+  const el = o.el;
+  el.classList.add('mp');
+  el.innerHTML = '<input class="mp-input" type="text" placeholder="'+esc(o.placeholder||'搜索添加…')+'"><button type="button" class="mp-clear">清空</button><div class="mp-menu"></div>';
+  const input = el.querySelector('.mp-input'), menu = el.querySelector('.mp-menu');
+  const sel = o.selected.slice();
+  const emit = ()=>o.onChange(sel.slice());
+  const drawChips = ()=>{
+    el.querySelectorAll('.mp-chip').forEach(c=>c.remove());
+    sel.forEach((name,idx)=>{
+      const c = document.createElement('span');
+      c.className = 'mp-chip';
+      c.innerHTML = '<i style="background:'+o.colorOf(name,idx)+'"></i>'+esc(name)+'<b title="移除">×</b>';
+      c.querySelector('b').onclick = ()=>{ sel.splice(idx,1); drawChips(); emit(); };
+      el.insertBefore(c, input);
+    });
+  };
+  const hide = ()=>menu.classList.remove('open');
+  const show = ()=>{
+    const q = input.value.trim().toLowerCase();
+    const list = o.options.filter(n=>!sel.includes(n) && (!q || n.toLowerCase().includes(q))).slice(0,50);
+    menu.innerHTML = list.map(n=>'<div class="mp-it" data-n="'+esc(n)+'">'+esc(n)+'</div>').join('')
+      || '<div class="mp-it muted">无匹配项</div>';
+    menu.classList.add('open');
+    menu.querySelectorAll('.mp-it[data-n]').forEach(it=>{
+      it.onmousedown = e=>{ e.preventDefault(); sel.push(it.dataset.n); input.value=''; drawChips(); emit(); show(); };
+    });
+  };
+  input.addEventListener('focus', show);
+  input.addEventListener('input', show);
+  input.addEventListener('keydown', e=>{ if(e.key==='Escape'){ hide(); input.blur(); } });
+  input.addEventListener('blur', ()=>setTimeout(hide,150));
+  el.querySelector('.mp-clear').onclick = ()=>{ sel.length=0; drawChips(); emit(); };
+  drawChips();
+}
+document.addEventListener('mousedown', e=>{
+  document.querySelectorAll('.mp-menu.open').forEach(m=>{ if(!m.parentElement.contains(e.target)) m.classList.remove('open'); });
+});
+echarts.registerTheme('ms', {
+  color: [CA,CB].concat(PROC_PALETTE),
+  textStyle: {fontFamily: FONT},
+  legend: {itemWidth:14, itemHeight:8, textStyle:{color:'#475569'}},
+  tooltip: {backgroundColor:'#fff', borderWidth:0, padding:[10,12], textStyle:{color:'#0f172a',fontSize:12},
+            extraCssText:'box-shadow:0 6px 20px rgba(15,23,42,.14);border-radius:8px;'},
+  categoryAxis: {axisLine:{lineStyle:{color:'#e5e7eb'}}, axisTick:{lineStyle:{color:'#e5e7eb'}},
+                 axisLabel:{color:'#64748b'}, splitLine:{show:false}, splitArea:{show:false}},
+  valueAxis: {axisLine:{show:false}, axisTick:{show:false}, axisLabel:{color:'#64748b'},
+              splitLine:{lineStyle:{color:'#eef2f7',type:'dashed'}}, splitArea:{show:false}},
+  bar: {itemStyle:{borderRadius:[4,4,0,0]}, barMaxWidth:28},
+  line: {symbol:'circle', symbolSize:5, lineStyle:{width:2}}
+});
+const LIVE_CHARTS = new Set();
+function makeChart(el){
+  const old = echarts.getInstanceByDom(el);
+  if (old) old.dispose();
+  const ch = echarts.init(el,'ms');
+  LIVE_CHARTS.add(ch);
+  requestAnimationFrame(()=>ch.resize());
+  return ch;
+}
+window.addEventListener('resize', ()=>LIVE_CHARTS.forEach(c=>c.resize()));
+
+/* ---- 时间轴序列：x=测试开始小时数 ---- */
+function tsData(dsIdx, series){
+  const H = DS[dsIdx].hours, R = DS[dsIdx].rounds, T = DS[dsIdx].start_times;
+  const out = [];
+  (series||[]).forEach((v,i)=>{ if(v!=null) out.push({value:[H[i],v], r:R[i], t:T[i]}); });
+  return out;
+}
+function abLine(dsIdx, series){
+  const a = dsIdx===0;
+  return {name:(a?'A '+LA:'B '+LB), type:'line', showSymbol:false, sampling:'lttb',
+    data: tsData(dsIdx, series), itemStyle:{color:a?CA:CB},
+    lineStyle:{color:a?CA:CB, type:a?'solid':'dashed', width:1.6}};
+}
+function tsTip(ps){
+  let h='';
+  ps.forEach(p=>{ const d=p.data||{};
+    h += (p.marker||'')+esc(p.seriesName)+' <b>'+fmt(p.value[1])+'</b>'
+      +(d.r!=null?' <span class="muted">第'+d.r+'轮 '+(d.t||'')+'</span>':'')+'<br>'; });
+  const d0 = ps[0] && ps[0].data;
+  return (d0 ? 't+'+(+ps[0].value[0]).toFixed(2)+'h<br>' : '') + h;
+}
+function tsOption(series, extra){
+  const o = {tooltip:{trigger:'axis', formatter:tsTip}, legend:{type:'scroll',top:0},
+    grid:{top:40,left:66,right:20,bottom:58},
+    xAxis:{type:'value',min:0,axisLabel:{formatter:v=>(+v).toFixed(0)+'h'}},
+    yAxis:{type:'value',name:'MB'},
+    dataZoom:[{type:'inside'},{type:'slider',height:18,bottom:8}],
+    series};
+  if (extra) Object.assign(o, extra);
+  return o;
+}
+function thrMarkLine(vals){
+  const data=[];
+  vals.forEach(v=>{ if(v!=null && v.y!=null) data.push({yAxis:v.y, name:v.n, lineStyle:{color:v.c,type:'dashed'}, label:{formatter:v.n, position:'insideEndTop', color:v.c, fontSize:11}}); });
+  return data.length? {silent:true, symbol:'none', data} : null;
+}
+
+/* ============ 路由 ============ */
+const PAGES = {overview:'概览', system:'整机', levels:'层级', procs:'进程',
+               inhouse:'自研', events:'查杀与稳定性', pressure:'内存压力',
+               risk:'风险', report:'报告'};
+const RENDER = {};
+const state = {tab:'overview', sysSel:null, lvSel:null, prSel:null, psSel:null,
+               pkKw:'', pkLevel:'', pkInhouse:false, pkSigOnly:false, pkResident:false, pkLeak:false,
+               pkGapMin:DATA.meta.gap_abs, pkSort:'gap', pkDir:-1,
+               devAll:false, mdRaw:false, lvInit:false};
+function parseHash(){
+  const q = new URLSearchParams(location.hash.replace(/^#/,''));
+  return {tab:q.get('tab'), proc:q.get('proc'), metric:q.get('metric')};
+}
+function setHash(patch){
+  const q = new URLSearchParams(location.hash.replace(/^#/,''));
+  for (const k in patch){ if(patch[k]==null) q.delete(k); else q.set(k, patch[k]); }
+  const h = q.toString();
+  if (location.hash.slice(1) !== h) location.hash = h;
+}
+function applyMetric(m){
+  if (!DATA.metrics[m]) return;
+  metric = m;
+  document.querySelectorAll('.toggles .seg').forEach(x=>x.classList.toggle('active', x.dataset.m===m));
+}
+function route(){
+  const p = parseHash();
+  if (p.metric) applyMetric(p.metric);
+  if (p.proc){ openProc(p.proc); return; }
+  document.getElementById('procOverlay').classList.remove('open');
+  const tab = (p.tab && PAGES[p.tab]) ? p.tab : 'overview';
+  state.tab = tab;
+  document.querySelectorAll('#tabnav button').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+  document.querySelectorAll('.tab-page').forEach(s=>s.classList.toggle('active', s.id==='page-'+tab));
+  RENDER[tab]();
+  window.scrollTo(0,0);
+}
+window.addEventListener('hashchange', route);
+const nav = document.getElementById('tabnav');
+for (const id in PAGES){
+  const b = document.createElement('button');
+  b.textContent = PAGES[id]; b.dataset.tab = id;
+  b.onclick = ()=>{ setHash({tab:id, proc:null}); };
+  nav.appendChild(b);
+}
+document.getElementById('chipA').textContent = LA;
+document.getElementById('chipB').textContent = LB;
+document.getElementById('foot').textContent = '由 '+DATA.meta.tool+' 生成 · A '+LA+' vs B '+LB;
+document.querySelectorAll('.toggles .seg').forEach(b=>{
+  b.onclick = ()=>{ if(b.dataset.m!==metric) setHash({metric:b.dataset.m}); };
+});
+document.getElementById('incCached').onchange = e=>{
+  includeCached = e.target.checked;
+  if (document.getElementById('procOverlay').classList.contains('open')) return;
+  RENDER[state.tab]();
+};
+applyMetric(new URLSearchParams(location.hash.replace(/^#/,'')).get('metric') || 'rss');
+
+/* ============ 小部件 ============ */
+function procTags(p){
+  const t = [];
+  if (p.da.k>0 && p.db.k===0) t.push('<span class="tag tag-a">仅A</span>');
+  if (p.db.k>0 && p.da.k===0) t.push('<span class="tag tag-b">仅B</span>');
+  if (p.inhouse) t.push('<span class="tag tag-ih">自研'+(p.ih_src==='whitelist'?'·白':'')+'</span>');
+  if (p.cached_only) t.push('<span class="tag tag-cached">Cached</span>');
+  if (p.sig) t.push('<span class="tag tag-sig">显著</span>');
+  if (p.resident_a) t.push('<span class="tag tag-lv">常驻A</span>');
+  if (p.resident_b) t.push('<span class="tag tag-lv">常驻B</span>');
+  if (p.leak_a||p.leak_b) t.push('<span class="tag tag-sig">泄漏'+(p.leak_a?'A':'')+(p.leak_b?'B':'')+'</span>');
+  return t.join('');
+}
+const showProc = p => includeCached || !p.cached_only;
+function procLink(name){ return '<a href="#proc='+encodeURIComponent(name)+'&metric='+metric+'">'+esc(name)+'</a>'; }
+function kpiCard(name, src, va, vb, unit, reversed, nd){
+  const g = (va==null||vb==null) ? null : vb-va;
+  return '<div class="kpi"><div class="kpi-hd"><span class="kpi-name">'+esc(name)+'</span><span class="kpi-src">'+esc(src)+'</span></div>'
+    +'<div class="kpi-v">'+fmt(vb,nd)+'<span class="u">'+unit+'</span></div>'
+    +'<div class="kpi-ab"><span style="color:var(--c-a)">A '+fmt(va,nd)+'</span><span class="arr">→</span><span style="color:var(--c-b)">B '+fmt(vb,nd)+'</span></div>'
+    +'<div class="kpi-delta">'+(g==null?'<span class="muted">—</span>':deltaBadge((g>0?'+':'')+fmt(g,nd)+' '+unit, deltaCls(g,reversed,null), g))+'</div></div>';
+}
+function lvRow(name){ return MV().level_rows.find(r=>r.level===name); }
+function sysRow(name){ return DATA.system.find(r=>r.name===name); }
+
+/* ============ 1. 概览 ============ */
+RENDER.overview = function(){
+  const el = document.getElementById('page-overview');
+  let h = '';
+  const warns = DS.map((d,i)=>d.warnings.map(w=>String.fromCharCode(65+i)+'：'+w)).flat();
+  if (warns.length) h += '<div class="warn">'+warns.map(esc).join('<br>')+'</div>';
+  // 判定对照
+  h += '<div class="card">'+cardHd('测试判定','平台 Exception_Summary_Report vs memscope 阈值判定')
+    +'<div class="tbl-wrap no-max"><table><thead><tr><th></th><th>平台判定</th><th>memscope 判定</th><th>超标项</th><th class="num">有效轮</th><th class="num">无效轮</th><th class="num">时长 h</th><th class="num">重启</th></tr></thead><tbody>';
+  ['a','b'].forEach((sd,i)=>{
+    const st = DATA.standards[sd], d = DS[i];
+    const plat = d.platform.dynamic_result || '—';
+    const ver = st ? st.verdict : '—';
+    const items = st && st.fail_items.length ? st.fail_items.join('、') : '—';
+    h += '<tr><td><b>'+String.fromCharCode(65+i)+'</b></td>'
+      +'<td>'+(plat==='Fail'?'<span class="st st-bad">Fail</span>':'<span class="st st-ok">'+esc(plat)+'</span>')+'</td>'
+      +'<td>'+(st?(ver==='Fail'?'<span class="st st-bad">Fail</span>':'<span class="st st-ok">Pass</span>'):'<span class="muted">无阈值</span>')+'</td>'
+      +'<td>'+esc(items)+'</td><td class="num">'+d.n+'</td><td class="num">'+d.failed_rounds.length+'</td><td class="num">'+fmt(d.hours_total,1)+'</td><td class="num">'+d.reboots.length+'</td></tr>';
+  });
+  h += '</tbody></table></div></div>';
+  // KPI
+  const ev = DATA.events;
+  h += '<div class="card">'+cardHd('关键指标','RSS 均值口径 · MB；LMK=次/小时')+'<div class="grid-kpi">';
+  const lvNames = ['Native','System','Persistent','Visible'];
+  lvNames.forEach(lv=>{
+    const r = lvRow(lv); if(!r) return;
+    h += kpiCard(lv+' RSS', '层级均值', r.da.mi, r.db.mi, 'MB', false);
+  });
+  const stA = DATA.standards.a, stB = DATA.standards.b;
+  const fr = sysRow('Free RAM');
+  h += kpiCard('Free RAM 均值', 'dumpsys tail · 高好', fr.da.mean, fr.db.mean, 'MB', true);
+  h += kpiCard('Free RAM P10', '下限阈值 '+(stB&&stB.free_ram?fmt(stB.free_ram.thr,0):'—'),
+               stA&&stA.free_ram?stA.free_ram.p10:null, stB&&stB.free_ram?stB.free_ram.p10:null, 'MB', true);
+  h += kpiCard('LMK 次/小时', 'killinfo', ev.a.lmk.per_hour, ev.b.lmk.per_hour, '/h', false);
+  h += kpiCard('ANR / crash', 'B 侧 '+ev.b.anr.length+'/'+ev.b.crash.length,
+               ev.a.anr.length+ev.a.crash.length, ev.b.anr.length+ev.b.crash.length, '次', false, 0);
+  h += kpiCard('重启次数', 'uptime 回退', DS[0].reboots.length, DS[1].reboots.length, '次', false, 0);
+  h += '</div></div>';
+  // findings top8
+  h += '<div class="card">'+cardHd('自动结论 Top '+Math.min(8,DATA.findings.length),'共 '+DATA.findings.length+' 条 · 全部见「风险」页',
+      '<a href="#tab=risk">全部 →</a>')
+    +'<ul class="findings">'
+    + DATA.findings.slice(0,8).map(f=>'<li>'+sevBadge(f.sev)+'<a href="'+esc(f.link)+'">'+esc(f.title)+'</a> <span class="muted">'+esc(f.detail)+'</span></li>').join('')
+    +'</ul></div>';
+  // 设备信息 + 包差异
+  const pd = DATA.pkg_diff;
+  h += '<div class="row-2col">'
+    +'<div class="card">'+cardHd('设备与测试信息','差异项高亮')
+    +'<div class="tbl-wrap"><table><thead><tr><th>字段</th><th>基线 A</th><th>对比 B</th></tr></thead><tbody>'
+    + DATA.device_diff.map(r=>'<tr'+(r.diff?' class="diff"':'')+'><td>'+esc(r.field)+'</td><td>'+esc(r.a)+'</td><td'+(r.diff?' class="bv"':'')+'>'+esc(r.b)+'</td></tr>').join('')
+    +'</tbody></table></div></div>'
+    +'<div class="card">'+cardHd('预装包差异','A '+DS[0].packages.length+' 个 / B '+DS[1].packages.length+' 个')
+    +'<div class="pkg-cols">'
+    +'<div><div class="sec-h">仅 A<span class="cnt">'+pd.a.length+'</span></div><ul class="mono-list">'+(pd.a.map(x=>'<li>'+esc(x)+'</li>').join('')||'<li class="muted">无</li>')+'</ul></div>'
+    +'<div><div class="sec-h">仅 B<span class="cnt">'+pd.b.length+'</span></div><ul class="mono-list">'+(pd.b.map(x=>'<li>'+esc(x)+'</li>').join('')||'<li class="muted">无</li>')+'</ul></div>'
+    +'</div></div></div>';
+  el.innerHTML = h;
+};
+
+/* ============ 2. 整机 ============ */
+RENDER.system = function(){
+  const el = document.getElementById('page-system');
+  const defs = DATA.system;
+  if (!state.sysSel) state.sysSel = ['Free RAM','MemAvailable','Used RAM','in swap'].filter(n=>defs.some(d=>d.name===n));
+  state.sysSel = state.sysSel.filter(n=>defs.some(d=>d.name===n));
+  let h = '<div class="card">'+cardHd('整机内存指标','出现轮均值 / MB · 斜率 MB/h')+'<div class="tbl-wrap"><table><thead><tr>'
+    +'<th>指标</th><th>来源</th><th class="num">A 均值</th><th class="num">B 均值</th><th class="num">GAP</th><th class="num">GAP%</th>'
+    +'<th class="num">A P90</th><th class="num">B P90</th><th class="num">A 最大</th><th class="num">B 最大</th>'
+    +'<th class="num">斜率A</th><th class="num">斜率B</th><th>泄漏</th></tr></thead><tbody>';
+  defs.forEach(d=>{
+    h += '<tr><td>'+esc(d.name)+'</td><td class="muted">'+esc(d.src)+'</td><td class="num">'+fmt(d.da.mean)+'</td><td class="num">'+fmt(d.db.mean)+'</td>'
+      + gapCells(d.da.mean||0, d.db.mean||0, d.gapt, d.gapp, d.hb)
+      + '<td class="num">'+fmt(d.da.p90)+'</td><td class="num">'+fmt(d.db.p90)+'</td>'
+      + '<td class="num">'+fmt(d.da.max)+'</td><td class="num">'+fmt(d.db.max)+'</td>'
+      + '<td class="num">'+fmt(d.ta&&d.ta.slope)+'</td><td class="num">'+fmt(d.tb&&d.tb.slope)+'</td>'
+      + '<td>'+(d.leak_a?'<span class="tag tag-sig">A</span>':'')+(d.leak_b?'<span class="tag tag-sig">B</span>':'')+'</td></tr>';
+  });
+  h += '</tbody></table></div></div>';
+  h += '<div class="card">'+cardHd('逐轮走势','x=测试小时 · 实线=A 虚线=B · 滚轮缩放')
+    +'<div id="sysPick"></div><div id="sysChart" class="chart chart-tall"></div></div>';
+  el.innerHTML = h;
+  const draw = ()=>{
+    const series=[];
+    state.sysSel.forEach((t,idx)=>{
+      const d = defs.find(x=>x.name===t); if(!d) return;
+      const col = PROC_PALETTE[idx%PROC_PALETTE.length];
+      const solo = state.sysSel.length===1;
+      [{s:d.a,sd:0,sfx:'A',dash:false},{s:d.b,sd:1,sfx:'B',dash:true}].forEach(c=>{
+        series.push({name:t+'·'+c.sfx, type:'line', showSymbol:false, sampling:'lttb',
+          data:tsData(c.sd,c.s), itemStyle:{color:solo?(c.sd?CB:CA):col},
+          lineStyle:{color:solo?(c.sd?CB:CA):col,type:c.dash?'dashed':'solid',width:1.4}});
+      });
+    });
+    makeChart(document.getElementById('sysChart')).setOption(tsOption(series));
+  };
+  multiPicker({el:document.getElementById('sysPick'), options:defs.map(d=>d.name), selected:state.sysSel,
+    colorOf:(n,idx)=>PROC_PALETTE[idx%PROC_PALETTE.length],
+    onChange:sel=>{state.sysSel=sel;draw();}, placeholder:'搜索添加指标…'});
+  draw();
+};
+
+/* ============ 3. 层级 ============ */
+RENDER.levels = function(){
+  const el = document.getElementById('page-levels');
+  const m = MV();
+  if (!state.lvInit){
+    state.lvInit = true;
+    state.lvSel = ['Native'];
+    state.lvDist = 'Native';
+  }
+  state.lvSel = (state.lvSel||[]).filter(n=>m.level_rows.some(r=>r.level===n));
+  if (!state.lvSel.length) state.lvSel = ['Native'];
+  if (!m.level_rows.some(r=>r.level===state.lvDist)) state.lvDist = 'Native';
+  let h = '<div class="card">'+cardHd('层级内存对比',metric.toUpperCase()+' · mi=轮次均值 MB')
+    +'<div class="tbl-wrap"><table><thead><tr>'
+    +'<th>层级</th><th class="num">A mi</th><th class="num">B mi</th><th class="num">GAP</th><th class="num">GAP%</th>'
+    +'<th class="num">A P50</th><th class="num">B P50</th><th class="num">A P90</th><th class="num">B P90</th><th class="num">P90差</th>'
+    +'<th class="num">A 最大</th><th class="num">B 最大</th><th class="num">进程A/B</th>'
+    +'<th class="num">阈值A</th><th class="num">阈值B</th><th>泄漏/显著</th></tr></thead><tbody>';
+  m.level_rows.forEach(r=>{
+    const ta=_thrLv.a[r.level], tb=_thrLv.b[r.level];
+    h += '<tr><td><span class="pill"><i style="background:'+lvColor(r.level)+'"></i>'+esc(r.level)+'</span></td>'
+      +'<td class="num">'+fmt(r.da.mi)+'</td><td class="num">'+fmt(r.db.mi)+'</td>'
+      + gapCells(r.da.mi, r.db.mi, r.gapt, r.gapp)
+      +'<td class="num">'+fmt(r.da.p50)+'</td><td class="num">'+fmt(r.db.p50)+'</td>'
+      +'<td class="num">'+fmt(r.da.p90)+'</td><td class="num">'+fmt(r.db.p90)+'</td><td class="num">'+fmt(r.gap_p90)+'</td>'
+      +'<td class="num">'+fmt(r.da.max)+'</td><td class="num">'+fmt(r.db.max)+'</td>'
+      +'<td class="num">'+r.ca+'/'+r.cb+'</td>'
+      +'<td class="num">'+(metric==='rss'?fmt(ta,0):'—')+'</td><td class="num">'+(metric==='rss'?fmt(tb,0):'—')+'</td>'
+      +'<td>'+(r.leak_a?'<span class="tag tag-sig">泄A</span>':'')+(r.leak_b?'<span class="tag tag-sig">泄B</span>':'')+(r.sig?'<span class="tag tag-sig">显著</span>':'')+'</td></tr>';
+  });
+  h += '</tbody></table></div></div>';
+  h += '<div class="card">'+cardHd('层级时序','x=测试小时 · markLine=各侧阈值')+'<div id="lvPick"></div><div id="lvChart" class="chart chart-tall"></div></div>';
+  h += '<div class="card">'+cardHd('分布对比','P50/P90/P95/Max · <select id="lvDistSel" style="height:28px">'+m.level_rows.map(r=>'<option'+(r.level===state.lvDist?' selected':'')+'>'+esc(r.level)+'</option>').join('')+'</select>')
+    +'<div id="lvDist" class="chart"></div></div>';
+  el.innerHTML = h;
+  const draw = ()=>{
+    const series=[];
+    const solo = state.lvSel.length===1;
+    state.lvSel.forEach((lv,idx)=>{
+      const r = m.level_rows.find(x=>x.level===lv); if(!r) return;
+      const col = lvColor(lv);
+      series.push({name:lv+'·A', type:'line', showSymbol:false, sampling:'lttb',
+        data:tsData(0,r.a), itemStyle:{color:solo?CA:col}, lineStyle:{color:solo?CA:col,width:1.6}});
+      series.push({name:lv+'·B', type:'line', showSymbol:false, sampling:'lttb',
+        data:tsData(1,r.b), itemStyle:{color:solo?CB:col}, lineStyle:{color:solo?CB:col,type:'dashed',width:1.6}});
+      const tA=_thrLv.a[lv], tB=_thrLv.b[lv];
+      const ml = (metric==='rss') ? thrMarkLine([{y:tA,n:lv+' A阈',c:CA},{y:tB,n:lv+' B阈',c:CB}]) : null;
+      if (ml) series[series.length-2].markLine = ml;
+    });
+    makeChart(document.getElementById('lvChart')).setOption(tsOption(series));
+  };
+  multiPicker({el:document.getElementById('lvPick'), options:m.level_rows.map(r=>r.level), selected:state.lvSel,
+    colorOf:(n)=>lvColor(n), onChange:sel=>{state.lvSel=sel;draw();}, placeholder:'搜索添加层级…'});
+  draw();
+  const drawDist = ()=>{
+    const r = m.level_rows.find(x=>x.level===state.lvDist); if(!r) return;
+    makeChart(document.getElementById('lvDist')).setOption({
+      tooltip:{trigger:'axis',axisPointer:{type:'shadow'}}, legend:{top:0},
+      grid:{top:36,left:66,right:20,bottom:30},
+      xAxis:{type:'category',data:['P50','P90','P95','Max','Mean']},
+      yAxis:{type:'value',name:'MB'},
+      series:[
+        {name:'A '+LA,type:'bar',data:[r.da.p50,r.da.p90,r.da.p95,r.da.max,r.da.mean].map(v=>v==null?null:+v.toFixed(2)),itemStyle:{color:CA}},
+        {name:'B '+LB,type:'bar',data:[r.db.p50,r.db.p90,r.db.p95,r.db.max,r.db.mean].map(v=>v==null?null:+v.toFixed(2)),itemStyle:{color:CB}}]
+    });
+  };
+  document.getElementById('lvDistSel').onchange = e=>{state.lvDist=e.target.value;drawDist();};
+  drawDist();
+};
+
+/* ============ 4. 进程 ============ */
+RENDER.procs = function(){
+  const el = document.getElementById('page-procs');
+  const m = MV();
+  const list = m.top.map(n=>m.procs[n]).filter(showProc);
+  let h = IH_NOTE;
+  h += '<div class="card">'+cardHd('进程对比表（'+list.length+'）',metric.toUpperCase()+' · 点击列头排序 · 点击进程进详情')
+    +'<div class="controls"><input type="text" id="pkKw" placeholder="关键词，多个用逗号分隔" value="'+esc(state.pkKw)+'" style="width:240px">'
+    +'<select id="pkLevel"><option value="">全部层级</option>'+m.levels.map(L=>'<option'+(state.pkLevel===L?' selected':'')+'>'+esc(L)+'</option>').join('')+'</select>'
+    +'<label><input type="checkbox" id="pkInhouse"'+(state.pkInhouse?' checked':'')+'> 仅自研</label>'
+    +'<label><input type="checkbox" id="pkSigOnly"'+(state.pkSigOnly?' checked':'')+'> 仅显著</label>'
+    +'<label><input type="checkbox" id="pkResident"'+(state.pkResident?' checked':'')+'> 仅常驻B</label>'
+    +'<label><input type="checkbox" id="pkLeak"'+(state.pkLeak?' checked':'')+'> 仅泄漏</label>'
+    +'<label>|GAP| ≥ <input type="number" id="pkGapMin" min="0" step="1" value="'+state.pkGapMin+'"> MB</label></div>'
+    +'<div class="tbl-wrap"><table><thead><tr>'
+    +'<th>进程</th><th>层级 A</th><th>层级 B</th>'
+    +'<th class="num sort" data-k="rate">出现率A/B</th>'
+    +'<th class="num sort" data-k="mi">mi A</th><th class="num sort" data-k="mi">mi B</th>'
+    +'<th class="num sort" data-k="p90">P90 A</th><th class="num sort" data-k="p90">P90 B</th>'
+    +'<th class="num sort" data-k="max">最大A/B</th>'
+    +'<th class="num sort" data-k="gap">GAP</th><th class="num">GAP%</th><th>标签</th></tr></thead><tbody id="pkBody"></tbody></table></div></div>';
+  el.innerHTML = h;
+  const pkBody = document.getElementById('pkBody');
+  const keyVal = (p,k,side)=> (side==='a'? p.da[k] : p.db[k]);
+  const fillPk = ()=>{
+    const kws = state.pkKw.split(/[,，]/).map(s=>s.trim()).filter(Boolean);
+    let rows = list.filter(p=>{
+      if (kws.length && !kws.some(k=>p.name.includes(k))) return false;
+      if (state.pkLevel && !p.la.includes(state.pkLevel) && !p.lb.includes(state.pkLevel)) return false;
+      if (state.pkInhouse && !p.inhouse) return false;
+      if (state.pkSigOnly && !p.sig) return false;
+      if (state.pkResident && !p.resident_b) return false;
+      if (state.pkLeak && !p.leak_a && !p.leak_b) return false;
+      if (Math.abs(p.gap) < state.pkGapMin) return false;
+      return true;
+    });
+    const k = state.pkSort, dir = state.pkDir;
+    rows.sort((x,y)=>{
+      const vx = k==='gap'? x.gap : k==='mi'? x.db.mi : k==='p90'? (x.db.p90??-1) : k==='max'? (x.db.max??-1) : x.db.rate;
+      const vy = k==='gap'? y.gap : k==='mi'? y.db.mi : k==='p90'? (y.db.p90??-1) : k==='max'? (y.db.max??-1) : y.db.rate;
+      return (vx-vy)*dir;
+    });
+    pkBody.innerHTML = rows.map(p=>'<tr><td class="name pname" title="'+esc(p.name)+'">'+procLink(p.name)+'</td>'
+      +'<td class="lvcell" title="'+esc(p.la.join('、')||'—')+'">'+esc(p.la[0]||'—')+(p.la.length>1?' +'+(p.la.length-1):'')+'</td>'
+      +'<td class="lvcell" title="'+esc(p.lb.join('、')||'—')+'">'+esc(p.lb[0]||'—')+(p.lb.length>1?' +'+(p.lb.length-1):'')+'</td>'
+      +'<td class="num">'+Math.round(p.da.rate*100)+'%/'+Math.round(p.db.rate*100)+'%</td>'
+      +'<td class="num">'+fmt(p.da.mi)+'</td><td class="num">'+fmt(p.db.mi)+'</td>'
+      +'<td class="num">'+fmt(p.da.p90)+'</td><td class="num">'+fmt(p.db.p90)+'</td>'
+      +'<td class="num">'+fmt(p.da.max)+' / '+fmt(p.db.max)+'</td>'
+      + gapCells(p.da.mi, p.db.mi, p.gapt, p.gapp) + '<td>'+procTags(p)+'</td></tr>').join('')
+      || '<tr><td colspan="12" class="muted">无匹配进程</td></tr>';
+  };
+  document.getElementById('pkKw').oninput = e=>{state.pkKw=e.target.value;fillPk();};
+  document.getElementById('pkLevel').onchange = e=>{state.pkLevel=e.target.value;fillPk();};
+  document.getElementById('pkInhouse').onchange = e=>{state.pkInhouse=e.target.checked;fillPk();};
+  document.getElementById('pkSigOnly').onchange = e=>{state.pkSigOnly=e.target.checked;fillPk();};
+  document.getElementById('pkResident').onchange = e=>{state.pkResident=e.target.checked;fillPk();};
+  document.getElementById('pkLeak').onchange = e=>{state.pkLeak=e.target.checked;fillPk();};
+  document.getElementById('pkGapMin').oninput = e=>{state.pkGapMin=+e.target.value||0;fillPk();};
+  el.querySelectorAll('th.sort').forEach(th=>{
+    th.style.cursor='pointer';
+    th.onclick = ()=>{ state.pkSort = th.dataset.k; state.pkDir = -state.pkDir; fillPk(); };
+  });
+  fillPk();
+};
+
+/* ============ 5. 自研 ============ */
+RENDER.inhouse = function(){
+  const el = document.getElementById('page-inhouse');
+  const m = MV();
+  const rows = m.top.map(n=>m.procs[n]).filter(p=>p.inhouse);
+  const nA = rows.filter(p=>p.da.k>0).length, nB = rows.filter(p=>p.db.k>0).length;
+  const sumA = rows.reduce((s,p)=>s+p.da.mi,0), sumB = rows.reduce((s,p)=>s+p.db.mi,0);
+  const g = sumB - sumA;
+  let h = IH_NOTE;
+  h += '<div class="grid-kpi auto" style="margin-bottom:16px">'
+    + kpiCard('自研进程数', metric.toUpperCase(), nA, nB, '个', false, 0)
+    + kpiCard('自研 mi 合计', metric.toUpperCase(), sumA, sumB, 'MB', false)
+    +'</div>';
+  h += '<div class="card">'+cardHd('自研进程明细','')+'<div class="tbl-wrap"><table><thead><tr>'
+    +'<th>进程</th><th>判定</th><th>层级 A</th><th>层级 B</th><th class="num">出现率A/B</th>'
+    +'<th class="num">mi A</th><th class="num">mi B</th><th class="num">均值A</th><th class="num">均值B</th>'
+    +'<th class="num">GAP</th><th class="num">GAP%</th><th>标签</th></tr></thead><tbody>'
+    + rows.map(p=>'<tr><td class="name">'+procLink(p.name)+'</td>'
+      +'<td class="muted">'+(p.ih_src==='whitelist'?'白名单':'前缀')+'</td>'
+      +'<td>'+esc(p.la.join('、')||'—')+'</td><td>'+esc(p.lb.join('、')||'—')+'</td>'
+      +'<td class="num">'+Math.round(p.da.rate*100)+'%/'+Math.round(p.db.rate*100)+'%</td>'
+      +'<td class="num">'+fmt(p.da.mi)+'</td><td class="num">'+fmt(p.db.mi)+'</td>'
+      +'<td class="num">'+fmt(p.da.mean)+'</td><td class="num">'+fmt(p.db.mean)+'</td>'
+      +gapCells(p.da.mi,p.db.mi,p.gapt,p.gapp)+'<td>'+procTags(p)+'</td></tr>').join('')
+    +'</tbody></table></div></div>';
+  el.innerHTML = h;
+};
+
+/* ============ 6. 查杀与稳定性 ============ */
+RENDER.events = function(){
+  const el = document.getElementById('page-events');
+  const ea = DATA.events.a, eb = DATA.events.b;
+  let h = '<div class="grid-kpi auto" style="margin-bottom:16px">'
+    + kpiCard('LMK 次数', 'killinfo', ea.lmk.total, eb.lmk.total, '次', false, 0)
+    + kpiCard('LMK 次/小时', '', ea.lmk.per_hour, eb.lmk.per_hour, '/h', false)
+    + kpiCard('am_kill', '', ea.am_kill.total, eb.am_kill.total, '次', false, 0)
+    + kpiCard('proc_died', '', ea.died_total, eb.died_total, '次', false, 0)
+    + kpiCard('proc_start', '反复拉起', ea.starts_total, eb.starts_total, '次', false, 0)
+    + kpiCard('am_low_memory', '', ea.lowmem_total, eb.lowmem_total, '次', false, 0)
+    +'</div>';
+  h += '<div class="card">'+cardHd('LMK 每小时分布','killinfo · test 阶段')+'<div id="lmkChart" class="chart"></div></div>';
+  // by_level / by_reason / top killed
+  const lvSet = new Set([...Object.keys(ea.lmk.by_level), ...Object.keys(eb.lmk.by_level)]);
+  const rMap = new Map();
+  [ea,eb].forEach(e=>e.lmk.by_reason.forEach(r=>{ const k=r.code+' '+r.name; rMap.set(k,(rMap.get(k)||[0,0])); }));
+  [ea,eb].forEach((e,i)=>e.lmk.by_reason.forEach(r=>{ rMap.get(r.code+' '+r.name)[i]=r.n; }));
+  const tMap = new Map();
+  [ea,eb].forEach((e,i)=>e.lmk.top.forEach(t=>{ if(!tMap.has(t.proc)) tMap.set(t.proc,{a:0,b:0,ra:null,rb:null}); const o=tMap.get(t.proc); (i?o.b=o.rb:o.a=o.ra)&&0; if(i){o.b=t.n;o.rb=t.rss_mean;}else{o.a=t.n;o.ra=t.rss_mean;} }));
+  h += '<div class="row-2col"><div class="card">'+cardHd('LMK 按层级','')
+    +'<div class="tbl-wrap h320"><table><thead><tr><th>层级</th><th class="num">A</th><th class="num">B</th></tr></thead><tbody>'
+    + [...lvSet].sort((x,y)=>((eb.lmk.by_level[y]||0)-(eb.lmk.by_level[x]||0))).map(lv=>'<tr><td>'+esc(lv)+'</td><td class="num">'+(ea.lmk.by_level[lv]||0)+'</td><td class="num">'+(eb.lmk.by_level[lv]||0)+'</td></tr>').join('')
+    +'</tbody></table></div></div>'
+    +'<div class="card">'+cardHd('LMK 按原因','kill_reason 枚举（AOSP）')
+    +'<div class="tbl-wrap h320"><table><thead><tr><th>code</th><th>原因</th><th class="num">A</th><th class="num">B</th></tr></thead><tbody>'
+    + [...rMap.entries()].sort((x,y)=>y[1][1]-x[1][1]).map(([k,v])=>{const cd=k.split(' ')[0];return '<tr><td class="num">'+esc(cd)+'</td><td>'+esc(k.slice(cd.length+1))+'</td><td class="num">'+v[0]+'</td><td class="num">'+v[1]+'</td></tr>';}).join('')
+    +'</tbody></table></div></div></div>';
+  const tops = [...tMap.entries()].sort((x,y)=>(y[1].a+y[1].b)-(x[1].a+x[1].b)).slice(0,30);
+  h += '<div class="card">'+cardHd('LMK Top 被杀进程','rss_mean=被杀时 RSS 均值 MB')
+    +'<div class="tbl-wrap"><table><thead><tr><th>进程</th><th class="num">A 次数</th><th class="num">A RSS均值</th><th class="num">B 次数</th><th class="num">B RSS均值</th></tr></thead><tbody>'
+    + tops.map(([p,o])=>'<tr><td class="name">'+procLink(p)+'</td><td class="num">'+(o.a||'')+'</td><td class="num">'+fmt(o.ra)+'</td><td class="num">'+(o.b||'')+'</td><td class="num">'+fmt(o.rb)+'</td></tr>').join('')
+    +'</tbody></table></div></div>';
+  const krMap = new Map();
+  [ea,eb].forEach((e,i)=>e.am_kill.by_reason.forEach(r=>{ if(!krMap.has(r.reason)) krMap.set(r.reason,[0,0]); krMap.get(r.reason)[i]=r.n; }));
+  h += '<div class="grid2">'
+    +'<div class="card">'+cardHd('am_kill 原因 Top','非 LMK 的主动查杀')
+    +'<div class="tbl-wrap h320"><table><thead><tr><th>reason</th><th class="num">A</th><th class="num">B</th></tr></thead><tbody>'
+    + [...krMap.entries()].sort((x,y)=>(y[1][0]+y[1][1])-(x[1][0]+x[1][1])).slice(0,20).map(([r,v])=>'<tr><td class="name">'+esc(r)+'</td><td class="num">'+v[0]+'</td><td class="num">'+v[1]+'</td></tr>').join('')
+    +'</tbody></table></div></div>'
+    +'<div class="card">'+cardHd('反复拉起 Top','am_proc_start 次数最多')
+    +'<div class="tbl-wrap h320"><table><thead><tr><th>进程</th><th class="num">A</th><th class="num">B</th></tr></thead><tbody>'
+    + (()=>{const mm=new Map();[ea,eb].forEach((e,i)=>e.start_top.forEach(t=>{if(!mm.has(t.proc))mm.set(t.proc,[0,0]);mm.get(t.proc)[i]=t.n;}));return [...mm.entries()].sort((x,y)=>(y[1][0]+y[1][1])-(x[1][0]+x[1][1])).slice(0,30).map(([p,v])=>'<tr><td class="name">'+procLink(p)+'</td><td class="num">'+v[0]+'</td><td class="num">'+v[1]+'</td></tr>').join('');})()
+    +'</tbody></table></div></div></div>';
+  h += '<div class="grid2">'
+    +'<div class="card">'+cardHd('ANR（'+ea.anr.length+' / '+eb.anr.length+'）','')
+    +'<div class="tbl-wrap h320"><table><thead><tr><th>侧</th><th>时间</th><th>进程</th><th>原因</th></tr></thead><tbody>'
+    + ea.anr.map(e=>'<tr><td>A</td><td class="mono">'+esc(e.t)+'</td><td class="name">'+esc(e.proc)+'</td><td class="name">'+esc(e.reason)+'</td></tr>').join('')
+    + eb.anr.map(e=>'<tr><td>B</td><td class="mono">'+esc(e.t)+'</td><td class="name">'+esc(e.proc)+'</td><td class="name">'+esc(e.reason)+'</td></tr>').join('')
+    +'</tbody></table></div></div>'
+    +'<div class="card">'+cardHd('crash（'+ea.crash.length+' / '+eb.crash.length+'）','')
+    +'<div class="tbl-wrap h320"><table><thead><tr><th>侧</th><th>时间</th><th>进程</th><th>原因</th></tr></thead><tbody>'
+    + ea.crash.map(e=>'<tr><td>A</td><td class="mono">'+esc(e.t)+'</td><td class="name">'+esc(e.proc)+'</td><td class="name">'+esc(e.reason)+'</td></tr>').join('')
+    + eb.crash.map(e=>'<tr><td>B</td><td class="mono">'+esc(e.t)+'</td><td class="name">'+esc(e.proc)+'</td><td class="name">'+esc(e.reason)+'</td></tr>').join('')
+    +'</tbody></table></div></div></div>';
+  const rbA = DS[0].reboots, rbB = DS[1].reboots;
+  h += '<div class="card">'+cardHd('重启（'+rbA.length+' / '+rbB.length+'）','相邻有效轮 uptime 回退')
+    +(rbA.length+rbB.length? '<ul class="findings">'
+      + rbA.map(r=>'<li>A：第 '+r.after_round+' 轮 → 第 '+r.round+' 轮之间</li>').join('')
+      + rbB.map(r=>'<li>B：第 '+r.after_round+' 轮 → 第 '+r.round+' 轮之间</li>').join('')+'</ul>'
+      : '<div class="muted">未检测到重启</div>')+'</div>';
+  el.innerHTML = h;
+  const nh = Math.max(ea.lmk.hourly.length, eb.lmk.hourly.length);
+  makeChart(document.getElementById('lmkChart')).setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}}, legend:{top:0},
+    grid:{top:36,left:50,right:20,bottom:30},
+    xAxis:{type:'category',data:Array.from({length:nh},(_,i)=>i+'h'),name:'测试小时'},
+    yAxis:{type:'value',name:'次'},
+    series:[
+      {name:'A '+LA,type:'bar',data:ea.lmk.hourly,itemStyle:{color:CA}},
+      {name:'B '+LB,type:'bar',data:eb.lmk.hourly,itemStyle:{color:CB}}]
+  });
+};
+
+/* ============ 7. 内存压力 ============ */
+RENDER.pressure = function(){
+  const el = document.getElementById('page-pressure');
+  const cs = DATA.pressure.counters;
+  if (!state.psSel) state.psSel = cs.length? [cs[0].name] : [];
+  state.psSel = state.psSel.filter(n=>cs.some(c=>c.name===n));
+  const pf = v => v==null ? '—' : (Math.abs(v)>=1000 ? fmt0(v) : fmt(v));
+  let h = '<div class="card">'+cardHd('内存压力计数器','proc_vmstat 每轮增量汇总 · /小时 = 总量/覆盖小时')
+    +'<div class="tbl-wrap"><table><thead><tr><th>计数器</th><th>单位</th>'
+    +'<th class="num">A 总量</th><th class="num">A /小时</th><th class="num">A P90/轮</th>'
+    +'<th class="num">B 总量</th><th class="num">B /小时</th><th class="num">B P90/轮</th>'
+    +'<th class="num">GAP/h</th><th class="num">GAP%</th></tr></thead><tbody>';
+  cs.forEach(c=>{
+    h += '<tr><td>'+esc(c.name)+'</td><td class="muted">'+esc(c.unit)+'</td>'
+      +'<td class="num">'+pf(c.sa&&c.sa.total)+'</td><td class="num">'+pf(c.sa&&c.sa.per_hour)+'</td><td class="num">'+pf(c.sa&&c.sa.p90)+'</td>'
+      +'<td class="num">'+pf(c.sb&&c.sb.total)+'</td><td class="num">'+pf(c.sb&&c.sb.per_hour)+'</td><td class="num">'+pf(c.sb&&c.sb.p90)+'</td>'
+      +'<td class="num">'+pf(c.gap)+'</td><td class="num">'+(c.gapp==null?'—':(c.gapp>0?'+':'')+c.gapp.toFixed(1)+'%')+'</td></tr>';
+  });
+  h += '</tbody></table></div></div>';
+  h += '<div class="card">'+cardHd('每轮增量时序','x=测试小时')+'<div id="psPick"></div><div id="psChart" class="chart chart-tall"></div></div>';
+  el.innerHTML = h;
+  const draw = ()=>{
+    const series=[];
+    state.psSel.forEach((nm,idx)=>{
+      const c = cs.find(x=>x.name===nm); if(!c) return;
+      const solo = state.psSel.length===1;
+      const col = PROC_PALETTE[idx%PROC_PALETTE.length];
+      if (c.a) series.push({name:nm+'·A', type:'line', showSymbol:false, sampling:'lttb',
+        data:tsData(0,c.a), itemStyle:{color:solo?CA:col}, lineStyle:{color:solo?CA:col,width:1.4}});
+      if (c.b) series.push({name:nm+'·B', type:'line', showSymbol:false, sampling:'lttb',
+        data:tsData(1,c.b), itemStyle:{color:solo?CB:col}, lineStyle:{color:solo?CB:col,type:'dashed',width:1.4}});
+    });
+    makeChart(document.getElementById('psChart')).setOption(tsOption(series,{yAxis:{type:'value',name:'增量/轮'}}));
+  };
+  multiPicker({el:document.getElementById('psPick'), options:cs.map(c=>c.name), selected:state.psSel,
+    colorOf:(n,idx)=>PROC_PALETTE[idx%PROC_PALETTE.length],
+    onChange:sel=>{state.psSel=sel;draw();}, placeholder:'搜索添加计数器…'});
+  draw();
+};
+
+/* ============ 8. 风险 ============ */
+RENDER.risk = function(){
+  const el = document.getElementById('page-risk');
+  let h = '';
+  ['a','b'].forEach((side,i)=>{
+    const st = DATA.standards[side];
+    h += '<div class="card">'+cardHd('健康标准对照 — '+String.fromCharCode(65+i),'RSS 口径 · 判定：<b>'+(st?st.verdict:'无阈值')+'</b>');
+    if (!st){ h += '<div class="muted">无阈值数据（缺少或无法解析 all_memory_data.xls）</div></div>'; return; }
+    if (st.levels.length || st.free_ram){
+      h += '<div class="tbl-wrap"><table><thead><tr><th>层级/指标</th><th class="num">阈值 MB</th><th class="num">均值</th><th class="num">P90/P10</th><th class="num">峰值</th><th class="num">超标轮</th><th>均值判定</th></tr></thead><tbody>';
+      if (st.free_ram){
+        const r = st.free_ram;
+        h += '<tr'+(r.viol?' class="viol"':'')+'><td>Free RAM（下限）</td><td class="num">'+fmt(r.thr)+'</td><td class="num">'+fmt(r.mean)+'</td><td class="num">'+fmt(r.p10)+'</td><td class="num">'+fmt(r.low)+'</td><td class="num">'+(r.exceed_rate*100).toFixed(1)+'%</td><td>'+(r.viol?'<span class="st st-bad">超标</span>':'<span class="st st-ok">达标</span>')+'</td></tr>';
+      }
+      st.levels.forEach(r=>{
+        h += '<tr'+(r.viol?' class="viol"':'')+'><td>'+esc(r.name)+'</td><td class="num">'+fmt(r.thr)+'</td><td class="num">'+fmt(r.mean)+'</td><td class="num">'+fmt(r.p90)+'</td><td class="num">'+fmt(r.peak)+'</td><td class="num">'+(r.exceed_rate*100).toFixed(1)+'%</td><td>'+(r.viol?'<span class="st st-bad">超标</span>':'<span class="st st-ok">达标</span>')+'</td></tr>';
+      });
+      h += '</tbody></table></div>';
+    }
+    if (st.procs.length){
+      h += '<div class="tbl-wrap" style="margin-top:12px"><table><thead><tr><th>进程（RSS）</th><th>层级</th><th class="num">阈值 MB</th><th class="num">均值</th><th class="num">峰值</th><th class="num">超标轮</th><th>均值判定</th></tr></thead><tbody>';
+      st.procs.forEach(r=>{
+        h += '<tr'+(r.viol?' class="viol"':'')+'><td class="name">'+procLink(r.name)+'</td><td>'+esc(r.level)+'</td><td class="num">'+fmt(r.thr)+'</td><td class="num">'+fmt(r.mean)+'</td><td class="num">'+fmt(r.peak)+'</td><td class="num">'+(r.exceed_rate*100).toFixed(1)+'%</td><td>'+(r.viol?'<span class="st st-bad">超标</span>':'<span class="st st-ok">达标</span>')+'</td></tr>';
+      });
+      h += '</tbody></table></div>';
+    }
+    h += '</div>';
+  });
+  if (DATA.leaks.length){
+    h += '<div class="card">'+cardHd('疑似泄漏','趋势回归 · delta≥门限 且 R²≥'+DATA.meta.leak_r2)
+      +'<div class="tbl-wrap"><table><thead><tr><th>数据集</th><th>类型</th><th>口径</th><th>对象</th><th class="num">head</th><th class="num">tail</th><th class="num">delta</th><th class="num">斜率/h</th><th class="num">R²</th></tr></thead><tbody>'
+      + DATA.leaks.map(lk=>'<tr><td>'+lk.ds+'</td><td>'+esc(lk.kind)+'</td><td>'+esc(lk.metric.toUpperCase()||'—')+'</td><td class="name">'+(lk.kind==='proc'?procLink(lk.name):esc(lk.name))+'</td><td class="num">'+fmt(lk.head)+'</td><td class="num">'+fmt(lk.tail)+'</td><td class="num">'+(lk.delta>0?'+':'')+fmt(lk.delta)+'</td><td class="num">'+(lk.slope>0?'+':'')+fmt(lk.slope)+'</td><td class="num">'+fmt(lk.r2)+'</td></tr>').join('')
+      +'</tbody></table></div></div>';
+  }
+  h += '<div class="card">'+cardHd('自动结论（'+DATA.findings.length+'）','按严重度排序')
+    +'<div class="tbl-wrap"><table><thead><tr><th>级别</th><th>类别</th><th>标题</th><th>详情</th></tr></thead><tbody>'
+    + DATA.findings.map(f=>'<tr><td>'+sevBadge(f.sev)+'</td><td>'+esc(f.cat)+'</td><td class="name"><a href="'+esc(f.link)+'">'+esc(f.title)+'</a></td><td class="name">'+esc(f.detail)+'</td></tr>').join('')
+    +'</tbody></table></div></div>';
+  el.innerHTML = h;
+};
+
+/* ============ 9. Markdown 报告 ============ */
+function mdToHtml(md){
+  const lines = md.split('\n');
+  const inline = s => esc(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/`(.+?)`/g,'<code>$1</code>');
+  let html='', i=0;
+  const parseRow = r => r.trim().replace(/^\|/,'').replace(/\|$/,'').split('|').map(c=>c.trim());
+  while (i<lines.length){
+    const l = lines[i];
+    if (/^\s*\|/.test(l)){
+      const rows=[];
+      while(i<lines.length && /^\s*\|/.test(lines[i])){rows.push(lines[i]);i++;}
+      const head=parseRow(rows[0]);
+      const body=rows.slice(2).map(parseRow);
+      html += '<div class="tbl-wrap"><table><thead><tr>'+head.map(c=>'<th>'+inline(c)+'</th>').join('')+'</tr></thead><tbody>'
+        + body.map(r=>'<tr>'+r.map(c=>'<td>'+inline(c)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
+      continue;
+    }
+    let mm;
+    if ((mm=l.match(/^###\s+(.*)/))){html+='<h3>'+inline(mm[1])+'</h3>';i++;continue;}
+    if ((mm=l.match(/^##\s+(.*)/))){html+='<h2>'+inline(mm[1])+'</h2>';i++;continue;}
+    if ((mm=l.match(/^#\s+(.*)/))){html+='<h1>'+inline(mm[1])+'</h1>';i++;continue;}
+    if (/^\s*\-\s+/.test(l)){
+      html+='<ul>';
+      while(i<lines.length && /^\s*\-\s+/.test(lines[i])){html+='<li>'+inline(lines[i].replace(/^\s*\-\s+/,''))+'</li>';i++;}
+      html+='</ul>';continue;
+    }
+    if (l.trim()===''){i++;continue;}
+    html+='<p>'+inline(l)+'</p>';i++;
+  }
+  return html;
+}
+RENDER.report = function(){
+  const el = document.getElementById('page-report');
+  const md = DATA.report_md || '';
+  el.innerHTML = '<div class="card">'+cardHd('Markdown 报告','与 report.md 内容一致',
+      '<button class="btn ghost" id="mdToggle">'+(state.mdRaw?'查看渲染效果':'查看原始 Markdown')+'</button>')
+    +(state.mdRaw ? '<div class="mdraw">'+esc(md)+'</div>' : '<div class="mdview">'+mdToHtml(md)+'</div>')
+    +'</div>';
+  document.getElementById('mdToggle').onclick = ()=>{state.mdRaw=!state.mdRaw;RENDER.report();};
+};
+
+/* ============ 进程详情 ============ */
+function distRow(d){
+  return '<td class="num">'+d.k+'/'+d.n+'</td><td class="num">'+Math.round(d.rate*100)+'%</td>'
+    +'<td class="num">'+fmt(d.mi)+'</td><td class="num">'+fmt(d.mean)+'</td><td class="num">'+fmt(d.min)+'</td>'
+    +'<td class="num">'+fmt(d.p50)+'</td><td class="num">'+fmt(d.p90)+'</td><td class="num">'+fmt(d.p95)+'</td><td class="num">'+fmt(d.max)+'</td>';
+}
+function trendRow(t){
+  if (!t) return '<td colspan="5" class="muted">出现轮 <10，不判定</td>';
+  return '<td class="num">'+fmt(t.head)+'</td><td class="num">'+fmt(t.tail)+'</td><td class="num">'+(t.delta>0?'+':'')+fmt(t.delta)+'</td><td class="num">'+(t.slope>0?'+':'')+fmt(t.slope)+'</td><td class="num">'+fmt(t.r2)+'</td>';
+}
+function openProc(name){
+  const ov = document.getElementById('procOverlay');
+  ov.classList.add('open');
+  const inner = document.getElementById('procInner');
+  const p = MV().procs[name];
+  if (!p){
+    inner.innerHTML = '<button class="btn ghost" id="procBack">← 返回</button><div class="card">当前指标（'+metric.toUpperCase()+'）下无进程 <b>'+esc(name)+'</b></div>';
+    document.getElementById('procBack').onclick = ()=>setHash({proc:null, tab:state.tab});
+    return;
+  }
+  const dc = deltaCls(p.gap, false, p.gapt);
+  const tA = metric==='rss' ? _thrProc.a[name] : null;
+  const tB = metric==='rss' ? _thrProc.b[name] : null;
+  let h = '<button class="btn ghost" id="procBack">← 返回 '+(PAGES[state.tab]||'')+'</button>'
+    +'<div class="pd-head"><h2>'+esc(name)+'</h2><div>'+procTags(p)+'<span class="tag tag-cached">'+metric.toUpperCase()+'</span>'
+    +(tA!=null||tB!=null?'<span class="tag tag-lv">阈值 A '+fmt(tA,0)+' / B '+fmt(tB,0)+' MB</span>':'')+'</div></div>'
+    +'<div class="pd-stats">'
+    +'<div class="stat"><div class="t">A mi（轮均）</div><div class="v" style="color:var(--c-a)">'+fmt(p.da.mi)+'<span class="uu"> MB</span></div></div>'
+    +'<div class="stat"><div class="t">B mi（轮均）</div><div class="v" style="color:var(--c-b)">'+fmt(p.db.mi)+'<span class="uu"> MB</span></div></div>'
+    +'<div class="stat"><div class="t">GAP</div><div class="v">'+(p.gap==null?'<span class="muted">—</span>':deltaBadge((p.gap>0?'+':'')+fmt(p.gap)+' MB', dc, p.gap))+'</div></div>'
+    +'<div class="stat"><div class="t">GAP%</div><div class="v">'+(p.gapp==null&&p.gapt==null?'<span class="muted">—</span>':deltaBadge(p.gapt||(p.gapp>0?'+':'')+(p.gapp==null?'—':p.gapp.toFixed(1))+'%', dc, p.gap))+'</div></div>'
+    +'</div>'
+    +'<div class="card">'+cardHd('逐轮走势','x=测试小时 · 实线=A '+LA+'，虚线=B '+LB+' · '+metric.toUpperCase()+' (MB)')+'<div id="pdChart" class="chart"></div></div>'
+    +'<div class="grid2">'
+    +'<div class="card">'+cardHd('分布统计','出现轮口径')+'<div class="tbl-wrap no-max"><table><thead><tr><th></th><th class="num">出现</th><th class="num">出现率</th><th class="num">mi</th><th class="num">均值</th><th class="num">最小</th><th class="num">P50</th><th class="num">P90</th><th class="num">P95</th><th class="num">最大</th></tr></thead><tbody>'
+    +'<tr><td><b>A</b></td>'+distRow(p.da)+'</tr><tr><td><b>B</b></td>'+distRow(p.db)+'</tr>'
+    +'</tbody></table></div></div>'
+    +'<div class="card">'+cardHd('趋势','线性回归 · head/tail=前/后10%中位')+'<div class="tbl-wrap no-max"><table><thead><tr><th></th><th class="num">head</th><th class="num">tail</th><th class="num">delta</th><th class="num">斜率/h</th><th class="num">R²</th></tr></thead><tbody>'
+    +'<tr><td><b>A</b></td>'+trendRow(p.ta)+'</tr><tr><td><b>B</b></td>'+trendRow(p.tb)+'</tr>'
+    +'</tbody></table></div></div></div>'
+    +'<div class="card">'+cardHd('层级出现分布','进程在各层级出现的轮数')+'<div class="tbl-wrap no-max"><table><thead><tr><th>层级</th><th class="num">A 轮数</th><th class="num">B 轮数</th></tr></thead><tbody>'
+    + (()=>{const ls=new Set([...Object.keys(p.lvc_a),...Object.keys(p.lvc_b)]);return [...ls].map(l=>'<tr><td><span class="pill"><i style="background:'+lvColor(l)+'"></i>'+esc(l)+'</span></td><td class="num">'+(p.lvc_a[l]||0)+'</td><td class="num">'+(p.lvc_b[l]||0)+'</td></tr>').join('')||'<tr><td colspan="3" class="muted">无</td></tr>';})()
+    +'</tbody></table></div></div>';
+  inner.innerHTML = h;
+  document.getElementById('procBack').onclick = ()=>setHash({proc:null, tab:state.tab});
+  const sA = abLine(0, p.a), sB = abLine(1, p.b);
+  const ml = thrMarkLine([{y:tA,n:'A阈 '+fmt(tA,0),c:CA},{y:tB,n:'B阈 '+fmt(tB,0),c:CB}]);
+  if (ml) sA.markLine = ml;
+  makeChart(document.getElementById('pdChart')).setOption(tsOption([sA, sB]));
+  ov.scrollTop = 0;
+}
+
+route();
+</script>
+</body>
+</html>

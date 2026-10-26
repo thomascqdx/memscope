@@ -1,6 +1,6 @@
 # memscope
 
-Android 静态内存测试报告 A/B 对比工具：读取两个平台测试包（zip 或解压目录），生成三份结果：
+Android 内存健康测试包（静态/动态）A/B 对比工具：读取两个平台测试包（zip/rar/解压目录），生成三份结果：
 
 - `report.md` — 中文对比报告
 - `report.html` — 单文件离线交互报告（内嵌 ECharts，支持 PSS/RSS 切换、Tab/进程路由）
@@ -20,11 +20,16 @@ pip install -e .
 memscope static compare <基线A.zip> <对比B.zip> [-o 输出目录] [--labels A B] \
     [--whitelist 白名单.txt] [--prefixes 前缀.txt] \
     [--gap-abs 5] [--gap-pct 10] [--growth-slope 1] [--sys-growth-slope 5] [--growth-r2 0.6]
+
+memscope dynamic compare <基线A.(zip|rar)> <对比B.(zip|rar)> [-o 输出目录] [--labels A B] \
+    [--tmpdir 临时目录] [--leak-pct 20] [--leak-r2 0.3] [--sys-leak-delta 100] [--rate-pct 20]
 ```
 
-- `static`：静态内存测试包（当前实现）；`dynamic`：动态内存测试包（占位，尚未实现）。
-- 输入为平台 `内存健康测试报告_*.zip` 或其解压目录；`Test Type` 字段非 `static` 时拒绝运行。
-- 默认输出到 `out/static/<A标签>_vs_<B标签>/`；标签默认取 `Rom Version`，相同则追加 `#SN`。
+- `static`：静态内存测试包；`dynamic`：动态内存测试包（monkey 长衰，默认 RSS 口径，小时时间轴，含 LMK/ANR/crash/重启/vmstat 内存压力/疑似泄漏分析）。
+- 输入为平台 `内存健康测试报告_*`（zip/rar/解压目录）；rar 依赖系统 `tar`（Win10 1803+ 自带 bsdtar），解包时剔除 debuglogger。
+- 嵌套 rounds/mobilelog zip 物化到临时目录（峰值约单包 5GB），`--tmpdir` 可改临时目录位置。
+- 动态阈值见 `--gap-abs/--gap-pct/--resident/--leak-delta/--leak-pct/--leak-r2/--sys-leak-delta/--rate-pct`。
+- 默认输出到 `out/<static|dynamic>/<A标签>_vs_<B标签>/`；标签默认取 `Rom Version`，相同则追加 `#SN`。
 - 自研进程判定：`--whitelist` 优先（命中记 `whitelist`），否则按 `--prefixes`（默认 `config/inhouse_prefixes.txt`）前缀匹配。
 
 ## 构建单文件 exe

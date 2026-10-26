@@ -17,15 +17,23 @@ pip install -e .
 python -m pytest -q
 ```
 
-Integration tests require `samples/static_memory_datas/*.zip` and are skipped when absent.
+Integration tests require `samples/static_memory_datas/*.zip` and are skipped when absent. Dynamic integration tests additionally need `$env:MEMSCOPE_SLOW=1` (loads two ~5GB packages, takes minutes):
+
+```powershell
+$env:MEMSCOPE_SLOW=1; python -m pytest -q tests/test_integration_dynamic.py
+```
 
 ## Run
 
 ```powershell
-memscope static compare <baseline.zip> <target.zip> [-o outdir] [--labels A B]
+memscope static compare <baseline.zip> <target.zip> [-o outdir] [--labels A B] [--tmpdir DIR]
+memscope dynamic compare <baseline.(zip|rar)> <target.(zip|rar)> [-o outdir] [--labels A B] [--tmpdir DIR]
 ```
 
-Outputs `report.md`, `report.html`, `data.xlsx` into `out/static/<labelA>_vs_<labelB>/` by default. `memscope dynamic compare` is a placeholder (exit 2).
+Outputs `report.md`, `report.html`, `data.xlsx` into `out/<static|dynamic>/<labelA>_vs_<labelB>/` by default.
+
+- Inputs may be platform zip / rar / extracted dirs. rar support needs system `tar` (Windows 10 1803+ ships bsdtar); `debuglogger/` is excluded during extraction.
+- Nested `tw_rpt_*_rounds.zip` / `mobilelog.zip` are materialized to a temp dir (peak temp space ≈ one package, ~5GB); use `--tmpdir` to redirect when the system temp drive is tight.
 
 ## Build single-file exe
 
@@ -42,10 +50,12 @@ $edge = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
 & $edge --headless=new --disable-gpu --window-size=1440,2400 --virtual-time-budget=20000 --screenshot=shot.png "file:///abs/path/report.html#tab=overview"
 ```
 
-Routes: `#tab=overview|system|levels|procs|inhouse|events|risk|report`, `#proc=<name>[&metric=pss|rss]`, `&metric=rss` appends to any route.
+`--screenshot` 必须使用**绝对路径**（Edge headless 会切换工作目录，相对路径报「系统找不到指定的路径」并静默退出）。
+
+Routes: `#tab=overview|system|levels|procs|inhouse|events|risk|report` (+ `pressure` for dynamic reports), `#proc=<name>[&metric=pss|rss]`, `&metric=rss` appends to any route. Dynamic reports default to `metric=rss`; time-series x axes are hours since test start.
 
 ## Conventions
 
-- `analysis.py` produces a single JSON-serializable result dict; all renderers (`render/markdown.py`, `render/html.py`, `render/excel.py`) consume it — do not re-parse datasets in renderers.
-- `report_template.html` in `src/memscope/assets/` is the UI; `mockups/` is a requirements-discussion mockup kept as reference — keep them visually aligned but they evolve separately.
+- `analysis.py` / `dynamic_analysis.py` each produce a single JSON-serializable result dict; renderers (`render/markdown.py`|`render/dynamic_markdown.py`, `render/html.py`, `render/excel.py`|`render/dynamic_excel.py`) consume it — do not re-parse datasets in renderers.
+- `report_template.html` / `report_dynamic_template.html` in `src/memscope/assets/` are the UIs; `mockups/` is a requirements-discussion mockup kept as reference — keep them visually aligned but they evolve separately.
 - `.work/` is scratch (gitignored); `samples/` and `out/` are gitignored and must not be committed.

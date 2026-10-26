@@ -10,13 +10,16 @@ from typing import Optional
 class Event:
     """一条 events_log 事件。t 为补全年份后的时间；phase ∈ boot|test。"""
     t: datetime
-    kind: str  # start | kill | died
+    kind: str  # start | kill | died | lmk | anr | crash | lowmem
     proc: str = ""
     reason: str = ""
     comp: str = ""
     caller: str = ""
     adj: str = ""
     phase: str = ""
+    pid: Optional[int] = None
+    rss_mb: Optional[float] = None
+    code: Optional[int] = None
 
 
 @dataclass
@@ -31,6 +34,7 @@ class RoundData:
     rss: dict = field(default_factory=dict)
     tail: dict = field(default_factory=dict)     # dumpsys 尾部汇总, MB
     meminfo: dict = field(default_factory=dict)  # /proc/meminfo, MB
+    vmstat: dict = field(default_factory=dict)   # /proc/vmstat 累计计数器（动态包）
 
 
 @dataclass
@@ -52,6 +56,9 @@ class Dataset:
     boot_time: Optional[datetime] = None
     thresholds: Thresholds = field(default_factory=Thresholds)
     warnings: list = field(default_factory=list)
+    failed_rounds: list = field(default_factory=list)  # list[dict(index, reason)]
+    reboots: list = field(default_factory=list)        # list[dict(after_round, round)]
+    platform: dict = field(default_factory=dict)       # 平台判定（动态包 Exception_Summary_Report）
 
     @property
     def n(self) -> int:
