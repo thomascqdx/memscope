@@ -52,12 +52,17 @@ if errorlevel 1 (
     exit /b 1
 )
 
-rem ---- 6. smoke test ----
-dist\memscope.exe -h >nul 2>&1
-if errorlevel 1 (
-    echo [build] ERROR: smoke test failed ^(memscope.exe -h^)
+rem ---- 6. smoke test + versioned artifact ----
+for /f "tokens=2" %%V in ('dist\memscope.exe --version') do set "VER=%%V"
+if not defined VER (
+    echo [build] ERROR: smoke test failed ^(memscope.exe --version^)
     exit /b 1
 )
-for %%F in (dist\memscope.exe) do set "EXESIZE=%%~zF"
-echo [build] OK: %CD%\dist\memscope.exe ^(%EXESIZE% bytes^)
+copy /y "dist\memscope.exe" "dist\memscope-%VER%.exe" >nul
+if errorlevel 1 (
+    echo [build] ERROR: copy to dist\memscope-%VER%.exe failed
+    exit /b 1
+)
+for %%F in (dist\memscope-%VER%.exe) do set "EXESIZE=%%~zF"
+echo [build] OK: %CD%\dist\memscope-%VER%.exe ^(version %VER%, %EXESIZE% bytes^)
 exit /b 0

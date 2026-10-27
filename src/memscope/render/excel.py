@@ -44,6 +44,7 @@ def render(R: dict, out_path) -> Path:
 
     # 测试信息
     ws = _sheet(wb, '测试信息', ['字段', 'A（基线）', 'B（对比）', '差异'])
+    ws.append(['工具版本', meta['tool'], meta['tool'], ''])
     for d in R['device_diff']:
         ws.append([d['field'], d['a'], d['b'], '不同' if d['diff'] else ''])
     pd = R['pkg_diff']

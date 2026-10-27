@@ -17,6 +17,7 @@ pip install -e .
 ## 使用
 
 ```powershell
+memscope -V   # 打印版本（单一来源 src/memscope/__init__.py）
 memscope static compare <基线A.zip> <对比B.zip> [-o 输出目录] [--labels A B]
 memscope dynamic compare <基线A.(zip|rar)> <对比B.(zip|rar)> [-o 输出目录] [--labels A B]
 ```
@@ -55,7 +56,7 @@ memscope dynamic compare <基线A.(zip|rar)> <对比B.(zip|rar)> [-o 输出目�
 build_exe.bat
 ```
 
-在隔离环境 `.venv-build\` 中安装 PyInstaller，产出 `dist\memscope.exe`，用法同 CLI：
+在隔离环境 `.venv-build\` 中安装 PyInstaller，产出 `dist\memscope.exe` 及按版本命名的 `dist\memscope-<ver>.exe`，用法同 CLI：
 
 ```powershell
 memscope.exe static compare A.zip B.zip -o outdir

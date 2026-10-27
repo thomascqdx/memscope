@@ -42,7 +42,15 @@ Outputs `report.md`, `report.html`, `data.xlsx` into `out/<static|dynamic>/<labe
 cmd /c build_exe.bat
 ```
 
-Produces `dist\memscope.exe` (isolated venv `.venv-build\`, PyInstaller, entry `packaging\memscope_entry.py`).
+Produces `dist\memscope.exe` plus the versioned artifact `dist\memscope-<ver>.exe` (isolated venv `.venv-build\`, PyInstaller, entry `packaging\memscope_entry.py`; smoke-tested via `--version`).
+
+## Versioning
+
+Single source of truth: `__version__` in `src/memscope/__init__.py` (pyproject reads it via `[tool.setuptools.dynamic]`). `memscope -V` prints it; it also lands in `meta.tool` → HTML footer, report.md header, data.xlsx 测试信息.
+
+RULE: every commit that changes user-visible behavior (CLI flags/output, report structure/content, analysis results, packaging) bumps the version **in the same commit** via `python scripts/bump_version.py minor|patch` — minor for new features or incompatible changes (while <1.0), patch for bug fixes. Docs/tests/pure refactors don't bump.
+
+Release steps: bump → commit → `git tag vX.Y.Z` → `cmd /c build_exe.bat` → artifact `dist\memscope-X.Y.Z.exe`.
 
 ## Screenshot verification of report.html
 

@@ -64,7 +64,7 @@ def render(R: dict) -> str:
     L = []
     L.append(f"# {'静态' if kind == 'static' else '动态'}内存对比报告")
     L.append('')
-    L.append(f'- 基线 A：**{la}**　对比 B：**{lb}**')
+    L.append(f'- 基线 A：**{la}**　对比 B：**{lb}**（{meta["tool"]}）')
     L.append(f"- 有效轮次：A {dsA['n']} / B {dsB['n']}；"
              f"测试时长：A {_fmt_hours(dsA)} h / B {_fmt_hours(dsB)} h；"
              f"显著性阈值：|GAP| ≥ {meta['gap_abs']} MB 且 ≥ {meta['gap_pct']}%")

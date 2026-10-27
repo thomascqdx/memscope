@@ -8,7 +8,7 @@ import time
 import zipfile
 from pathlib import Path
 
-from . import analysis, inhouse, loader
+from . import __version__, analysis, inhouse, loader
 from .render import excel, html, markdown
 
 
@@ -60,6 +60,8 @@ def build_parser():
     p = argparse.ArgumentParser(
         prog='memscope',
         description='Android 内存健康测试包 A/B 对比分析工具')
+    p.add_argument('-V', '--version', action='version',
+                   version=f'memscope {__version__}')
     sub = p.add_subparsers(dest='test_type', required=True,
                            metavar='{static,dynamic}',
                            help='测试类型')
@@ -90,6 +92,7 @@ def main(argv=None):
 
 
 def _cmd_compare(args, kind):
+    print(f'[memscope] memscope {__version__}', file=sys.stderr)
     try:
         whitelist, wl_src = inhouse.load_whitelist(args.whitelist)
         prefixes, px_src = inhouse.load_prefixes(args.prefixes)

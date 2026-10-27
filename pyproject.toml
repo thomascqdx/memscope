@@ -4,13 +4,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "memscope"
-version = "0.2.0"
+dynamic = ["version"]
 description = "Android 内存健康测试包（静态/动态）A/B 对比分析工具"
 requires-python = ">=3.10"
 dependencies = ["openpyxl>=3.1", "xlrd>=2.0"]
 
 [project.scripts]
 memscope = "memscope.cli:main"
+
+[tool.setuptools.dynamic]
+version = {attr = "memscope.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -11,6 +11,7 @@ import statistics
 from dataclasses import dataclass
 from math import ceil
 
+from . import __version__
 from .inhouse import classify, is_google
 from .model import Dataset, RoundData
 from .parsers.procstatus import oom_to_level
@@ -965,7 +966,7 @@ def analyze(dsa: Dataset, dsb: Dataset, opts: Options) -> dict:
         'kind': opts.kind,
         'labels': [dsa.label, dsb.label],
         'meta': {
-            'tool': 'memscope 0.2.0',
+            'tool': f'memscope {__version__}',
             'kind': opts.kind,
             'primary_metric': opts.primary_metric,
             'axis': 'round' if max(dsa.n, dsb.n) <= SMALL_N else 'hour',
