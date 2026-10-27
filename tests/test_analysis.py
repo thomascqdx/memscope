@@ -5,7 +5,8 @@ import pytest
 
 from memscope.analysis import (Options, analyze, cnt, gap_info, is_significant,
                                linreg, rmean, vmean)
-from memscope.inhouse import base_pkg, classify
+from memscope.inhouse import (base_pkg, classify, is_google,
+                              load_google_prefixes)
 from memscope.model import Dataset, RoundData
 
 
@@ -99,3 +100,44 @@ def test_inhouse():
     assert classify('com.transsion.x', wl, px) == 'prefix'
     assert classify('com.google.x', wl, px) is None
     assert base_pkg('com.a.b:c:d') == 'com.a.b'
+
+
+def test_is_google():
+    px = ('com.google.', 'com.android.vending', 'com.android.chrome')
+    assert is_google('com.google.android.gms', px)
+    assert is_google('com.android.vending:background', px)
+    assert is_google('com.android.chrome', px)
+    assert not is_google('com.transsion.x', px)
+
+
+def test_google_vs_inhouse_priority():
+    rounds = [{'Foreground': {'com.google.android.gms': 10,
+                              'com.transsion.x': 5}}] * 6
+    a, b = _mk_dataset(rounds), _mk_dataset(rounds)
+    R = analyze(a, b, Options(prefixes=('com.transsion.',),
+                            google_prefixes=('com.google.', 'com.transsion.')))
+    procs = R['metrics']['pss']['procs']
+    # 同时命中自研前缀与 google 前缀 → 自研优先
+    assert procs['com.transsion.x']['inhouse']
+    assert not procs['com.transsion.x']['google']
+    # 仅命中 google 前缀
+    assert procs['com.google.android.gms']['google']
+    assert not procs['com.google.android.gms']['inhouse']
+    assert R['google']['prefixes'] == ['com.google.', 'com.transsion.']
+
+
+def test_load_google_prefixes(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    px, src = load_google_prefixes()          # cwd 无 config → 内置
+    assert 'com.google.' in px and src == '(内置)'
+    cfg = tmp_path / 'config'
+    cfg.mkdir()
+    (cfg / 'google_prefixes.txt').write_text('com.foo.\n', encoding='utf-8')
+    px2, src2 = load_google_prefixes()        # 本地 config 覆盖
+    assert px2 == ['com.foo.'] and 'google_prefixes.txt' in src2
+    with pytest.raises(FileNotFoundError):
+        load_google_prefixes(tmp_path / 'nope.txt')
+    f = tmp_path / 'g.txt'
+    f.write_text('com.bar.\n', encoding='utf-8')
+    px3, _ = load_google_prefixes(f)          # 显式路径
+    assert px3 == ['com.bar.']

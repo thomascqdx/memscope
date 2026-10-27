@@ -31,6 +31,7 @@ memscope dynamic compare <基线A.(zip|rar)> <对比B.(zip|rar)> [-o 输出目�
 - 动态阈值见 `--gap-abs/--gap-pct/--resident/--leak-delta/--leak-pct/--leak-r2/--sys-leak-delta/--rate-pct`。
 - 默认输出到 `out/<static|dynamic>/<A标签>_vs_<B标签>/`；标签默认取 `Rom Version`，相同则追加 `#SN`。
 - 自研进程判定：`--whitelist` 优先（命中记 `whitelist`），否则按 `--prefixes`（默认 `config/inhouse_prefixes.txt`）前缀匹配。
+- Google 进程判定：`--google-prefixes`（默认 `config/google_prefixes.txt` 或内置）前缀匹配；与自研同时命中时自研优先。
 
 ## 构建单文件 exe
 

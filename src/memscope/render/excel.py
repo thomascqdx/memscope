@@ -117,14 +117,15 @@ def render(R: dict, out_path) -> Path:
             if p['sig']:
                 marks.append('显著')
             prow_rows.append([k, p['name'], '是' if p['inhouse'] else '',
-                              p['ih_src'] or '', _join(p['la']), _join(p['lb']),
+                              p['ih_src'] or '', '是' if p['google'] else '',
+                              _join(p['la']), _join(p['lb']),
                               p['ka'], p['kb'], p['ra'], p['rb'], p['va'], p['vb'],
                               p['gap'], _gaptxt(p), ','.join(marks)])
-    _write_table(ws, ['口径', '进程', '自研', '判定来源', '层级A', '层级B',
+    _write_table(ws, ['口径', '进程', '自研', '判定来源', 'Google', '层级A', '层级B',
                       '出现A', '出现B', '轮均A', '轮均B', '值均A', '值均B',
                       'GAP', 'GAP%', '标记'],
-                 prow_rows, num_cols=(9, 10, 11, 12), gap_col=13,
-                 widths={2: 55, 5: 22, 6: 22})
+                 prow_rows, num_cols=(10, 11, 12, 13), gap_col=14,
+                 widths={2: 55, 6: 22, 7: 22})
 
     # 层级进程明细（双口径，层级×进程）
     ws = _sheet(wb, '层级进程明细')
@@ -201,6 +202,20 @@ def render(R: dict, out_path) -> Path:
     _write_table(ws, ['口径', '进程', '判定', '层级A', '层级B', '出现A', '出现B',
                       '轮均A', '轮均B', 'GAP', 'GAP%'],
                  rows, num_cols=(8, 9), gap_col=10, widths={2: 55})
+
+    # Google 应用（双口径）
+    ws = _sheet(wb, 'Google应用')
+    rows = []
+    for k, m in metrics:
+        for n in m['top']:
+            p = m['procs'][n]
+            if not p['google']:
+                continue
+            rows.append([k, p['name'], _join(p['la']), _join(p['lb']),
+                         p['ka'], p['kb'], p['ra'], p['rb'], p['gap'], _gaptxt(p)])
+    _write_table(ws, ['口径', '进程', '层级A', '层级B', '出现A', '出现B',
+                      '轮均A', '轮均B', 'GAP', 'GAP%'],
+                 rows, num_cols=(7, 8), gap_col=9, widths={2: 55})
 
     # 标准对照
     ws = _sheet(wb, '标准对照')

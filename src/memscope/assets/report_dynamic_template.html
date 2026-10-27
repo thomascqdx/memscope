@@ -66,6 +66,7 @@ main{max-width:1400px;margin:0 auto;padding:20px 20px 48px}
 @media(max-width:1000px){.row-2col{grid-template-columns:1fr}}
 @media(max-width:1100px){.grid2{grid-template-columns:1fr}}
 .grid-kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media(min-width:1200px){.grid-kpi:not(.auto){grid-template-columns:repeat(5,1fr)}}
 @media(max-width:999px){.grid-kpi{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:560px){.grid-kpi{grid-template-columns:1fr}}
 .grid-kpi.auto{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
@@ -91,6 +92,7 @@ main{max-width:1400px;margin:0 auto;padding:20px 20px 48px}
 .tag-ih{background:var(--green-soft);color:#047857}
 .tag-sig{background:var(--red-soft);color:#be123c}
 .tag-cached{background:#f1f5f9;color:#64748b}
+.tag-gg{background:#e8f0fe;color:#1a73e8}
 .st{display:inline-block;padding:1px 10px;border-radius:999px;font-size:12px;font-weight:500}
 .st-ok{background:var(--green-soft);color:var(--green)}
 .st-bad{background:var(--red-soft);color:var(--red)}
@@ -192,6 +194,11 @@ details.info .info-body code{background:#eef2f7;padding:1px 5px;border-radius:4p
 .pill{display:inline-flex;align-items:center;background:#f8fafc;border:1px solid var(--line-soft);border-radius:999px;padding:1px 10px;font-size:12px;margin:2px 4px 2px 0}
 .pill i{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;flex:none}
 td.comp{white-space:normal;word-break:break-all;min-width:220px;max-width:380px}
+.hint{position:relative;display:inline-flex;align-items:center;color:var(--brand);font-size:15px;cursor:help;margin-left:2px;outline:none}
+.hint-pop{position:absolute;top:calc(100% + 8px);right:-8px;width:320px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(16,24,40,.14);padding:10px 12px;font-size:12px;line-height:1.6;color:var(--sub);display:none;z-index:80;font-weight:400;white-space:normal;cursor:default}
+.hint:hover .hint-pop,.hint:focus-within .hint-pop{display:block}
+.hint-pop p{margin:0 0 6px}
+.hint-pop p:last-child{margin:0}
 #procOverlay{position:fixed;inset:0;background:var(--bg);z-index:100;overflow:auto;display:none}
 #procOverlay.open{display:block}
 #procOverlay .inner{max-width:1400px;margin:0 auto;padding:20px}
@@ -238,6 +245,7 @@ th.sort:hover{background:#eef2ff}
     <div class="toggles">
       <span class="segtrack"><button class="seg" data-m="pss">PSS</button><button class="seg active" data-m="rss">RSS</button></span>
       <label class="switch"><input type="checkbox" id="incCached"><span class="sl"></span><span>包含 Cached</span></label>
+      <span class="hint" tabindex="0">ⓘ<span class="hint-pop"><p>Cached 是后台缓存进程所在的 OOM 层级，内存紧张时可被系统随时回收，数值受测试时机和 LMK 影响波动大，默认不参与差异排行。</p><p>打开后纳入：概览与风险页「自动结论」中 Cached 层级 / 仅 Cached 进程相关条目、进程对比表。</p><p>始终显示：关键指标（含 cached pss）、整机、层级表、自研 / Google 明细。</p></span></span>
     </div>
   </div>
   <nav id="tabnav"></nav>
@@ -248,6 +256,7 @@ th.sort:hover{background:#eef2ff}
   <section class="tab-page" id="page-levels"></section>
   <section class="tab-page" id="page-procs"></section>
   <section class="tab-page" id="page-inhouse"></section>
+  <section class="tab-page" id="page-google"></section>
   <section class="tab-page" id="page-events"></section>
   <section class="tab-page" id="page-pressure"></section>
   <section class="tab-page" id="page-risk"></section>
@@ -307,9 +316,10 @@ const _thrProc = {a:{}, b:{}};
   if(st.free_ram) _thrLv[sd]['Free RAM']=st.free_ram.thr;
   st.procs.forEach(r=>_thrProc[sd][r.name]=r.thr);
 });
-const IH_NOTE = '<details class="info"><summary>自研应用判定规则</summary><div class="info-body">自研应用判定：' +
+const RULE_NOTE = '<details class="info"><summary>进程归类规则</summary><div class="info-body">自研应用判定：' +
   (DATA.inhouse.whitelist_src ? '白名单 <b>'+esc(DATA.inhouse.whitelist_src)+'</b>（'+DATA.inhouse.whitelist_count+' 项）+ ' : '未提供白名单，') +
-  '前缀匹配（'+esc(DATA.inhouse.prefixes_src||'')+'：'+DATA.inhouse.prefixes.join(' ')+'）。进程名按 <code>包名:子进程</code> 取包名匹配。</div></details>';
+  '前缀匹配（'+esc(DATA.inhouse.prefixes_src||'')+'：'+DATA.inhouse.prefixes.join(' ')+'）。进程名按 <code>包名:子进程</code> 取包名匹配。<br>' +
+  'Google：前缀匹配（'+esc(DATA.google.prefixes_src||'')+'：'+DATA.google.prefixes.join(' ')+'），自研优先。</div></details>';
 
 /* ============ 多选 / 图表 ============ */
 function multiPicker(o){
@@ -413,16 +423,16 @@ function thrMarkLine(vals){
 
 /* ============ 路由 ============ */
 const PAGES = {overview:'概览', system:'整机', levels:'层级', procs:'进程',
-               inhouse:'自研', events:'查杀与稳定性', pressure:'内存压力',
+               inhouse:'自研', google:'Google', events:'查杀与稳定性', pressure:'内存压力',
                risk:'风险', report:'报告'};
 const RENDER = {};
 const state = {tab:'overview', sysSel:null, lvSel:null, prSel:null, psSel:null,
-               pkKw:'', pkLevel:'', pkInhouse:false, pkSigOnly:false, pkResident:false, pkLeak:false,
+               pkKw:'', pkLevel:'', pkCat:'', pkSigOnly:false, pkResident:false, pkLeak:false,
                pkGapMin:DATA.meta.gap_abs, pkSort:'gap', pkDir:-1,
                devAll:false, mdRaw:false, lvInit:false};
 function parseHash(){
   const q = new URLSearchParams(location.hash.replace(/^#/,''));
-  return {tab:q.get('tab'), proc:q.get('proc'), metric:q.get('metric')};
+  return {tab:q.get('tab'), proc:q.get('proc'), metric:q.get('metric'), cached:q.get('cached')};
 }
 function setHash(patch){
   const q = new URLSearchParams(location.hash.replace(/^#/,''));
@@ -438,6 +448,8 @@ function applyMetric(m){
 function route(){
   const p = parseHash();
   if (p.metric) applyMetric(p.metric);
+  includeCached = p.cached==='1';
+  document.getElementById('incCached').checked = includeCached;
   if (p.proc){ openProc(p.proc); return; }
   document.getElementById('procOverlay').classList.remove('open');
   const tab = (p.tab && PAGES[p.tab]) ? p.tab : 'overview';
@@ -462,9 +474,7 @@ document.querySelectorAll('.toggles .seg').forEach(b=>{
   b.onclick = ()=>{ if(b.dataset.m!==metric) setHash({metric:b.dataset.m}); };
 });
 document.getElementById('incCached').onchange = e=>{
-  includeCached = e.target.checked;
-  if (document.getElementById('procOverlay').classList.contains('open')) return;
-  RENDER[state.tab]();
+  setHash({cached: e.target.checked ? 1 : null});
 };
 applyMetric(new URLSearchParams(location.hash.replace(/^#/,'')).get('metric') || 'rss');
 
@@ -474,6 +484,7 @@ function procTags(p){
   if (p.da.k>0 && p.db.k===0) t.push('<span class="tag tag-a">仅A</span>');
   if (p.db.k>0 && p.da.k===0) t.push('<span class="tag tag-b">仅B</span>');
   if (p.inhouse) t.push('<span class="tag tag-ih">自研'+(p.ih_src==='whitelist'?'·白':'')+'</span>');
+  if (p.google) t.push('<span class="tag tag-gg">Google</span>');
   if (p.cached_only) t.push('<span class="tag tag-cached">Cached</span>');
   if (p.sig) t.push('<span class="tag tag-sig">显著</span>');
   if (p.resident_a) t.push('<span class="tag tag-lv">常驻A</span>');
@@ -521,6 +532,8 @@ RENDER.overview = function(){
     const r = lvRow(lv); if(!r) return;
     h += kpiCard(lv+' RSS', '层级均值', r.da.mi, r.db.mi, 'MB', false);
   });
+  const cpss = sysRow('cached pss');
+  if (cpss) h += kpiCard('cached pss', 'dumpsys tail', cpss.da.mean, cpss.db.mean, 'MB', false);
   const stA = DATA.standards.a, stB = DATA.standards.b;
   const fr = sysRow('Free RAM');
   h += kpiCard('Free RAM 均值', 'dumpsys tail · 高好', fr.da.mean, fr.db.mean, 'MB', true);
@@ -531,11 +544,13 @@ RENDER.overview = function(){
                ev.a.anr.length+ev.a.crash.length, ev.b.anr.length+ev.b.crash.length, '次', false, 0);
   h += kpiCard('重启次数', 'uptime 回退', DS[0].reboots.length, DS[1].reboots.length, '次', false, 0);
   h += '</div></div>';
-  // findings top8
-  h += '<div class="card">'+cardHd('自动结论 Top '+Math.min(8,DATA.findings.length),'共 '+DATA.findings.length+' 条 · 全部见「风险」页',
+  // findings top8（Cached 相关条目默认隐藏，右上角开关纳入）
+  const fs = DATA.findings.filter(f=>includeCached||!f.cached);
+  const hidden = DATA.findings.length - fs.length;
+  h += '<div class="card">'+cardHd('自动结论 Top '+Math.min(8,fs.length),'共 '+DATA.findings.length+' 条 · 全部见「风险」页'+(hidden?' · 已隐藏 '+hidden+' 条 Cached 相关':''),
       '<a href="#tab=risk">全部 →</a>')
     +'<ul class="findings">'
-    + DATA.findings.slice(0,8).map(f=>'<li>'+sevBadge(f.sev)+'<a href="'+esc(f.link)+'">'+esc(f.title)+'</a> <span class="muted">'+esc(f.detail)+'</span></li>').join('')
+    + fs.slice(0,8).map(f=>'<li>'+sevBadge(f.sev)+'<a href="'+esc(f.link)+'">'+esc(f.title)+'</a> <span class="muted">'+esc(f.detail)+'</span></li>').join('')
     +'</ul></div>';
   // 设备信息 + 包差异
   const pd = DATA.pkg_diff;
@@ -669,11 +684,11 @@ RENDER.procs = function(){
   const el = document.getElementById('page-procs');
   const m = MV();
   const list = m.top.map(n=>m.procs[n]).filter(showProc);
-  let h = IH_NOTE;
+  let h = RULE_NOTE;
   h += '<div class="card">'+cardHd('进程对比表（'+list.length+'）',metric.toUpperCase()+' · 点击列头排序 · 点击进程进详情')
     +'<div class="controls"><input type="text" id="pkKw" placeholder="关键词，多个用逗号分隔" value="'+esc(state.pkKw)+'" style="width:240px">'
     +'<select id="pkLevel"><option value="">全部层级</option>'+m.levels.map(L=>'<option'+(state.pkLevel===L?' selected':'')+'>'+esc(L)+'</option>').join('')+'</select>'
-    +'<label><input type="checkbox" id="pkInhouse"'+(state.pkInhouse?' checked':'')+'> 仅自研</label>'
+    +'<select id="pkCat"><option value="">全部归类</option><option value="inhouse"'+(state.pkCat==='inhouse'?' selected':'')+'>自研</option><option value="google"'+(state.pkCat==='google'?' selected':'')+'>Google</option><option value="other"'+(state.pkCat==='other'?' selected':'')+'>其他</option></select>'
     +'<label><input type="checkbox" id="pkSigOnly"'+(state.pkSigOnly?' checked':'')+'> 仅显著</label>'
     +'<label><input type="checkbox" id="pkResident"'+(state.pkResident?' checked':'')+'> 仅常驻B</label>'
     +'<label><input type="checkbox" id="pkLeak"'+(state.pkLeak?' checked':'')+'> 仅泄漏</label>'
@@ -693,7 +708,9 @@ RENDER.procs = function(){
     let rows = list.filter(p=>{
       if (kws.length && !kws.some(k=>p.name.includes(k))) return false;
       if (state.pkLevel && !p.la.includes(state.pkLevel) && !p.lb.includes(state.pkLevel)) return false;
-      if (state.pkInhouse && !p.inhouse) return false;
+      if (state.pkCat==='inhouse' && !p.inhouse) return false;
+      if (state.pkCat==='google' && !p.google) return false;
+      if (state.pkCat==='other' && (p.inhouse||p.google)) return false;
       if (state.pkSigOnly && !p.sig) return false;
       if (state.pkResident && !p.resident_b) return false;
       if (state.pkLeak && !p.leak_a && !p.leak_b) return false;
@@ -718,7 +735,7 @@ RENDER.procs = function(){
   };
   document.getElementById('pkKw').oninput = e=>{state.pkKw=e.target.value;fillPk();};
   document.getElementById('pkLevel').onchange = e=>{state.pkLevel=e.target.value;fillPk();};
-  document.getElementById('pkInhouse').onchange = e=>{state.pkInhouse=e.target.checked;fillPk();};
+  document.getElementById('pkCat').onchange = e=>{state.pkCat=e.target.value;fillPk();};
   document.getElementById('pkSigOnly').onchange = e=>{state.pkSigOnly=e.target.checked;fillPk();};
   document.getElementById('pkResident').onchange = e=>{state.pkResident=e.target.checked;fillPk();};
   document.getElementById('pkLeak').onchange = e=>{state.pkLeak=e.target.checked;fillPk();};
@@ -730,25 +747,26 @@ RENDER.procs = function(){
   fillPk();
 };
 
-/* ============ 5. 自研 ============ */
-RENDER.inhouse = function(){
-  const el = document.getElementById('page-inhouse');
+/* ============ 5. 自研 / Google ============ */
+function renderCategory(key){
+  const el = document.getElementById('page-'+key);
   const m = MV();
-  const rows = m.top.map(n=>m.procs[n]).filter(p=>p.inhouse);
+  const isIh = key==='inhouse';
+  const cn = isIh?'自研':'Google';
+  const rows = m.top.map(n=>m.procs[n]).filter(p=>isIh?p.inhouse:p.google);
   const nA = rows.filter(p=>p.da.k>0).length, nB = rows.filter(p=>p.db.k>0).length;
   const sumA = rows.reduce((s,p)=>s+p.da.mi,0), sumB = rows.reduce((s,p)=>s+p.db.mi,0);
-  const g = sumB - sumA;
-  let h = IH_NOTE;
+  let h = RULE_NOTE;
   h += '<div class="grid-kpi auto" style="margin-bottom:16px">'
-    + kpiCard('自研进程数', metric.toUpperCase(), nA, nB, '个', false, 0)
-    + kpiCard('自研 mi 合计', metric.toUpperCase(), sumA, sumB, 'MB', false)
+    + kpiCard(cn+'进程数', metric.toUpperCase(), nA, nB, '个', false, 0)
+    + kpiCard(cn+' mi 合计', metric.toUpperCase(), sumA, sumB, 'MB', false)
     +'</div>';
-  h += '<div class="card">'+cardHd('自研进程明细','')+'<div class="tbl-wrap"><table><thead><tr>'
-    +'<th>进程</th><th>判定</th><th>层级 A</th><th>层级 B</th><th class="num">出现率A/B</th>'
+  h += '<div class="card">'+cardHd(cn+'进程明细','')+'<div class="tbl-wrap"><table><thead><tr>'
+    +'<th>进程</th>'+(isIh?'<th>判定</th>':'')+'<th>层级 A</th><th>层级 B</th><th class="num">出现率A/B</th>'
     +'<th class="num">mi A</th><th class="num">mi B</th><th class="num">均值A</th><th class="num">均值B</th>'
     +'<th class="num">GAP</th><th class="num">GAP%</th><th>标签</th></tr></thead><tbody>'
     + rows.map(p=>'<tr><td class="name">'+procLink(p.name)+'</td>'
-      +'<td class="muted">'+(p.ih_src==='whitelist'?'白名单':'前缀')+'</td>'
+      +(isIh?'<td class="muted">'+(p.ih_src==='whitelist'?'白名单':'前缀')+'</td>':'')
       +'<td>'+esc(p.la.join('、')||'—')+'</td><td>'+esc(p.lb.join('、')||'—')+'</td>'
       +'<td class="num">'+Math.round(p.da.rate*100)+'%/'+Math.round(p.db.rate*100)+'%</td>'
       +'<td class="num">'+fmt(p.da.mi)+'</td><td class="num">'+fmt(p.db.mi)+'</td>'
@@ -756,7 +774,9 @@ RENDER.inhouse = function(){
       +gapCells(p.da.mi,p.db.mi,p.gapt,p.gapp)+'<td>'+procTags(p)+'</td></tr>').join('')
     +'</tbody></table></div></div>';
   el.innerHTML = h;
-};
+}
+RENDER.inhouse = ()=>renderCategory('inhouse');
+RENDER.google = ()=>renderCategory('google');
 
 /* ============ 6. 查杀与稳定性 ============ */
 RENDER.events = function(){
@@ -906,9 +926,11 @@ RENDER.risk = function(){
       + DATA.leaks.map(lk=>'<tr><td>'+lk.ds+'</td><td>'+esc(lk.kind)+'</td><td>'+esc(lk.metric.toUpperCase()||'—')+'</td><td class="name">'+(lk.kind==='proc'?procLink(lk.name):esc(lk.name))+'</td><td class="num">'+fmt(lk.head)+'</td><td class="num">'+fmt(lk.tail)+'</td><td class="num">'+(lk.delta>0?'+':'')+fmt(lk.delta)+'</td><td class="num">'+(lk.slope>0?'+':'')+fmt(lk.slope)+'</td><td class="num">'+fmt(lk.r2)+'</td></tr>').join('')
       +'</tbody></table></div></div>';
   }
-  h += '<div class="card">'+cardHd('自动结论（'+DATA.findings.length+'）','按严重度排序')
+  const fs = DATA.findings.filter(f=>includeCached||!f.cached);
+  const hidden = DATA.findings.length - fs.length;
+  h += '<div class="card">'+cardHd('自动结论（'+fs.length+'）','按严重度排序'+(hidden?' · 已隐藏 '+hidden+' 条 Cached 相关':''))
     +'<div class="tbl-wrap"><table><thead><tr><th>级别</th><th>类别</th><th>标题</th><th>详情</th></tr></thead><tbody>'
-    + DATA.findings.map(f=>'<tr><td>'+sevBadge(f.sev)+'</td><td>'+esc(f.cat)+'</td><td class="name"><a href="'+esc(f.link)+'">'+esc(f.title)+'</a></td><td class="name">'+esc(f.detail)+'</td></tr>').join('')
+    + fs.map(f=>'<tr><td>'+sevBadge(f.sev)+'</td><td>'+esc(f.cat)+'</td><td class="name"><a href="'+esc(f.link)+'">'+esc(f.title)+'</a></td><td class="name">'+esc(f.detail)+'</td></tr>').join('')
     +'</tbody></table></div></div>';
   el.innerHTML = h;
 };

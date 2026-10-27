@@ -118,7 +118,7 @@ def render(R: dict, out_path) -> Path:
                     ['进程', '层级A', '层级B', '出现A', '出现B', '出现率A',
                      '出现率B', 'mi A', 'mi B', '均值A', '均值B', 'P90 A',
                      'P90 B', '最大A', '最大B', 'GAP', 'GAP%', '常驻A',
-                     '常驻B', '泄漏', '自研', '标记'])
+                     '常驻B', '泄漏', '自研', 'Google', '标记'])
         for n in m['top']:
             p = m['procs'][n]
             marks = []
@@ -144,6 +144,7 @@ def render(R: dict, out_path) -> Path:
                        + ('B' if p['leak_b'] else ''),
                        ('白名单' if p['ih_src'] == 'whitelist' else '前缀')
                        if p['inhouse'] else '',
+                       '是' if p['google'] else '',
                        ','.join(marks)])
 
     # 疑似泄漏

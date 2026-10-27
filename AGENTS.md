@@ -2,6 +2,7 @@
 
 ## Environment
 
+- Do not pipe scripts containing non-ASCII (Chinese) into `python -` from Windows PowerShell 5.1: `$OutputEncoding` is US-ASCII, so every CJK char becomes `?` (this once produced `<title>????????</title>` in re-rendered reports). Write the script to `.work/*.py` (UTF-8) and run it instead.
 - Windows, Python 3.13. Use PowerShell syntax (`;` not `&&`, no `2>$null` on `&`-invocations — use `cmd /c '... > file 2>nul'` when you need to capture stdout of a binary like `msedge --dump-dom`).
 - Package uses `src/` layout; install editable before running tests or CLI.
 
@@ -52,7 +53,7 @@ $edge = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
 
 `--screenshot` 必须使用**绝对路径**（Edge headless 会切换工作目录，相对路径报「系统找不到指定的路径」并静默退出）。
 
-Routes: `#tab=overview|system|levels|procs|inhouse|events|risk|report` (+ `pressure` for dynamic reports), `#proc=<name>[&metric=pss|rss]`, `&metric=rss` appends to any route. Dynamic reports default to `metric=rss`; time-series x axes are hours since test start.
+Routes: `#tab=overview|system|levels|procs|inhouse|google|events|risk|report` (+ `pressure` for dynamic reports), `#proc=<name>[&metric=pss|rss]`, `&metric=rss` and `&cached=1` (include Cached in rankings) append to any route. Dynamic reports default to `metric=rss`; time-series x axes are hours since test start.
 
 ## Conventions
 

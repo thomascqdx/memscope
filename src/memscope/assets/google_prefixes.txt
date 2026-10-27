@@ -1,0 +1,4 @@
+# Google 应用包名前缀（GMS / Google 预装应用）
+com.google.
+com.android.vending
+com.android.chrome

@@ -47,6 +47,7 @@ def build_parser():
     c.add_argument('--labels', nargs=2, metavar=('A', 'B'), help='自定义两侧标签')
     c.add_argument('--whitelist', help='自研白名单文件（默认 config/internal_dev_package.txt，若存在）')
     c.add_argument('--prefixes', help='自研包名前缀文件（默认 config/inhouse_prefixes.txt 或内置）')
+    c.add_argument('--google-prefixes', help='Google 包名前缀文件（默认 config/google_prefixes.txt 或内置）')
     c.add_argument('--gap-abs', type=float, default=5.0, help='显著差异绝对阈值 MB（默认 5）')
     c.add_argument('--gap-pct', type=float, default=10.0, help='显著差异百分比阈值 %%（默认 10）')
     c.add_argument('--growth-slope', type=float, default=1.0, help='进程增长斜率阈值 MB/轮（默认 1）')
@@ -63,6 +64,7 @@ def build_parser():
     dc.add_argument('--labels', nargs=2, metavar=('A', 'B'), help='自定义两侧标签')
     dc.add_argument('--whitelist', help='自研白名单文件（默认 config/internal_dev_package.txt，若存在）')
     dc.add_argument('--prefixes', help='自研包名前缀文件（默认 config/inhouse_prefixes.txt 或内置）')
+    dc.add_argument('--google-prefixes', help='Google 包名前缀文件（默认 config/google_prefixes.txt 或内置）')
     dc.add_argument('--gap-abs', type=float, default=5.0, help='显著差异绝对阈值 MB（默认 5）')
     dc.add_argument('--gap-pct', type=float, default=10.0, help='显著差异百分比阈值 %%（默认 10）')
     dc.add_argument('--resident', type=float, default=0.9, help='常驻出现率阈值（默认 0.9）')
@@ -94,6 +96,7 @@ def _cmd_static_compare(args):
     try:
         whitelist, wl_src = inhouse.load_whitelist(args.whitelist)
         prefixes, px_src = inhouse.load_prefixes(args.prefixes)
+        google_px, gp_src = inhouse.load_google_prefixes(args.google_prefixes)
     except FileNotFoundError as e:
         print(f'[memscope] {e}', file=sys.stderr)
         return 2
@@ -125,7 +128,8 @@ def _cmd_static_compare(args):
         growth_slope=args.growth_slope, sys_growth_slope=args.sys_growth_slope,
         growth_r2=args.growth_r2,
         whitelist=whitelist, whitelist_src=wl_src,
-        prefixes=tuple(prefixes), prefixes_src=px_src)
+        prefixes=tuple(prefixes), prefixes_src=px_src,
+        google_prefixes=tuple(google_px), google_prefixes_src=gp_src)
 
     result = analysis.analyze(dsa, dsb, opts)
     md = markdown.render(result)
@@ -150,6 +154,7 @@ def _cmd_dynamic_compare(args):
     try:
         whitelist, wl_src = inhouse.load_whitelist(args.whitelist)
         prefixes, px_src = inhouse.load_prefixes(args.prefixes)
+        google_px, gp_src = inhouse.load_google_prefixes(args.google_prefixes)
     except FileNotFoundError as e:
         print(f'[memscope] {e}', file=sys.stderr)
         return 2
@@ -194,7 +199,8 @@ def _cmd_dynamic_compare(args):
         leak_pct=args.leak_pct, leak_r2=args.leak_r2,
         sys_leak_delta=args.sys_leak_delta, rate_pct=args.rate_pct,
         whitelist=whitelist, whitelist_src=wl_src,
-        prefixes=tuple(prefixes), prefixes_src=px_src)
+        prefixes=tuple(prefixes), prefixes_src=px_src,
+        google_prefixes=tuple(google_px), google_prefixes_src=gp_src)
     result = dynamic_analysis.analyze(dsa, dsb, opts)
     md = dynamic_markdown.render(result)
     result['report_md'] = md

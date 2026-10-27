@@ -53,6 +53,11 @@ def _summary_lines(R):
     tb = sum(p['rb'] for p in ih)
     out.append(f"- 自研应用合计（PSS 轮次均值）：A {_f(ta)} MB → B {_f(tb)} MB"
                f"（{tb - ta:+.2f} MB）")
+    gg = [p for p in m['procs'].values() if p['google']]
+    ga = sum(p['ra'] for p in gg)
+    gb = sum(p['rb'] for p in gg)
+    out.append(f"- Google 应用合计（PSS 轮次均值）：A {_f(ga)} MB → B {_f(gb)} MB"
+               f"（{gb - ga:+.2f} MB）")
     viol = []
     for side, lab in (('a', 'A'), ('b', 'B')):
         st = R['standards'].get(side)
@@ -189,7 +194,12 @@ def render(R: dict) -> str:
     ih = sorted((p for p in m['procs'].values() if p['inhouse']),
                 key=lambda p: -abs(p['gap']))
     ih_show = [p for p in ih if p['sig'] or p['ka'] == 0 or p['kb'] == 0]
-    L.append('## 8. 自研应用')
+    gg = sorted((p for p in m['procs'].values() if p['google']),
+                key=lambda p: -abs(p['gap']))
+    gg_show = [p for p in gg if p['sig'] or p['ka'] == 0 or p['kb'] == 0]
+    L.append('## 8. 自研 / Google 应用')
+    L.append('')
+    L.append('### 8.1 自研应用')
     L.append('')
     L.append(f"自研进程数：A {sum(1 for p in ih if p['ka'])} / B {sum(1 for p in ih if p['kb'])}；"
              f"合计轮次均值：A {_f(sum(p['ra'] for p in ih))} MB / "
@@ -203,12 +213,26 @@ def render(R: dict) -> str:
                       _f(p['ra']), _f(p['rb']), _gap_txt(p)]
                      for p in ih_show]) if ih_show else '（无）')
     L.append('')
+    L.append('### 8.2 Google 应用')
+    L.append('')
+    L.append(f"Google 进程数：A {sum(1 for p in gg if p['ka'])} / B {sum(1 for p in gg if p['kb'])}；"
+             f"合计轮次均值：A {_f(sum(p['ra'] for p in gg))} MB / "
+             f"B {_f(sum(p['rb'] for p in gg))} MB")
+    L.append('')
+    L.append('下表为差异显著或单侧独有的 Google 进程：')
+    L.append('')
+    L.append(_table(['进程', '层级 A', '层级 B', '轮均 A', '轮均 B', 'GAP / GAP%'],
+                    [[p['name'], '、'.join(p['la']) or '—', '、'.join(p['lb']) or '—',
+                      _f(p['ra']), _f(p['rb']), _gap_txt(p)]
+                     for p in gg_show]) if gg_show else '（无）')
+    L.append('')
 
     L.append('## 9. 启动/唤醒（关联进程）')
     L.append('')
     names = sorted({p['name'] for p in sig} |
                    {r[0] for r in only_rows} |
-                   {p['name'] for p in ih_show})
+                   {p['name'] for p in ih_show} |
+                   {p['name'] for p in gg_show})
     names = names[:40]
     rows = _wake_rows(R, names)
     L.append(_table(['进程', '数据集', '启动次数 测试/全部', '主要原因', '调用方'],
@@ -269,6 +293,8 @@ def render(R: dict) -> str:
         f"- 显著差异：|GAP| ≥ {meta['gap_abs']} MB 且（单侧出现或 |GAP|/A ≥ {meta['gap_pct']}%）。",
         '- 仅出现于 Cached 层的进程（cached_only）默认不计入差异显著/Top 榜单。',
         f"- 自研判定：{wl} + 前缀匹配 `{ih['prefixes_src']}`（{len(ih['prefixes'])} 条）。",
+        f"- Google 判定：前缀匹配 `{R['google']['prefixes_src']}`"
+        f"（{len(R['google']['prefixes'])} 条），自研优先。",
         '- 事件阶段：boot=开机至第 1 轮前；test=测试窗口内；早于本次开机的日志已丢弃。',
         f"- 疑似增长：逐轮线性回归，斜率 ≥ {meta['growth_slope']} MB/轮（整机 {meta['sys_growth_slope']}）且 R² ≥ {meta['growth_r2']}。",
     ]

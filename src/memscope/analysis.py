@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .inhouse import base_pkg, classify
+from .inhouse import base_pkg, classify, is_google
 from .model import Dataset
 
 LEVEL_ORDER = ['Native', 'System', 'Persistent', 'Persistent Service', 'Foreground',
@@ -40,6 +40,8 @@ class Options:
     whitelist_src: str = None
     prefixes: tuple = ()
     prefixes_src: str = None
+    google_prefixes: tuple = ()
+    google_prefixes_src: str = None
 
 
 # ---------- 基础统计 ----------
@@ -195,6 +197,7 @@ def build_metric(dsa: Dataset, dsb: Dataset, kind: str, opts: Options):
             'cached_only': cached_only,
             'level_changed': level_changed,
             'inhouse': ih is not None, 'ih_src': ih,
+            'google': ih is None and is_google(name, opts.google_prefixes),
             'la': sorted(seta), 'lb': sorted(setb),
             'pra': pra, 'prb': prb,
             'sa': sa, 'sb': sb,
@@ -409,6 +412,8 @@ def analyze(dsa: Dataset, dsb: Dataset, opts: Options) -> dict:
         'metrics': {'pss': mpss, 'rss': mrss},
         'system': system,
         'inhouse': ih,
+        'google': {'prefixes': list(opts.google_prefixes),
+                   'prefixes_src': opts.google_prefixes_src},
         'standards': {'a': std_a, 'b': std_b},
         'growth': growth,
     }

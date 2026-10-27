@@ -7,7 +7,8 @@ import pytest
 
 from memscope import loader
 from memscope.dynamic_analysis import DynOptions, analyze, dist
-from memscope.inhouse import load_prefixes, load_whitelist
+from memscope.inhouse import (load_google_prefixes, load_prefixes,
+                              load_whitelist)
 
 SAMPLES = os.path.join(os.path.dirname(__file__), '..', 'samples',
                        'dynamic_memory_datas')
@@ -37,8 +38,11 @@ def result(datasets):
     a, b = datasets
     wl, ws = load_whitelist()
     px, ps = load_prefixes()
+    gp, gs = load_google_prefixes()
     return analyze(a, b, DynOptions(whitelist=wl, whitelist_src=ws,
-                                  prefixes=tuple(px), prefixes_src=ps))
+                                  prefixes=tuple(px), prefixes_src=ps,
+                                  google_prefixes=tuple(gp),
+                                  google_prefixes_src=gs))
 
 
 def test_dataset_shape(datasets):

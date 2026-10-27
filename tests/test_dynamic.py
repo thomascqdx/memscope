@@ -344,3 +344,39 @@ def test_findings_score_sort():
     keys = [(da._SEV_ORDER[f['sev']], da._CAT_ORDER[f['cat']], -f['score'])
             for f in r['findings']]
     assert keys == sorted(keys)
+
+
+def _mk_ds_levels(spec, n=20):
+    """spec: {level: {proc: series}} —— 多层级多进程。"""
+    ds = Dataset(label='X')
+    for i in range(n):
+        rd = RoundData(index=i + 1)
+        rd.start = None
+        rd.rss = {}
+        rd.pss = {}
+        for lv, procs in spec.items():
+            vals = {p: s[i] for p, s in procs.items() if s[i] is not None}
+            rd.rss[lv] = vals
+            rd.pss[lv] = {'total': sum(vals.values()), 'procs': dict(vals)}
+        rd.uptime_ms = (i + 1) * 1000
+        ds.rounds.append(rd)
+    return ds
+
+
+def test_findings_cached_flag():
+    """Cached 层级/仅 Cached 进程的 finding 带 cached=True，其余 False。"""
+    flat = [100.0] * 20
+    a = _mk_ds_levels({'Cached': {'procC': flat}, 'Native': {'procN': flat}})
+    b = _mk_ds_levels({'Cached': {'procC': [150.0] * 20},
+                       'Native': {'procN': [200.0] * 20}})
+    r = da.analyze(a, b, da.DynOptions())
+    assert all('cached' in f for f in r['findings'])
+    lv_f = [f for f in r['findings'] if f['cat'] == '层级']
+    cached_lv = [f for f in lv_f if 'Cached' in f['title']]
+    other_lv = [f for f in lv_f if 'Cached' not in f['title']]
+    assert cached_lv and all(f['cached'] for f in cached_lv)
+    assert other_lv and all(not f['cached'] for f in other_lv)
+    # procC 常驻且显著上升且 cached_only → 进程 finding cached=True
+    proc_f = [f for f in r['findings'] if f['cat'] == '进程']
+    assert any(f['cached'] and 'procC' in f['title'] for f in proc_f)
+    assert any(not f['cached'] and 'procN' in f['title'] for f in proc_f)

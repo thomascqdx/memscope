@@ -34,19 +34,34 @@ def load_whitelist(path=None):
     return items, str(path)
 
 
-def load_prefixes(path=None):
-    """前缀文件：--prefixes > ./config/inhouse_prefixes.txt > 包内置默认。"""
+def _load_prefix_file(path, local_default, asset_name, missing_msg):
     if path is not None:
         path = Path(path)
         if not path.exists():
-            raise FileNotFoundError(f'前缀文件不存在: {path}')
+            raise FileNotFoundError(f'{missing_msg}: {path}')
         return _read_lines(path), str(path)
-    local = Path('config/inhouse_prefixes.txt')
+    local = Path(local_default)
     if local.exists():
         return _read_lines(local), str(local)
-    ref = importlib.resources.files('memscope.assets').joinpath('inhouse_prefixes.txt')
+    ref = importlib.resources.files('memscope.assets').joinpath(asset_name)
     return [l for l in ref.read_text(encoding='utf-8').splitlines()
             if l.strip() and not l.strip().startswith('#')], '(内置)'
+
+
+def load_prefixes(path=None):
+    """前缀文件：--prefixes > ./config/inhouse_prefixes.txt > 包内置默认。"""
+    return _load_prefix_file(path, 'config/inhouse_prefixes.txt',
+                             'inhouse_prefixes.txt', '前缀文件不存在')
+
+
+def load_google_prefixes(path=None):
+    """Google 前缀文件：--google-prefixes > ./config/google_prefixes.txt > 包内置默认。"""
+    return _load_prefix_file(path, 'config/google_prefixes.txt',
+                             'google_prefixes.txt', 'Google 前缀文件不存在')
+
+
+def is_google(name, prefixes) -> bool:
+    return any(name.startswith(p) for p in prefixes)
 
 
 def base_pkg(name: str) -> str:

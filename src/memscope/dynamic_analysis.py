@@ -13,7 +13,7 @@ from math import ceil
 from .analysis import (HIGHER_BETTER, LEVEL_ORDER, SYSTEM_FIELDS, cnt,
                        gap_info, is_significant, rmean, _dataset_metric,
                        _level_order)
-from .inhouse import classify
+from .inhouse import classify, is_google
 from .model import Dataset
 from .parsers.procstatus import oom_to_level
 
@@ -61,6 +61,8 @@ class DynOptions:
     whitelist_src: str = None
     prefixes: tuple = ()
     prefixes_src: str = None
+    google_prefixes: tuple = ()
+    google_prefixes_src: str = None
 
 
 # ---------- 统计 ----------
@@ -246,6 +248,7 @@ def build_metric(dsa: Dataset, dsb: Dataset, kind: str, opts: DynOptions,
             'lvc_a': lvc_a, 'lvc_b': lvc_b,
             'cached_only': cached_only,
             'inhouse': ih is not None, 'ih_src': ih,
+            'google': ih is None and is_google(name, opts.google_prefixes),
         }
 
     only_a = sorted(n for n, p in procs.items() if p['da']['k'] > 0
@@ -545,9 +548,10 @@ def _findings(dsa, dsb, mrss, system, std_a, std_b, ea, eb, pressure, opts,
               leaks):
     out = []
 
-    def add(sev, cat, title, detail, link, score=0.0):
+    def add(sev, cat, title, detail, link, score=0.0, cached=False):
         out.append({'sev': sev, 'cat': cat, 'title': title,
-                    'detail': detail, 'link': link, 'score': score})
+                    'detail': detail, 'link': link, 'score': score,
+                    'cached': cached})
 
     # 1. 标准
     fa = set((std_a or {}).get('fail_items', []))
@@ -572,7 +576,8 @@ def _findings(dsa, dsb, mrss, system, std_a, std_b, ea, eb, pressure, opts,
         add('mid' if worse else 'info', '层级',
             f"层级 {r['level']} RSS {'上升' if worse else '下降'}",
             f"mi {r['da']['mi']:.2f} → {r['db']['mi']:.2f} MB"
-            f"（{r['gap']:+.2f} MB）", '#tab=levels', abs(r['gap']))
+            f"（{r['gap']:+.2f} MB）", '#tab=levels', abs(r['gap']),
+            r['level'] == 'Cached')
     for r in system:
         g = gap_info(r['da']['mean'] or 0.0, r['db']['mean'] or 0.0)
         if not is_significant(r['da']['mean'] or 0.0,
@@ -604,15 +609,18 @@ def _findings(dsa, dsb, mrss, system, std_a, std_b, ea, eb, pressure, opts,
                     f"slope {lk['slope']:+.2f} MB/h，R²={lk['r2']:.2f}")
         detail = '；'.join(parts)
         score = max(abs(l['delta']) for e in g.values() for l in e)
+        lcached = ((kind == 'level' and name == 'Cached')
+                   or (kind == 'proc'
+                       and mrss['procs'].get(name, {}).get('cached_only')))
         if g['B'] and g['A']:
             add('mid', '泄漏', f'两侧均疑似泄漏：{nm}（{kind_cn[kind]}）',
-                detail, link, score)
+                detail, link, score, lcached)
         elif g['B']:
             add('high', '泄漏', f'B 侧疑似泄漏：{nm}（{kind_cn[kind]}）',
-                detail, link, score)
+                detail, link, score, lcached)
         else:
             add('low', '泄漏', f'A 侧疑似泄漏：{nm}（{kind_cn[kind]}，仅 A）',
-                detail + '；仅出现在基线侧', link, score)
+                detail + '；仅出现在基线侧', link, score, lcached)
 
     # 4. RSS 口径 sig 且 B 侧 resident 的增长 Top10 → mid（剔除测试工具进程）
     cand = [p for p in mrss['procs'].values()
@@ -623,7 +631,7 @@ def _findings(dsa, dsb, mrss, system, std_a, std_b, ea, eb, pressure, opts,
         add('mid', '进程', f"常驻进程 {p['name']} RSS 显著上升",
             f"mi {p['da']['mi']:.2f} → {p['db']['mi']:.2f} MB"
             f"（{p['gap']:+.2f} MB），B 侧出现率 {p['db']['rate']:.0%}",
-            f"#proc={p['name']}&metric=rss", abs(p['gap']))
+            f"#proc={p['name']}&metric=rss", abs(p['gap']), p['cached_only'])
 
     # 5. LMK 频率
     la, lb = ea['lmk'], eb['lmk']
@@ -787,6 +795,8 @@ def analyze(dsa: Dataset, dsb: Dataset, opts: DynOptions) -> dict:
         'events': {'a': ea, 'b': eb},
         'standards': {'a': std_a, 'b': std_b},
         'inhouse': ih,
+        'google': {'prefixes': list(opts.google_prefixes),
+                   'prefixes_src': opts.google_prefixes_src},
         'leaks': leaks,
         'findings': findings,
     }

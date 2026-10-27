@@ -35,3 +35,14 @@ def test_old_top_level_compare_removed():
     with pytest.raises(SystemExit) as e:
         main(['compare', 'x', 'y'])
     assert e.value.code == 2
+
+
+def test_google_prefixes_arg():
+    from memscope.cli import build_parser
+    p = build_parser()
+    a = p.parse_args(['static', 'compare', 'x', 'y',
+                      '--google-prefixes', 'g.txt'])
+    assert a.google_prefixes == 'g.txt'
+    a2 = p.parse_args(['dynamic', 'compare', 'x', 'y',
+                       '--google-prefixes', 'g.txt'])
+    assert a2.google_prefixes == 'g.txt'

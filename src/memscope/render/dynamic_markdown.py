@@ -247,10 +247,14 @@ def render(R: dict) -> str:
         L.append('（无 vmstat 数据）')
     L.append('')
 
-    # ---- 10. 自研进程 ----
+    # ---- 10. 自研 / Google 进程 ----
     ih = [p for p in mrss['procs'].values() if p['inhouse']]
     ih.sort(key=lambda p: -abs(p['gap']))
-    L.append('## 10. 自研进程（RSS）')
+    gg = [p for p in mrss['procs'].values() if p['google']]
+    gg.sort(key=lambda p: -abs(p['gap']))
+    L.append('## 10. 自研 / Google 进程（RSS）')
+    L.append('')
+    L.append('### 10.1 自研')
     L.append('')
     ihA = sum(p['da']['mi'] for p in ih)
     ihB = sum(p['db']['mi'] for p in ih)
@@ -268,6 +272,24 @@ def render(R: dict) -> str:
                       ('A' if p['leak_a'] else '')
                       + ('B' if p['leak_b'] else '')]
                      for p in ih[:50]]) if ih else '（无）')
+    L.append('')
+    L.append('### 10.2 Google')
+    L.append('')
+    ggA = sum(p['da']['mi'] for p in gg)
+    ggB = sum(p['db']['mi'] for p in gg)
+    L.append(f"Google 进程数：{len(gg)}；合计 mi：A {_f(ggA)} MB / "
+             f"B {_f(ggB)} MB（{ggB - ggA:+.2f} MB）")
+    L.append('')
+    L.append(_table(['进程', '层级 A', '层级 B', 'mi A', 'mi B',
+                     'GAP / GAP%', '常驻B', '泄漏'],
+                    [[p['name'],
+                      '、'.join(p['la']) or '—', '、'.join(p['lb']) or '—',
+                      _f(p['da']['mi']), _f(p['db']['mi']),
+                      _gap_txt(p['gap'], p['gapp'], p['gapt']),
+                      '✓' if p['resident_b'] else '',
+                      ('A' if p['leak_a'] else '')
+                      + ('B' if p['leak_b'] else '')]
+                     for p in gg[:50]]) if gg else '（无）')
     L.append('')
 
     # ---- 11. 口径说明 ----
@@ -298,6 +320,8 @@ def render(R: dict) -> str:
         '- vmstat 压力：累计计数器逐轮差值；中间有重启或差值为负的间隔不计；'
         'pswpin/out 按 4KB/页换算 MB。',
         '- 时间轴：x = 距测试开始的小时数；start 缺失按序号×平均间隔回退。',
+        f"- Google 判定：前缀匹配 `{R['google']['prefixes_src']}`"
+        f"（{len(R['google']['prefixes'])} 条），自研优先。",
     ]
     L.append('')
     for side, ds in ((0, dsA), (1, dsB)):
@@ -323,6 +347,8 @@ def _proc_marks(p):
         marks.append('泄漏')
     if p['inhouse']:
         marks.append('自研')
+    if p['google']:
+        marks.append('Google')
     if p['cached_only']:
         marks.append('Cached')
     return '、'.join(marks)

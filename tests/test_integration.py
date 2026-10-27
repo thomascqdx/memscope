@@ -8,7 +8,8 @@ import pytest
 
 from memscope import loader
 from memscope.analysis import Options, analyze, rmean
-from memscope.inhouse import load_prefixes, load_whitelist
+from memscope.inhouse import (load_google_prefixes, load_prefixes,
+                              load_whitelist)
 from memscope.model import Dataset
 
 SAMPLES = os.path.join(os.path.dirname(__file__), '..', 'samples',
@@ -37,8 +38,11 @@ def result(datasets):
     a, b = datasets
     wl, ws = load_whitelist()
     px, ps = load_prefixes()
+    gp, gs = load_google_prefixes()
     return analyze(a, b, Options(whitelist=wl, whitelist_src=ws,
-                               prefixes=tuple(px), prefixes_src=ps))
+                               prefixes=tuple(px), prefixes_src=ps,
+                               google_prefixes=tuple(gp),
+                               google_prefixes_src=gs))
 
 
 def test_dataset_shape(datasets):
@@ -99,6 +103,15 @@ def test_cached_only_integration(result):
     # 仅单侧出现的 Cached 进程
     assert procs['com.transsnet.store']['cached_only']
     assert procs['com.transsion.healthlife']['cached_only']
+
+
+def test_google_category(result):
+    procs = result['metrics']['pss']['procs']
+    assert procs['com.google.android.youtube']['google']
+    assert not procs['com.google.android.youtube']['inhouse']
+    assert procs['com.transsnet.store']['inhouse']
+    assert not procs['com.transsnet.store']['google']
+    assert result['google']['prefixes']
 
 
 def test_atomicbrain(result):
