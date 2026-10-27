@@ -174,7 +174,7 @@ def load_dataset(path, label: str, kind: str = 'static', tmpdir=None) -> Dataset
         src = open_source(path, tmp_path)
         if isinstance(src, ZipSource):
             opened.append(src.zf)
-        _load(src, ds, kind, tmp_path, opened)
+        _load(src, ds, tmp_path, opened)
     finally:
         for zf in opened:
             try:
@@ -185,8 +185,7 @@ def load_dataset(path, label: str, kind: str = 'static', tmpdir=None) -> Dataset
     return ds
 
 
-def _load(src: _Source, ds: Dataset, kind: str, tmp_path: Path, opened: list):
-    dynamic = kind == 'dynamic'
+def _load(src: _Source, ds: Dataset, tmp_path: Path, opened: list):
     names = set(src.list())
 
     def find(suffix):
@@ -209,8 +208,7 @@ def _load(src: _Source, ds: Dataset, kind: str, tmp_path: Path, opened: list):
     rfiles = _round_files(src, names, tmp_path, opened)
     failed = {}
     for idx in sorted(rfiles):
-        rd, reason = _load_round(idx, rfiles[idx], tmap.get(idx, (None, None)),
-                                 dynamic)
+        rd, reason = _load_round(idx, rfiles[idx], tmap.get(idx, (None, None)))
         if reason is None:
             ds.rounds.append(rd)
         else:
@@ -255,7 +253,7 @@ def _load(src: _Source, ds: Dataset, kind: str, tmp_path: Path, opened: list):
             ds.warnings.append('无法确定事件日志年份，已跳过 mobilelog.zip')
         else:
             try:
-                lines = _event_lines(src, f, tmp_path, opened, dynamic)
+                lines = _event_lines(src, f, tmp_path, opened)
                 if not lines:
                     ds.warnings.append('mobilelog.zip 中无 events_log')
                 r1 = ds.rounds[0] if ds.rounds else None
@@ -264,18 +262,17 @@ def _load(src: _Source, ds: Dataset, kind: str, tmp_path: Path, opened: list):
                     year if year is not None else r1.start.year,
                     r1.start if r1 else None,
                     r1.uptime_ms if r1 else None,
-                    extra=dynamic)
+                    extra=True)
             except Exception as e:  # noqa: BLE001
                 ds.warnings.append(f'mobilelog.zip 解析失败: {e}')
     else:
         ds.warnings.append('缺少 mobilelog.zip（无启动/唤醒事件）')
 
-    if dynamic:
-        _load_platform(src, names, ds)
-        _detect_reboots(ds)
+    _load_platform(src, names, ds)
+    _detect_reboots(ds)
 
 
-def _load_round(idx: int, got: dict, times, dynamic: bool):
+def _load_round(idx: int, got: dict, times):
     """解析单轮；返回 (RoundData, reason)。reason 非 None 表示无效轮。"""
     rd = RoundData(index=idx)
     rd.start, rd.end = times
@@ -295,7 +292,7 @@ def _load_round(idx: int, got: dict, times, dynamic: bool):
         if 'proc_meminfo.txt' in got:
             rd.meminfo = procmeminfo.parse_proc_meminfo(
                 _decode(got['proc_meminfo.txt']()))
-        if dynamic and 'proc_vmstat.txt' in got:
+        if 'proc_vmstat.txt' in got:
             rd.vmstat = vms.parse_vmstat(_decode(got['proc_vmstat.txt']()))
     except Exception as e:  # noqa: BLE001 - 单轮异常 → 无效轮
         return rd, f'解析失败: {str(e)[:80]}'
@@ -332,13 +329,12 @@ def _round_files(src: _Source, names, tmp_path: Path, opened: list):
     return out
 
 
-def _event_lines(src: _Source, name: str, tmp_path: Path, opened: list,
-                 dynamic: bool):
+def _event_lines(src: _Source, name: str, tmp_path: Path, opened: list):
     """materialize mobilelog.zip → 只保留目标 tag 的行（去重前预过滤）。"""
     p = src.materialize(name, tmp_path)
     mz = zipfile.ZipFile(p)
     opened.append(mz)
-    tags = _STATIC_TAGS + _DYNAMIC_TAGS if dynamic else _STATIC_TAGS
+    tags = _STATIC_TAGS + _DYNAMIC_TAGS
     out = []
     for zi in mz.infolist():
         if zi.is_dir() or 'events_log' not in zip_name(zi):
@@ -367,6 +363,9 @@ def _load_platform(src: _Source, names, ds: Dataset):
             if k == '内存标准动态测试结果：':
                 ds.platform['dynamic_result'] = (str(row[1]).strip()
                                                if len(row) > 1 and row[1] is not None else '')
+            elif k == '内存标准静态测试结果：':
+                ds.platform['static_result'] = (str(row[1]).strip()
+                                              if len(row) > 1 and row[1] is not None else '')
             elif k == '检测工具版本：':
                 ds.platform['tool_version'] = (str(row[1]).strip()
                                              if len(row) > 1 and row[1] is not None else '')

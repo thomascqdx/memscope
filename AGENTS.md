@@ -31,7 +31,7 @@ memscope static compare <baseline.zip> <target.zip> [-o outdir] [--labels A B] [
 memscope dynamic compare <baseline.(zip|rar)> <target.(zip|rar)> [-o outdir] [--labels A B] [--tmpdir DIR]
 ```
 
-Outputs `report.md`, `report.html`, `data.xlsx` into `out/<static|dynamic>/<labelA>_vs_<labelB>/` by default.
+Outputs `report.md`, `report.html`, `data.xlsx` into `out/<static|dynamic>/<labelA>_vs_<labelB>/` by default. Both subcommands share one pipeline and the same flags: `--labels -o --whitelist --prefixes --google-prefixes --gap-abs --gap-pct --resident --leak-delta --leak-pct --leak-r2 --sys-leak-delta --rate-pct --tmpdir` (per-kind argparse defaults come from `analysis.default_options(kind)`).
 
 - Inputs may be platform zip / rar / extracted dirs. rar support needs system `tar` (Windows 10 1803+ ships bsdtar); `debuglogger/` is excluded during extraction.
 - Nested `tw_rpt_*_rounds.zip` / `mobilelog.zip` are materialized to a temp dir (peak temp space ≈ one package, ~5GB); use `--tmpdir` to redirect when the system temp drive is tight.
@@ -53,10 +53,12 @@ $edge = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
 
 `--screenshot` 必须使用**绝对路径**（Edge headless 会切换工作目录，相对路径报「系统找不到指定的路径」并静默退出）。
 
-Routes: `#tab=overview|system|levels|procs|inhouse|google|events|risk|report` (+ `pressure` for dynamic reports), `#proc=<name>[&metric=pss|rss]`, `&metric=rss` and `&cached=1` (include Cached in rankings) append to any route. Dynamic reports default to `metric=rss`; time-series x axes are hours since test start.
+Routes: `#tab=overview|system|levels|procs|inhouse|google|events|pressure|risk|report` (same 10 tabs for both kinds), `#proc=<name>[&metric=pss|rss]`, `&metric=rss` and `&cached=1` (include Cached in rankings) append to any route; `#tab=events&q=<kw>` prefills the wake-chain filter. Default metric = `meta.primary_metric` (static=pss, dynamic=rss). Time-series x axis = round categories when `meta.axis=='round'` (max rounds ≤30), else hours since test start.
 
 ## Conventions
 
-- `analysis.py` / `dynamic_analysis.py` each produce a single JSON-serializable result dict; renderers (`render/markdown.py`|`render/dynamic_markdown.py`, `render/html.py`, `render/excel.py`|`render/dynamic_excel.py`) consume it — do not re-parse datasets in renderers.
-- `report_template.html` / `report_dynamic_template.html` in `src/memscope/assets/` are the UIs; `mockups/` is a requirements-discussion mockup kept as reference — keep them visually aligned but they evolve separately.
+- One analysis pipeline: `analysis.py` `analyze()` produces a single JSON-serializable result dict with an identical key set for both kinds; scenario differences come only from data presence and per-kind defaults (`Options.kind` / `default_options(kind)`: primary_metric, resident, leak thresholds, trend min points). Renderers (`render/markdown.py`, `render/html.py`, `render/excel.py`) consume it — do not re-parse datasets in renderers.
+- `report_template.html` in `src/memscope/assets/` is the single UI for both kinds (h1/metric/axis derived from DATA.kind/DATA.meta); `mockups/` is a requirements-discussion mockup kept as reference — keep them visually aligned but they evolve separately. `report_dynamic_template.html` and `dynamic_analysis.py`/`dynamic_*` renderers are legacy files kept on disk pending removal — nothing imports them.
+- Terminology in UI/MD/Excel: 轮均 (=round-mean, absent rounds count 0), 值均 (=mean over present rounds), 出现率, 疑似泄漏 (趋势回归，提示非定论), 自动结论, 关键指标, 测试判定 — never print the raw token "mi".
+- `datasets[i].events` is inlined only when ≤5000 events (else `None`, see `events_total`; details live in data.xlsx 启动事件). Per-proc `pra`/`prb` (per-round level) exist only when max rounds ≤30.
 - `.work/` is scratch (gitignored); `samples/` and `out/` are gitignored and must not be committed.

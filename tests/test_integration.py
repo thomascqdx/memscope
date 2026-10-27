@@ -75,7 +75,7 @@ def test_rss_levels(datasets):
 
 def test_rss_zygote(result):
     p = result['metrics']['rss']['procs']['zygote64']
-    assert p['ra'] == pytest.approx(169.11, abs=0.01)
+    assert p['da']['mi'] == pytest.approx(169.11, abs=0.01)
 
 
 def test_thresholds(datasets):
@@ -87,9 +87,9 @@ def test_thresholds(datasets):
 
 def test_maps_pss(result):
     p = result['metrics']['pss']['procs']['com.google.android.apps.maps']
-    assert p['ra'] == pytest.approx(124.06, abs=0.01) and p['ka'] == 10
+    assert p['da']['mi'] == pytest.approx(124.06, abs=0.01) and p['da']['k'] == 10
     assert p['la'] == ['Cached']
-    assert p['rb'] == pytest.approx(98.96, abs=0.01) and p['kb'] == 9
+    assert p['db']['mi'] == pytest.approx(98.96, abs=0.01) and p['db']['k'] == 9
     assert p['lb'] == ['Perceptible Low']
     assert p['gap'] == pytest.approx(-25.10, abs=0.01)
     assert p['level_changed']
@@ -117,7 +117,7 @@ def test_google_category(result):
 def test_atomicbrain(result):
     mp = result['metrics']['pss']
     p = mp['procs'].get('com.transsion.atomicbrain')
-    assert p is not None and p['ka'] == 0 and p['kb'] == 11
+    assert p is not None and p['da']['k'] == 0 and p['db']['k'] == 11
     assert 'com.transsion.atomicbrain' in mp['only_b']
     assert 'com.transsion.atomicbrain' in result['pkg_diff']['b']
     # 事件：boot 阶段、caller=launcher3；callee 含 healthlife；上一次开机的 weathers 事件被丢弃
@@ -149,5 +149,7 @@ def test_cli_end_to_end(tmp_path):
     html = (out / 'report.html').read_text(encoding='utf-8')
     assert 'src="http' not in html and 'href="http' not in html
     import openpyxl
-    wb = openpyxl.load_workbook(out / 'data.xlsx')
-    assert '进程对比' in wb.sheetnames and '每轮明细_PSS' in wb.sheetnames
+    wb = openpyxl.load_workbook(out / 'data.xlsx', read_only=True)
+    for s in ('进程对比_PSS', '进程对比_RSS', '每轮_整机_A', '每轮_进程PSS_B',
+              '标准对照', '疑似泄漏', '启动事件', '内存压力'):
+        assert s in wb.sheetnames

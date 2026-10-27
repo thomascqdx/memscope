@@ -40,7 +40,7 @@ def parse_events(lines, year: int, round1_start, round1_uptime_ms, extra: bool =
     阶段：t < boot_time → 丢弃；boot_time <= t < round1_start → 'boot'；否则 'test'。
     boot_time = 满足 <= round1_start 的最近一次 boot（event_t − boot_progress_start 毫秒）；
     无记录时回退为 round1_start − 第 1 轮 dumpsys Uptime。
-    extra=True（动态包）时额外解析 killinfo/am_anr/am_crash/am_low_memory。
+    extra=True 时额外解析 killinfo/am_anr/am_crash/am_low_memory（统一开启）。
     """
     boots = []   # boot 事件的原始 uptime_ms，含事件时刻
     evs = []

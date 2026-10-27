@@ -1,61 +1,34 @@
-"""渲染 data.xlsx（openpyxl）：全部明细数据表。"""
+"""渲染 data.xlsx（openpyxl write_only）。数据源为 analyze() 的 result dict。
+
+静态/动态共用同一组 sheet 与表头术语；无数据的 sheet 写一行说明。
+"""
 from __future__ import annotations
 
 from pathlib import Path
 
 from openpyxl import Workbook
+from openpyxl.cell import WriteOnlyCell
 from openpyxl.styles import Font, PatternFill
-from openpyxl.utils import get_column_letter
 
 HEAD_FONT = Font(bold=True)
 HEAD_FILL = PatternFill('solid', fgColor='E2E8F0')
-RED = Font(color='DC2626')
-GREEN = Font(color='16A34A')
-NUM = '0.00'
 
 
-def _sheet(wb, title):
+def _sheet(wb, title, header):
     ws = wb.create_sheet(title)
+    ws.append([_head_cell(ws, h) for h in header])
     return ws
 
 
-def _write_table(ws, header, rows, num_cols=(), gap_col=None, widths=None):
-    ws.append(header)
-    for c in range(1, len(header) + 1):
-        cell = ws.cell(1, c)
-        cell.font = HEAD_FONT
-        cell.fill = HEAD_FILL
-    for r in rows:
-        ws.append(list(r))
-    ws.freeze_panes = 'A2'
-    if rows:
-        ws.auto_filter.ref = f'A1:{get_column_letter(len(header))}{len(rows) + 1}'
-    for i in range(1, len(header) + 1):
-        letter = get_column_letter(i)
-        w = max((len(str(header[i - 1])) * 2,
-                 *(len(str(r[i - 1])) * 1.1 for r in rows[:200]))) if rows else len(str(header[i - 1])) * 2
-        ws.column_dimensions[letter].width = min(max(w, 8), 60)
-    if widths:
-        for i, w in widths.items():
-            ws.column_dimensions[get_column_letter(i)].width = w
-    for c in num_cols:
-        for r in range(2, ws.max_row + 1):
-            cell = ws.cell(r, c)
-            if isinstance(cell.value, (int, float)):
-                cell.number_format = NUM
-    if gap_col:
-        for r in range(2, ws.max_row + 1):
-            cell = ws.cell(r, gap_col)
-            if isinstance(cell.value, (int, float)):
-                cell.number_format = NUM
-                if cell.value > 0:
-                    cell.font = RED
-                elif cell.value < 0:
-                    cell.font = GREEN
+def _head_cell(ws, v):
+    c = WriteOnlyCell(ws, value=v)
+    c.font = HEAD_FONT
+    c.fill = HEAD_FILL
+    return c
 
 
-def _gaptxt(p):
-    return p['gapt'] or (f"{p['gapp']:.1f}%" if p['gapp'] is not None else '—')
+def _f(v, nd=2):
+    return None if v is None else round(v, nd)
 
 
 def _join(xs):
@@ -63,215 +36,305 @@ def _join(xs):
 
 
 def render(R: dict, out_path) -> Path:
-    wb = Workbook()
-    wb.remove(wb.active)
-    na, nb = R['datasets'][0]['n'], R['datasets'][1]['n']
-    metrics = [('PSS', R['metrics']['pss']), ('RSS', R['metrics']['rss'])]
+    wb = Workbook(write_only=True)
+    dsA, dsB = R['datasets']
+    mrss, mpss = R['metrics']['rss'], R['metrics']['pss']
+    meta = R['meta']
+    mp = mrss if meta.get('primary_metric') == 'rss' else mpss
 
-    # 设备信息
-    ws = _sheet(wb, '设备信息')
-    _write_table(ws, ['字段', 'A（基线）', 'B（对比）', '差异'],
-                 [[d['field'], d['a'], d['b'], '不同' if d['diff'] else '']
-                  for d in R['device_diff']], widths={2: 42, 3: 42})
+    # 测试信息
+    ws = _sheet(wb, '测试信息', ['字段', 'A（基线）', 'B（对比）', '差异'])
+    for d in R['device_diff']:
+        ws.append([d['field'], d['a'], d['b'], '不同' if d['diff'] else ''])
+    pd = R['pkg_diff']
+    ws.append(['预装包总数', len(dsA['packages']), len(dsB['packages']),
+               '不同' if len(dsA['packages']) != len(dsB['packages']) else ''])
+    ws.append(['仅 A 预装包数', len(pd['a']), '', ''])
+    ws.append(['仅 B 预装包数', '', len(pd['b']), ''])
 
     # 预装包差异
-    ws = _sheet(wb, '预装包差异')
-    pd = R['pkg_diff']
-    rows = max(len(pd['a']), len(pd['b']))
-    _write_table(ws, ['仅 A 存在', '仅 B 存在'],
-                 [[pd['a'][i] if i < len(pd['a']) else '',
-                   pd['b'][i] if i < len(pd['b']) else ''] for i in range(rows)],
-                 widths={1: 50, 2: 50})
+    ws = _sheet(wb, '预装包差异', ['仅 A 存在', '仅 B 存在'])
+    for i in range(max(len(pd['a']), len(pd['b']))):
+        ws.append([pd['a'][i] if i < len(pd['a']) else '',
+                   pd['b'][i] if i < len(pd['b']) else ''])
 
-    # 整机汇总
-    ws = _sheet(wb, '整机汇总')
-    _write_table(ws, ['指标', '来源', 'A 均值', 'B 均值', 'GAP', 'GAP%',
-                      'A 最小', 'A 最大', 'B 最小', 'B 最大', '方向'],
-                 [[r['name'], r['src'], r['ra'], r['rb'], r['gap'], _gaptxt(r),
-                   r['mina'], r['maxa'], r['minb'], r['maxb'],
-                   '越高越好' if r['hb'] else '越低越好'] for r in R['system']],
-                 num_cols=(3, 4, 7, 8, 9, 10), gap_col=5)
+    # 结论（findings 全量）
+    ws = _sheet(wb, '结论', ['级别', '类别', '标题', '详情', '链接'])
+    for f in R['findings']:
+        ws.append([f['sev'], f['cat'], f['title'], f['detail'], f['link']])
 
-    # 层级汇总（双口径）
-    ws = _sheet(wb, '层级汇总')
-    _write_table(ws, ['口径', '层级', 'A 均值', 'B 均值', 'GAP', 'GAP%', '进程数A', '进程数B'],
-                 [[k, r['level'], r['ra'], r['rb'], r['gap'], _gaptxt(r), r['ca'], r['cb']]
-                  for k, m in metrics for r in m['level_rows']],
-                 num_cols=(3, 4), gap_col=5)
+    # 标准对照
+    ws = _sheet(wb, '标准对照',
+                ['数据集', '对象', '层级', '阈值', '值均', 'P90/P10', '峰值',
+                 '值均判定', '超标轮比例'])
+    for st, lab in ((R['standards']['a'], 'A'), (R['standards']['b'], 'B')):
+        if not st:
+            ws.append([lab, '(无阈值数据)'] + [''] * 7)
+            continue
+        ws.append([lab, f'判定: {st["verdict"]}'] + [''] * 7)
+        if st['free_ram']:
+            r = st['free_ram']
+            ws.append([lab, 'Free RAM(下限)', '', r['thr'], _f(r['mean']),
+                       _f(r['p10']), _f(r['low']),
+                       '超标' if r['viol'] else '达标',
+                       round(r['exceed_rate'], 4)])
+        for r in st['levels']:
+            ws.append([lab, r['name'], '', r['thr'], _f(r['mean']),
+                       _f(r['p90']), _f(r['peak']),
+                       '超标' if r['viol'] else '达标',
+                       round(r['exceed_rate'], 4)])
+        for r in st['procs']:
+            ws.append([lab, r['name'], r['level'], r['thr'], _f(r['mean']),
+                       '', _f(r['peak']),
+                       '超标' if r['viol'] else '达标',
+                       round(r['exceed_rate'], 4)])
 
-    # 进程对比（双口径全量）
-    ws = _sheet(wb, '进程对比')
-    prow_rows = []
-    for k, m in metrics:
+    # 整机对比
+    ws = _sheet(wb, '整机对比',
+                ['指标', '来源', '越高越好', 'A 值均', 'B 值均', 'GAP', 'GAP%',
+                 'A P90', 'B P90', 'A 最大', 'B 最大', 'A 斜率/h', 'B 斜率/h',
+                 'A R²', 'B R²', '疑似泄漏'])
+    for r in R['system']:
+        ws.append([r['name'], r['src'], '是' if r['hb'] else '',
+                   _f(r['da']['mean']), _f(r['db']['mean']), _f(r['gap']),
+                   r['gapt'] or _f(r['gapp'], 1),
+                   _f(r['da']['p90']), _f(r['db']['p90']),
+                   _f(r['da']['max']), _f(r['db']['max']),
+                   _f(r['ta']['slope'] if r['ta'] else None),
+                   _f(r['tb']['slope'] if r['tb'] else None),
+                   _f(r['ta']['r2'] if r['ta'] else None),
+                   _f(r['tb']['r2'] if r['tb'] else None),
+                   ('A' if r['leak_a'] else '') + ('B' if r['leak_b'] else '')])
+
+    # 层级对比（双口径）
+    for tag, m in (('RSS', mrss), ('PSS', mpss)):
+        ws = _sheet(wb, f'层级对比_{tag}',
+                    ['层级', 'A 轮均', 'B 轮均', 'GAP', 'GAP%', 'A 值均', 'B 值均',
+                     'A P50', 'B P50', 'A P90', 'B P90', 'A P95', 'B P95',
+                     'A 最大', 'B 最大', 'P90差', '进程数A', '进程数B',
+                     '显著', '泄漏'])
+        for r in m['level_rows']:
+            ws.append([r['level'], _f(r['da']['mi']), _f(r['db']['mi']),
+                       _f(r['gap']), r['gapt'] or _f(r['gapp'], 1),
+                       _f(r['da']['mean']), _f(r['db']['mean']),
+                       _f(r['da']['p50']), _f(r['db']['p50']),
+                       _f(r['da']['p90']), _f(r['db']['p90']),
+                       _f(r['da']['p95']), _f(r['db']['p95']),
+                       _f(r['da']['max']), _f(r['db']['max']),
+                       _f(r['gap_p90']), r['ca'], r['cb'],
+                       '✓' if r['sig'] else '',
+                       ('A' if r['leak_a'] else '')
+                       + ('B' if r['leak_b'] else '')])
+
+    # 进程对比（双口径）
+    for tag, m in (('RSS', mrss), ('PSS', mpss)):
+        ws = _sheet(wb, f'进程对比_{tag}',
+                    ['进程', '层级A', '层级B', '出现A', '出现B', '出现率A',
+                     '出现率B', '轮均A', '轮均B', '值均A', '值均B', 'P90 A',
+                     'P90 B', '最大A', '最大B', 'GAP', 'GAP%', '常驻A',
+                     '常驻B', '泄漏', '层级变化', '自研', 'Google', '标记'])
         for n in m['top']:
             p = m['procs'][n]
             marks = []
-            if p['ka'] and not p['kb']:
-                marks.append('仅A')
-            if p['kb'] and not p['ka']:
-                marks.append('仅B')
-            if p['level_changed']:
-                marks.append('层级变化')
-            if p['cached_only']:
-                marks.append('仅Cached')
+            if p['gapt'] == '新增':
+                marks.append('新增')
+            if p['gapt'] == '消失':
+                marks.append('消失')
             if p['sig']:
                 marks.append('显著')
-            prow_rows.append([k, p['name'], '是' if p['inhouse'] else '',
-                              p['ih_src'] or '', '是' if p['google'] else '',
-                              _join(p['la']), _join(p['lb']),
-                              p['ka'], p['kb'], p['ra'], p['rb'], p['va'], p['vb'],
-                              p['gap'], _gaptxt(p), ','.join(marks)])
-    _write_table(ws, ['口径', '进程', '自研', '判定来源', 'Google', '层级A', '层级B',
-                      '出现A', '出现B', '轮均A', '轮均B', '值均A', '值均B',
-                      'GAP', 'GAP%', '标记'],
-                 prow_rows, num_cols=(10, 11, 12, 13), gap_col=14,
-                 widths={2: 55, 6: 22, 7: 22})
+            if p['cached_only']:
+                marks.append('仅Cached')
+            ws.append([n, '、'.join(p['la']), '、'.join(p['lb']),
+                       p['da']['k'], p['db']['k'],
+                       _f(p['da']['rate']), _f(p['db']['rate']),
+                       _f(p['da']['mi']), _f(p['db']['mi']),
+                       _f(p['da']['mean']), _f(p['db']['mean']),
+                       _f(p['da']['p90']), _f(p['db']['p90']),
+                       _f(p['da']['max']), _f(p['db']['max']),
+                       _f(p['gap']), p['gapt'] or _f(p['gapp'], 1),
+                       '✓' if p['resident_a'] else '',
+                       '✓' if p['resident_b'] else '',
+                       ('A' if p['leak_a'] else '')
+                       + ('B' if p['leak_b'] else ''),
+                       '✓' if p['level_changed'] else '',
+                       ('白名单' if p['ih_src'] == 'whitelist' else '前缀')
+                       if p['inhouse'] else '',
+                       '是' if p['google'] else '',
+                       ','.join(marks)])
 
-    # 层级进程明细（双口径，层级×进程）
-    ws = _sheet(wb, '层级进程明细')
-    rows = []
-    for k, m in metrics:
-        for lr in m['level_rows']:
-            lv = lr['level']
-            for n in m['top']:
-                p = m['procs'][n]
-                sa, sb = p['sa'].get(lv), p['sb'].get(lv)
-                if not sa and not sb:
-                    continue
-                ra = sum(x or 0 for x in (sa or [])) / na if sa else 0.0
-                rb = sum(x or 0 for x in (sb or [])) / nb if sb else 0.0
-                va = (lambda s: (sum(x for x in s if x is not None) /
-                                 sum(1 for x in s if x is not None)) if any(x is not None for x in s) else None)
-                rows.append([k, lv, n,
-                             sum(1 for x in (sa or []) if x is not None),
-                             sum(1 for x in (sb or []) if x is not None),
-                             ra, rb, va(sa or []), va(sb or []), rb - ra])
-    _write_table(ws, ['口径', '层级', '进程', '出现A', '出现B', '轮均A', '轮均B',
-                      '值均A', '值均B', 'GAP'],
-                 rows, num_cols=(6, 7, 8, 9), gap_col=10, widths={3: 55})
+    # 独有进程（主口径）
+    ws = _sheet(wb, '独有进程',
+                ['进程', '归属', '所在层级', '出现次数', '轮均', '值均',
+                 'GAP', '标记'])
+    for side, key in (('a', 'only_a'), ('b', 'only_b')):
+        for n in mp[key]:
+            p = mp['procs'][n]
+            dd = p['da'] if side == 'a' else p['db']
+            lv = p['la'] if side == 'a' else p['lb']
+            ws.append([n, '仅A' if side == 'a' else '仅B',
+                       '、'.join(lv), f"{dd['k']}/{dd['n']}",
+                       _f(dd['mi']), _f(dd['mean']), _f(p['gap']),
+                       _proc_marks(p)])
 
-    # 差异显著（PSS）
-    ws = _sheet(wb, '差异显著')
-    mp = R['metrics']['pss']
-    sig = [mp['procs'][n] for n in mp['top']
-           if mp['procs'][n]['sig'] and not mp['procs'][n]['cached_only']]
-    _write_table(ws, ['进程', '层级A', '层级B', '出现A', '出现B',
-                      '轮均A', '轮均B', '值均A', '值均B', 'GAP', 'GAP%'],
-                 [[p['name'], _join(p['la']), _join(p['lb']), p['ka'], p['kb'],
-                   p['ra'], p['rb'], p['va'], p['vb'], p['gap'], _gaptxt(p)]
-                  for p in sig], num_cols=(6, 7, 8, 9), gap_col=10, widths={1: 55})
+    # 层级变化（主口径；pra/prb 仅在轮次 ≤30 时存在）
+    ws = _sheet(wb, '层级变化',
+                ['进程', '层级A', '层级B', 'A 各轮', 'B 各轮'])
+    for n in mp['level_changed']:
+        p = mp['procs'][n]
+        if p['pra'] is not None:
+            ra = ','.join(x or '·' for x in p['pra'])
+            rb = ','.join(x or '·' for x in p['prb'])
+        else:
+            ra = '、'.join(f'{l}×{p["lvc_a"][l]}' for l in p['la'])
+            rb = '、'.join(f'{l}×{p["lvc_b"][l]}' for l in p['lb'])
+        ws.append([n, '、'.join(p['la']), '、'.join(p['lb']), ra, rb])
 
-    # 独有进程（双口径）
-    ws = _sheet(wb, '独有进程')
-    rows = []
-    for k, m in metrics:
-        for side, key in (('A', 'only_a'), ('B', 'only_b')):
-            for n in m[key]:
-                p = m['procs'][n]
-                rows.append([k, n, f'仅{side}',
-                             _join(p['la'] if side == 'A' else p['lb']),
-                             p['ka'] if side == 'A' else p['kb'],
-                             p['ra'] if side == 'A' else p['rb'],
-                             p['va'] if side == 'A' else p['vb']])
-    _write_table(ws, ['口径', '进程', '归属', '所在层级', '出现次数', '轮次均值', '数值均值'],
-                 rows, num_cols=(6, 7), widths={2: 55})
-
-    # 层级变化（双口径，各轮层级序列）
-    ws = _sheet(wb, '层级变化')
-    rows = []
-    for k, m in metrics:
-        for n in m['level_changed']:
-            p = m['procs'][n]
-            rows.append([k, n,
-                         ','.join(x or '·' for x in p['pra']),
-                         ','.join(x or '·' for x in p['prb'])])
-    _write_table(ws, ['口径', '进程', 'A 各轮层级', 'B 各轮层级'],
-                 rows, widths={2: 55, 3: 60, 4: 60})
-
-    # 自研应用（双口径）
-    ws = _sheet(wb, '自研应用')
-    rows = []
-    for k, m in metrics:
-        for n in m['top']:
-            p = m['procs'][n]
-            if not p['inhouse']:
+    # 自研应用 / Google 应用（主口径）
+    for sheet_name, key in (('自研应用', 'inhouse'), ('Google应用', 'google')):
+        ws = _sheet(wb, sheet_name,
+                    ['进程', '判定', '层级A', '层级B', '出现A', '出现B',
+                     '出现率A', '出现率B', '轮均A', '轮均B', '值均A', '值均B',
+                     'GAP', 'GAP%', '标记'])
+        for n in mp['top']:
+            p = mp['procs'][n]
+            if not p[key]:
                 continue
-            rows.append([k, p['name'], '白名单' if p['ih_src'] == 'whitelist' else '前缀',
-                         _join(p['la']), _join(p['lb']), p['ka'], p['kb'],
-                         p['ra'], p['rb'], p['gap'], _gaptxt(p)])
-    _write_table(ws, ['口径', '进程', '判定', '层级A', '层级B', '出现A', '出现B',
-                      '轮均A', '轮均B', 'GAP', 'GAP%'],
-                 rows, num_cols=(8, 9), gap_col=10, widths={2: 55})
+            ws.append([n,
+                       ('白名单' if p['ih_src'] == 'whitelist' else '前缀')
+                       if p['inhouse'] else '',
+                       '、'.join(p['la']), '、'.join(p['lb']),
+                       p['da']['k'], p['db']['k'],
+                       _f(p['da']['rate']), _f(p['db']['rate']),
+                       _f(p['da']['mi']), _f(p['db']['mi']),
+                       _f(p['da']['mean']), _f(p['db']['mean']),
+                       _f(p['gap']), p['gapt'] or _f(p['gapp'], 1),
+                       _proc_marks(p)])
 
-    # Google 应用（双口径）
-    ws = _sheet(wb, 'Google应用')
-    rows = []
-    for k, m in metrics:
-        for n in m['top']:
-            p = m['procs'][n]
-            if not p['google']:
-                continue
-            rows.append([k, p['name'], _join(p['la']), _join(p['lb']),
-                         p['ka'], p['kb'], p['ra'], p['rb'], p['gap'], _gaptxt(p)])
-    _write_table(ws, ['口径', '进程', '层级A', '层级B', '出现A', '出现B',
-                      '轮均A', '轮均B', 'GAP', 'GAP%'],
-                 rows, num_cols=(7, 8), gap_col=9, widths={2: 55})
+    # 疑似泄漏
+    ws = _sheet(wb, '疑似泄漏',
+                ['数据集', '类型', '口径', '对象', 'head', 'tail', 'delta',
+                 '斜率MB/h', 'R²'])
+    for lk in R['leaks']:
+        ws.append([lk['ds'], lk['kind'], lk['metric'], lk['name'],
+                   _f(lk['head']), _f(lk['tail']), _f(lk['delta']),
+                   _f(lk['slope']), _f(lk['r2'])])
 
-    # 标准对照
-    ws = _sheet(wb, '标准对照')
-    rows = []
+    # LMK查杀（全量明细）
+    ws = _sheet(wb, 'LMK查杀',
+                ['数据集', '时间', '进程', 'adj', '层级', 'rss_mb', 'code',
+                 '原因'])
     for side, lab in (('a', 'A'), ('b', 'B')):
-        st = R['standards'].get(side)
-        if not st:
-            rows.append([lab, '(无阈值数据)', '', '', '', '', '', ''])
-            continue
-        if st['free_ram']:
-            r = st['free_ram']
-            rows.append([lab, 'Free RAM(下限)', '', r['thr'], r['mean'], r['low'],
-                         '超标' if r['viol'] else '达标',
-                         '峰值超标' if r['peak_viol'] else ''])
-        for r in st['levels']:
-            rows.append([lab, r['name'], '', r['thr'], r['mean'], r['peak'],
-                         '超标' if r['viol'] else '达标',
-                         '峰值超标' if r['peak_viol'] else ''])
-        for r in st['procs']:
-            rows.append([lab, r['name'], r['level'], r['thr'], r['mean'], r['peak'],
-                         '超标' if r['viol'] else '达标',
-                         '峰值超标' if r['peak_viol'] else ''])
-    _write_table(ws, ['数据集', '对象', '层级', '阈值', '均值', '峰值', '均值判定', '峰值判定'],
-                 rows, num_cols=(4, 5, 6), widths={2: 50})
+        e = R['events'][side]['lmk']
+        rname = {r['code']: r['name'] for r in e['by_reason']}
+        for x in e['list']:
+            ws.append([lab, x['t'], x['proc'], x['adj'], x['level'],
+                       _f(x['rss_mb']), x['code'],
+                       rname.get(x['code'], '')])
 
-    # 疑似增长
-    ws = _sheet(wb, '疑似增长')
-    _write_table(ws, ['数据集', '对象', '类型', '斜率(MB/轮)', 'R²'],
-                 [[h['ds'], h['name'],
-                   '进程(PSS)' if h['kind'] == 'proc' else '整机',
-                   h['slope'], h['r2']] for h in R['growth']],
-                 num_cols=(4, 5), widths={2: 55})
+    # am_kill原因
+    ws = _sheet(wb, 'am_kill原因', ['数据集', '类别', '名称', '次数'])
+    for side, lab in (('a', 'A'), ('b', 'B')):
+        e = R['events'][side]['am_kill']
+        for r in e['by_reason']:
+            ws.append([lab, 'reason', r['reason'], r['n']])
+        for r in e['top']:
+            ws.append([lab, 'proc', r['proc'], r['n']])
 
-    # 启动事件
-    ws = _sheet(wb, '启动事件')
-    rows = []
+    # ANR_Crash
+    ws = _sheet(wb, 'ANR_Crash', ['数据集', '类型', '时间', '进程', '原因'])
+    for side, lab in (('a', 'A'), ('b', 'B')):
+        e = R['events'][side]
+        for x in e['anr']:
+            ws.append([lab, 'anr', x['t'], x['proc'], x['reason']])
+        for x in e['crash']:
+            ws.append([lab, 'crash', x['t'], x['proc'], x['reason']])
+
+    # 启动事件（原始明细；未内嵌时写说明行）
+    ws = _sheet(wb, '启动事件',
+                ['数据集', '时间', '阶段', '类型', '进程', '原因', '组件',
+                 '调用方', 'adj'])
     for i, lab in ((0, 'A'), (1, 'B')):
-        for e in R['datasets'][i]['events']:
-            rows.append([lab, e['t'], e['phase'], e['kind'], e['proc'],
-                         e['reason'], e['comp'], e['caller'], e['adj']])
-    _write_table(ws, ['数据集', '时间', '阶段', '类型', '进程', '原因', '组件', '调用方', 'adj'],
-                 rows, widths={5: 40, 7: 55, 8: 40})
+        ds = R['datasets'][i]
+        if ds['events'] is None:
+            ws.append([lab, f"事件共 {ds['events_total']} 条，"
+                            '数量过多未内嵌明细（见 HTML 说明）']
+                      + [''] * 7)
+            continue
+        for e in ds['events']:
+            ws.append([lab, e['t'], e['phase'], e['kind'], e['proc'],
+                       e['reason'], e['comp'], e['caller'], e['adj']])
 
-    # 每轮明细_PSS / _RSS
-    for k, m in metrics:
-        ws = _sheet(wb, f'每轮明细_{k}')
-        header = ['进程', '层级A'] + [f'A第{i + 1}轮' for i in range(na)] \
-            + ['层级B'] + [f'B第{i + 1}轮' for i in range(nb)]
-        rows = []
-        for n in m['top']:
-            p = m['procs'][n]
-            rows.append([n, _join(p['la'])] + list(p['ta'])
-                        + [_join(p['lb'])] + list(p['tb']))
-        num_cols = tuple(range(3, 3 + na)) + tuple(range(3 + na, 3 + na + nb))
-        _write_table(ws, header, rows, num_cols=num_cols, widths={1: 55, 2: 18, 3 + na: 18})
+    # 内存压力
+    ws = _sheet(wb, '内存压力',
+                ['计数器', '单位', 'A 总量', 'A /小时', 'A P90/轮',
+                 'A 覆盖小时', 'B 总量', 'B /小时', 'B P90/轮', 'B 覆盖小时',
+                 'GAP/小时', 'GAP%'])
+    cs = R['pressure'].get('counters', [])
+    if cs:
+        for c in cs:
+            ws.append([c['name'], c['unit'],
+                       _f(c['sa']['total'] if c['sa'] else None),
+                       _f(c['sa']['per_hour'] if c['sa'] else None),
+                       _f(c['sa']['p90'] if c['sa'] else None),
+                       _f(c['sa']['cov_hours'] if c['sa'] else None),
+                       _f(c['sb']['total'] if c['sb'] else None),
+                       _f(c['sb']['per_hour'] if c['sb'] else None),
+                       _f(c['sb']['p90'] if c['sb'] else None),
+                       _f(c['sb']['cov_hours'] if c['sb'] else None),
+                       _f(c['gap']), _f(c['gapp'], 1)])
+    else:
+        ws.append(['(本测试包无 proc_vmstat 数据)'] + [''] * 11)
+
+    # 每轮_整机_A / B
+    sys_fields = [r['name'] for r in R['system']]
+    for side, ds, lab in (('a', dsA, 'A'), ('b', dsB, 'B')):
+        ws = _sheet(wb, f'每轮_整机_{lab}',
+                    ['轮次', '时间', '小时']
+                    + sys_fields
+                    + [f'RSS:{lv}' for lv in mrss['levels']]
+                    + [f'PSS:{lv}' for lv in mpss['levels']])
+        n = ds['n']
+        for i in range(n):
+            row = [ds['rounds'][i], ds['start_times'][i],
+                   _f(ds['hours'][i])]
+            row += [r[side][i] for r in R['system']]
+            row += [r[side][i] for r in mrss['level_rows']]
+            row += [r[side][i] for r in mpss['level_rows']]
+            ws.append(row)
+
+    # 每轮_进程{RSS,PSS}_A / B（行=轮次，列=进程）
+    for tag, m in (('RSS', mrss), ('PSS', mpss)):
+        for side, ds, lab in (('a', dsA, 'A'), ('b', dsB, 'B')):
+            ws = _sheet(wb, f'每轮_进程{tag}_{lab}', ['轮次'] + m['top'])
+            procs = [m['procs'][n] for n in m['top']]
+            for i in range(ds['n']):
+                row = [ds['rounds'][i]]
+                for p in procs:
+                    s = p[side]
+                    row.append(s[i] if s else None)
+                ws.append(row)
 
     out_path = Path(out_path)
     wb.save(out_path)
     return out_path
+
+
+def _proc_marks(p):
+    marks = []
+    if p['gapt'] == '新增':
+        marks.append('新增')
+    if p['gapt'] == '消失':
+        marks.append('消失')
+    if p['resident_b']:
+        marks.append('常驻')
+    if p['leak_a'] or p['leak_b']:
+        marks.append('泄漏')
+    if p['level_changed']:
+        marks.append('层级变化')
+    if p['inhouse']:
+        marks.append('自研')
+    if p['google']:
+        marks.append('Google')
+    if p['cached_only']:
+        marks.append('仅Cached')
+    return '、'.join(marks)

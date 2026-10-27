@@ -34,7 +34,7 @@ class RoundData:
     rss: dict = field(default_factory=dict)
     tail: dict = field(default_factory=dict)     # dumpsys 尾部汇总, MB
     meminfo: dict = field(default_factory=dict)  # /proc/meminfo, MB
-    vmstat: dict = field(default_factory=dict)   # /proc/vmstat 累计计数器（动态包）
+    vmstat: dict = field(default_factory=dict)   # /proc/vmstat 累计计数器（存在才解析）
 
 
 @dataclass
@@ -58,7 +58,7 @@ class Dataset:
     warnings: list = field(default_factory=list)
     failed_rounds: list = field(default_factory=list)  # list[dict(index, reason)]
     reboots: list = field(default_factory=list)        # list[dict(after_round, round)]
-    platform: dict = field(default_factory=dict)       # 平台判定（动态包 Exception_Summary_Report）
+    platform: dict = field(default_factory=dict)       # 平台判定（Exception_Summary_Report.xlsx）
 
     @property
     def n(self) -> int:

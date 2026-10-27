@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import pytest
 
 from memscope.analysis import (Options, analyze, cnt, gap_info, is_significant,
-                               linreg, rmean, vmean)
+                               rmean, vmean)
 from memscope.inhouse import (base_pkg, classify, is_google,
                               load_google_prefixes)
 from memscope.model import Dataset, RoundData
@@ -48,13 +48,6 @@ def test_significant():
     assert not is_significant(100, 104, o)     # 4 < 5 abs, 4% < 10%
 
 
-def test_linreg():
-    slope, r2 = linreg([1, 2, 3, 4, 5, 6])
-    assert slope == pytest.approx(1.0) and r2 == pytest.approx(1.0)
-    slope, r2 = linreg([5, 4, 3, 4, 5, 4])
-    assert abs(slope) < 0.5 and r2 < 0.3
-
-
 def test_level_changed_and_cached_only():
     a = _mk_dataset([{'Cached': {'p.maps': 10}, 'Foreground': {'p.fg': 5}}] * 6)
     b = _mk_dataset([{'Perceptible Low': {'p.maps': 8}, 'Foreground': {'p.fg': 5}}] * 6)
@@ -79,15 +72,18 @@ def test_cached_only_partial_presence():
     R = analyze(a, b, Options(prefixes=()))
     procs = R['metrics']['pss']['procs']
     assert procs['p.part']['cached_only']      # A 侧缺席一轮 + 仅 A
-    assert procs['p.part']['ka'] == 2 and procs['p.part']['kb'] == 0
+    assert procs['p.part']['da']['k'] == 2 and procs['p.part']['db']['k'] == 0
     assert not procs['p.fg']['cached_only']    # 缺席的 None 不参与判定，但层级非 Cached
 
 
-def test_growth_hint():
-    a = _mk_dataset([{'Foreground': {'p.grow': 10 + i}} for i in range(8)])
+def test_leak_hint_static():
+    # 静态默认：常驻（全出现）+ head/tail delta ≥ 10 MB 且 R² ≥ 0.6 → 疑似泄漏
+    a = _mk_dataset([{'Foreground': {'p.grow': 10 + i * 5}} for i in range(8)])
     b = _mk_dataset([{'Foreground': {'p.grow': 10}} for _ in range(8)])
-    R = analyze(a, b, Options(prefixes=(), growth_slope=1.0, growth_r2=0.6))
-    names = {(h['ds'], h['name']) for h in R['growth']}
+    R = analyze(a, b, Options(prefixes=()))
+    p = R['metrics']['pss']['procs']['p.grow']
+    assert p['leak_a'] and not p['leak_b']
+    names = {(h['ds'], h['name']) for h in R['leaks']}
     assert ('A', 'p.grow') in names
     assert ('B', 'p.grow') not in names
 

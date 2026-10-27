@@ -162,7 +162,7 @@ input[type=checkbox]{accent-color:var(--brand);width:15px;height:15px}
 .chart{width:100%;height:340px}
 .chart-tall{height:460px}
 .mono{font-family:Consolas,"Courier New",monospace;font-size:12px}
-.strip{display:flex;gap:2px;align-items:center;margin:3px 0}
+.strip{display:flex;gap:2px;align-items:center;margin:3px 0;flex-wrap:wrap}
 .strip .cell{width:18px;height:14px;border-radius:4px;display:inline-block}
 .strip .cell.empty{background:#f1f5f9;border:1px dashed #cbd5e1}
 .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--sub);margin:6px 0 10px}
@@ -223,20 +223,31 @@ tr.lv-off td{color:var(--sub)}
 .mdview .tbl-wrap{margin:10px 0}
 .mdview code{background:#f1f5f9;padding:1px 5px;border-radius:4px;font-family:Consolas,monospace;font-size:12.5px}
 .foot{color:var(--sub);font-size:12px;text-align:center;padding:10px 0 0}
+
+.sev{display:inline-block;padding:1px 9px;border-radius:999px;font-size:11px;font-weight:600;margin-right:6px}
+.sev-high{background:var(--red-soft);color:var(--red)}
+.sev-mid{background:#fffbeb;color:#b45309}
+.sev-low{background:#f5f3ff;color:#6d28d9}
+.sev-info{background:#eff6ff;color:#1d4ed8}
+th.sort:hover{background:#eef2ff}
+.pname{max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pname a{display:block;overflow:hidden;text-overflow:ellipsis}
+.lvcell{white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis}
+.empty{padding:26px 10px;color:var(--sub);font-size:13px;text-align:center}
 </style>
 </head>
 <body>
 <header id="topbar">
   <div class="bar-row">
-    <div class="brand"><span class="logo">M</span><h1>静态内存对比分析<span class="sub">memscope</span></h1></div>
+    <div class="brand"><span class="logo">M</span><h1><span id="pageTitle"></span><span class="sub">memscope</span></h1></div>
     <div class="chips">
       <span class="chip chip-a"><i class="dot"></i>基线 A：<b id="chipA"></b></span>
       <span class="chip chip-b"><i class="dot"></i>对比 B：<b id="chipB"></b></span>
     </div>
     <div class="toggles">
-      <span class="segtrack"><button class="seg active" data-m="pss">PSS</button><button class="seg" data-m="rss">RSS</button></span>
+      <span class="segtrack"><button class="seg" data-m="pss">PSS</button><button class="seg" data-m="rss">RSS</button></span>
       <label class="switch"><input type="checkbox" id="incCached"><span class="sl"></span><span>包含 Cached</span></label>
-      <span class="hint" tabindex="0">ⓘ<span class="hint-pop"><p>Cached 是后台缓存进程所在的 OOM 层级，内存紧张时可被系统随时回收，数值受测试时机和 LMK 影响波动大，默认不参与差异排行。</p><p>打开后纳入：概览「层级 GAP Top3 / 进程 GAP Top5 / 新增·消失进程 Top3」、层级内存柱状图、进程分析 Top20 / 全量进程表 / 走势默认项。</p><p>始终显示（不受开关影响）：核心指标（含 cached pss）、整机内存、层级明细表中的 Cached 行、自研 / Google 明细。</p></span></span>
+      <span class="hint" tabindex="0">ⓘ<span class="hint-pop"><p>Cached 是后台缓存进程所在的 OOM 层级，内存紧张时可被系统随时回收，数值受测试时机和 LMK 影响波动大，默认不参与差异排行。</p><p>打开后纳入：概览与风险页「自动结论」中 Cached 层级 / 仅 Cached 进程相关条目、进程分析 Top20 与全量进程表、层级轮均柱状图。</p><p>始终显示：关键指标（含 cached pss）、整机、层级表、自研 / Google 明细。</p></span></span>
     </div>
   </div>
   <nav id="tabnav"></nav>
@@ -249,6 +260,7 @@ tr.lv-off td{color:var(--sub)}
   <section class="tab-page" id="page-inhouse"></section>
   <section class="tab-page" id="page-google"></section>
   <section class="tab-page" id="page-events"></section>
+  <section class="tab-page" id="page-pressure"></section>
   <section class="tab-page" id="page-risk"></section>
   <section class="tab-page" id="page-report"></section>
   <div class="foot" id="foot"></div>
@@ -262,27 +274,26 @@ tr.lv-off td{color:var(--sub)}
 /* ============ 基础 ============ */
 const LA = DATA.labels[0], LB = DATA.labels[1];
 const DS = DATA.datasets;
-let metric = 'pss';
+const AXIS = DATA.meta.axis;              // 'round' | 'hour'
+const NMAX = Math.max(DS[0].n, DS[1].n);
+let metric = DATA.meta.primary_metric || 'rss';
 let includeCached = false;
 const MV = () => DATA.metrics[metric];
 const N = i => DS[i].n;
 const FONT = '"Segoe UI Variable","Segoe UI","Microsoft YaHei UI","Microsoft YaHei","PingFang SC",system-ui,sans-serif';
 const LEVEL_COLORS = {'Native':'#64748b','System':'#0ea5e9','Persistent':'#8b5cf6','Persistent Service':'#a78bfa','Foreground':'#22c55e','Visible':'#84cc16','Perceptible':'#eab308','Perceptible Medium':'#f59e0b','Perceptible Low':'#f97316','Backup':'#a16207','Heavy Weight':'#78350f','A Services':'#ec4899','Home':'#10b981','Previous':'#78716c','B Services':'#14b8a6','Cached':'#94a3b8'};
 const PROC_PALETTE = ['#0ea5e9','#e11d48','#8b5cf6','#16a34a','#f97316','#0891b2','#be185d','#65a30d','#7c3aed','#b45309'];
+const CA = '#3b82f6', CB = '#f59e0b';
 const lvColor = l => LEVEL_COLORS[l] || '#475569';
 const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-const fmt = v => v==null ? '—' : (+v).toFixed(2);
-const cnt = v => v.reduce((s,x)=>s+(x!=null?1:0),0);
-const rmean = (v,n) => v.reduce((s,x)=>s+(x||0),0)/n;
-const vmean = v => { const a=v.filter(x=>x!=null); return a.length ? a.reduce((s,x)=>s+x,0)/a.length : null; };
-const vmin = v => { const a=v.filter(x=>x!=null); return a.length?Math.min(...a):null; };
-const vmax = v => { const a=v.filter(x=>x!=null); return a.length?Math.max(...a):null; };
+const fmt = (v,d) => v==null ? '—' : (+v).toFixed(d==null?2:d);
+const fmt0 = v => v==null ? '—' : Math.round(v).toLocaleString();
+const cardHd = (t,s,r)=>'<div class="card-hd"><div><h3>'+t+'</h3>'+(s?'<div class="sub">'+s+'</div>':'')+'</div>'+(r?'<div class="card-hd-r">'+r+'</div>':'')+'</div>';
 function gapCls(gap, reversed){
   if (gap==null || gap===0) return '';
   const worse = reversed ? gap<0 : gap>0;
   return worse ? 'gap-pos' : 'gap-neg';
 }
-function gapTxt(p){ return p.gapt || (p.gapp==null?'—':(p.gapp>0?'+':'')+p.gapp.toFixed(1)+'%'); }
 function deltaCls(gap, reversed, gapt){
   if (gapt==='新增') return 'bad';
   if (gapt==='消失') return 'good';
@@ -300,8 +311,30 @@ function gapCells(ra, rb, gapt, gapp, reversed){
   const badge = txt==='—' ? '<span class="muted">—</span>' : deltaBadge(txt, deltaCls(gap, reversed, gapt), gap);
   return '<td class="num '+cls+'">'+fmt(gap)+'</td><td class="num">'+badge+'</td>';
 }
-const cardHd = (t,s,r)=>'<div class="card-hd"><div><h3>'+t+'</h3>'+(s?'<div class="sub">'+s+'</div>':'')+'</div>'+(r?'<div class="card-hd-r">'+r+'</div>':'')+'</div>';
+function sevBadge(sev){ const cn={high:'高',mid:'中',low:'低',info:'参考'}[sev]||sev;
+  return '<span class="sev sev-'+sev+'">'+cn+'</span>'; }
+const _thrLv = {a:{}, b:{}};
+const _thrProc = {a:{}, b:{}};
+['a','b'].forEach(sd=>{ const st=DATA.standards[sd]; if(!st) return;
+  st.levels.forEach(r=>_thrLv[sd][r.name]=r.thr);
+  if(st.free_ram) _thrLv[sd]['Free RAM']=st.free_ram.thr;
+  st.procs.forEach(r=>_thrProc[sd][r.name]=r.thr);
+});
+const RULE_NOTE = '<details class="info"><summary>进程归类规则</summary><div class="info-body">自研应用判定：' +
+  (DATA.inhouse.whitelist_src ? '白名单 <b>'+esc(DATA.inhouse.whitelist_src)+'</b>（'+DATA.inhouse.whitelist_count+' 项）+ ' : '未提供白名单，') +
+  '前缀匹配（'+esc(DATA.inhouse.prefixes_src||'')+'：'+DATA.inhouse.prefixes.join(' ')+'）。进程名按 <code>包名:子进程</code> 取包名匹配。<br>' +
+  'Google：前缀匹配（'+esc(DATA.google.prefixes_src||'')+'：'+DATA.google.prefixes.join(' ')+'），自研优先。</div></details>';
+const roundCats = n => Array.from({length:n},(_,i)=>'第'+(i+1)+'轮');
+
+/* ---------- 迷你走势（sparkline，降采样至 ≤200 点） ---------- */
+function _dsample(arr){
+  if (!arr || arr.length<=200) return arr;
+  const step = arr.length/200, out=[];
+  for (let i=0;i<200;i++) out.push(arr[Math.floor(i*step)]);
+  return out;
+}
 function sparkSvg(a, b, w, h){
+  a=_dsample(a); b=_dsample(b);
   w=w||200; h=h||36;
   const all=[...(a||[]),...(b||[])].filter(v=>v!=null);
   if (!all.length) return '';
@@ -323,8 +356,10 @@ function sparkSvg(a, b, w, h){
     return '<polyline points="'+s.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')+'" fill="none" stroke="'+stroke+'" stroke-width="1.5"'+(dash?' stroke-dasharray="'+dash+'"':'')+'/>';
   }).join('');
   return '<svg class="spark" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" width="100%" height="'+h+'">'
-    +draw(a,'#3b82f6')+draw(b,'#f59e0b','3,2')+'</svg>';
+    +draw(a,CA)+draw(b,CB,'3,2')+'</svg>';
 }
+
+/* ============ 多选 / 图表 ============ */
 function multiPicker(o){
   const el = o.el;
   el.classList.add('mp');
@@ -364,7 +399,7 @@ document.addEventListener('mousedown', e=>{
   document.querySelectorAll('.mp-menu.open').forEach(m=>{ if(!m.parentElement.contains(e.target)) m.classList.remove('open'); });
 });
 echarts.registerTheme('ms', {
-  color: ['#3b82f6','#f59e0b'].concat(PROC_PALETTE),
+  color: [CA,CB].concat(PROC_PALETTE),
   textStyle: {fontFamily: FONT},
   legend: {itemWidth:14, itemHeight:8, textStyle:{color:'#475569'}},
   tooltip: {backgroundColor:'#fff', borderWidth:0, padding:[10,12], textStyle:{color:'#0f172a',fontSize:12},
@@ -386,36 +421,74 @@ function makeChart(el){
   return ch;
 }
 window.addEventListener('resize', ()=>LIVE_CHARTS.forEach(c=>c.resize()));
-const roundCats = n => Array.from({length:n},(_,i)=>'第'+(i+1)+'轮');
-const RULE_NOTE = '<details class="info"><summary>进程归类规则</summary><div class="info-body">自研应用判定：' +
-  (DATA.inhouse.whitelist_src ? '白名单 <b>'+esc(DATA.inhouse.whitelist_src)+'</b>（'+DATA.inhouse.whitelist_count+' 项）+ ' : '未提供白名单，') +
-  '前缀匹配（'+esc(DATA.inhouse.prefixes_src||'')+'：'+DATA.inhouse.prefixes.join(' ')+'）。进程名按 <code>包名:子进程</code> 取包名匹配。<br>' +
-  'Google：前缀匹配（'+esc(DATA.google.prefixes_src||'')+'：'+DATA.google.prefixes.join(' ')+'），自研优先。</div></details>';
 
-/* ============ 数据派生 ============ */
-function procList(){
-  return MV().top.map(n=>MV().procs[n]);
+/* ---- 时间轴序列：axis='round' → 第N轮类目轴；'hour' → 距测试开始小时数 ---- */
+function tsData(dsIdx, series){
+  if (AXIS==='round')
+    return (series||[]).map((v,i)=> v==null ? null
+      : {value:v, r:DS[dsIdx].rounds[i], t:DS[dsIdx].start_times[i]});
+  const H = DS[dsIdx].hours, R = DS[dsIdx].rounds, T = DS[dsIdx].start_times;
+  const out = [];
+  (series||[]).forEach((v,i)=>{ if(v!=null) out.push({value:[H[i],v], r:R[i], t:T[i]}); });
+  return out;
 }
-function tags(p){
-  const t = [];
-  if (p.ka>0 && p.kb===0) t.push('<span class="tag tag-a">仅A</span>');
-  if (p.kb>0 && p.ka===0) t.push('<span class="tag tag-b">仅B</span>');
-  if (p.level_changed) t.push('<span class="tag tag-lv">层级变化</span>');
-  if (p.inhouse) t.push('<span class="tag tag-ih">自研'+(p.ih_src==='whitelist'?'·白':'')+'</span>');
-  if (p.google) t.push('<span class="tag tag-gg">Google</span>');
-  if (p.cached_only) t.push('<span class="tag tag-cached">Cached</span>');
-  if (p.sig) t.push('<span class="tag tag-sig">显著</span>');
-  return t.join('');
+function lineSeries(name, dsIdx, series, col, dash){
+  const s = {name, type:'line', data:tsData(dsIdx,series),
+    itemStyle:{color:col}, lineStyle:{color:col,type:dash?'dashed':'solid',width:1.5},
+    showSymbol:AXIS==='round', symbolSize:5, connectNulls:false};
+  if (AXIS!=='round') s.sampling='lttb';
+  return s;
 }
-const showProc = p => includeCached || !p.cached_only;
+function abLine(dsIdx, series){
+  const a = dsIdx===0;
+  return lineSeries(a?'A '+LA:'B '+LB, dsIdx, series, a?CA:CB, !a);
+}
+function tsTip(ps){
+  if (AXIS==='round'){
+    const i0 = (ps[0] && ps[0].dataIndex!=null) ? ps[0].dataIndex : null;
+    let h = i0!=null ? '第'+(i0+1)+'轮<br>' : '';
+    ps.forEach(p=>{ const d=p.data||{};
+      h += (p.marker||'')+esc(p.seriesName)+' <b>'+fmt(p.value)+'</b>'
+        +(d.t?' <span class="muted">'+esc(d.t)+'</span>':'')+'<br>'; });
+    return h;
+  }
+  let h='';
+  ps.forEach(p=>{ const d=p.data||{};
+    h += (p.marker||'')+esc(p.seriesName)+' <b>'+fmt(p.value[1])+'</b>'
+      +(d.r!=null?' <span class="muted">第'+d.r+'轮 '+(d.t||'')+'</span>':'')+'<br>'; });
+  const d0 = ps[0] && ps[0].data;
+  return (d0 ? 't+'+(+ps[0].value[0]).toFixed(2)+'h<br>' : '') + h;
+}
+function tsOption(series, extra){
+  const o = {tooltip:{trigger:'axis', formatter:tsTip}, legend:{type:'scroll',top:0},
+    grid:{top:40,left:66,right:20,bottom:AXIS==='round'?30:58},
+    yAxis:{type:'value',name:'MB'},
+    series};
+  if (AXIS==='round'){
+    o.xAxis = {type:'category', data:roundCats(NMAX)};
+  } else {
+    o.xAxis = {type:'value',min:0,axisLabel:{formatter:v=>(+v).toFixed(0)+'h'}};
+    o.dataZoom = [{type:'inside'},{type:'slider',height:18,bottom:8}];
+  }
+  if (extra) Object.assign(o, extra);
+  return o;
+}
+function thrMarkLine(vals){
+  const data=[];
+  vals.forEach(v=>{ if(v!=null && v.y!=null) data.push({yAxis:v.y, name:v.n, lineStyle:{color:v.c,type:'dashed'}, label:{formatter:v.n, position:'insideEndTop', color:v.c, fontSize:11}}); });
+  return data.length? {silent:true, symbol:'none', data} : null;
+}
 
 /* ============ 路由 ============ */
 const PAGES = {overview:'概览', system:'整机内存', levels:'层级内存', procs:'进程分析',
-               inhouse:'自研应用', google:'Google 应用', events:'启动/唤醒', risk:'标准与风险', report:'Markdown 报告'};
+               inhouse:'自研应用', google:'Google 应用', events:'进程事件', pressure:'内存压力',
+               risk:'标准与风险', report:'Markdown 报告'};
 const RENDER = {};
-const state = {tab:'overview', evQ:'', lvGapMin:DATA.meta.gap_abs,
-               pkKw:'', pkLevel:'', pkCat:'', pkGapMin:DATA.meta.gap_abs, pkSigOnly:false,
-               sysSel:null, trSel:null, mdRaw:false, devAll:false, expanded:new Set(), lvInit:false};
+const state = {tab:'overview', sysSel:null, lvSel:null, prSel:null, psSel:null,
+               pkKw:'', pkLevel:'', pkCat:'', pkSigOnly:false, pkResident:false, pkLeak:false,
+               pkGapMin:DATA.meta.gap_abs, pkSort:'gap', pkDir:-1,
+               devAll:false, mdRaw:false, lvInit:false, evQ:'',
+               expanded:new Set(), lvGapMin:DATA.meta.gap_abs, trSel:null};
 function parseHash(){
   const q = new URLSearchParams(location.hash.replace(/^#/,''));
   return {tab:q.get('tab'), proc:q.get('proc'), q:q.get('q'), metric:q.get('metric'), cached:q.get('cached')};
@@ -429,7 +502,7 @@ function setHash(patch){
 function applyMetric(m){
   if (!DATA.metrics[m]) return;
   metric = m;
-  document.querySelectorAll('.metric-toggle .seg,.toggles .seg').forEach(x=>x.classList.toggle('active', x.dataset.m===m));
+  document.querySelectorAll('.toggles .seg').forEach(x=>x.classList.toggle('active', x.dataset.m===m));
 }
 function route(){
   const p = parseHash();
@@ -454,6 +527,7 @@ for (const id in PAGES){
   b.onclick = ()=>{ setHash({tab:id, proc:null}); };
   nav.appendChild(b);
 }
+document.getElementById('pageTitle').textContent = (DATA.kind==='static'?'静态':'动态')+'内存对比分析';
 document.getElementById('chipA').textContent = LA;
 document.getElementById('chipB').textContent = LB;
 document.getElementById('foot').textContent = '由 '+DATA.meta.tool+' 生成 · A '+LA+' vs B '+LB;
@@ -463,70 +537,105 @@ document.querySelectorAll('.toggles .seg').forEach(b=>{
 document.getElementById('incCached').onchange = e=>{
   setHash({cached: e.target.checked ? 1 : null});
 };
+applyMetric(new URLSearchParams(location.hash.replace(/^#/,'')).get('metric') || metric);
+
+/* ============ 小部件 ============ */
+function procTags(p){
+  const t = [];
+  if (p.da.k>0 && p.db.k===0) t.push('<span class="tag tag-a">仅A</span>');
+  if (p.db.k>0 && p.da.k===0) t.push('<span class="tag tag-b">仅B</span>');
+  if (p.level_changed) t.push('<span class="tag tag-lv">层级变化</span>');
+  if (p.inhouse) t.push('<span class="tag tag-ih">自研'+(p.ih_src==='whitelist'?'·白':'')+'</span>');
+  if (p.google) t.push('<span class="tag tag-gg">Google</span>');
+  if (p.cached_only) t.push('<span class="tag tag-cached">Cached</span>');
+  if (p.sig) t.push('<span class="tag tag-sig">显著</span>');
+  if (p.resident_a) t.push('<span class="tag tag-lv">常驻A</span>');
+  if (p.resident_b) t.push('<span class="tag tag-lv">常驻B</span>');
+  if (p.leak_a||p.leak_b) t.push('<span class="tag tag-sig">泄漏'+(p.leak_a?'A':'')+(p.leak_b?'B':'')+'</span>');
+  return t.join('');
+}
+const showProc = p => includeCached || !p.cached_only;
+function procLink(name){ return '<a href="#proc='+encodeURIComponent(name)+'&metric='+metric+'">'+esc(name)+'</a>'; }
+function kpiCard(name, src, va, vb, unit, reversed, nd, spark){
+  const g = (va==null||vb==null) ? null : vb-va;
+  return '<div class="kpi"><div class="kpi-hd"><span class="kpi-name">'+esc(name)+'</span><span class="kpi-src">'+esc(src)+'</span></div>'
+    +'<div class="kpi-v">'+fmt(vb,nd)+'<span class="u">'+unit+'</span></div>'
+    +'<div class="kpi-ab"><span style="color:var(--c-a)">A '+fmt(va,nd)+'</span><span class="arr">→</span><span style="color:var(--c-b)">B '+fmt(vb,nd)+'</span></div>'
+    +'<div class="kpi-delta">'+(g==null?'<span class="muted">—</span>':deltaBadge((g>0?'+':'')+fmt(g,nd)+' '+unit, deltaCls(g,reversed,null), g))+'</div>'
+    +(spark||'')+'</div>';
+}
+function lvRow(name){ return MV().level_rows.find(r=>r.level===name); }
+function sysRow(name){ return DATA.system.find(r=>r.name===name); }
 
 /* ============ 1. 概览 ============ */
-const KPI_NAMES = ['Free RAM','Used RAM','used pss','cached pss','kernel','MemAvailable','ZRAM physical','in swap','Lost RAM'];
-function findings(){
-  const m = MV(), out = [];
-  const sfx = includeCached ? '（含 Cached）' : '（不含 Cached）';
-  const lg = m.level_rows.filter(r=>includeCached||r.level!=='Cached').sort((x,y)=>Math.abs(y.gap)-Math.abs(x.gap)).slice(0,3);
-  out.push('层级 GAP Top3'+sfx+'：' + lg.map(r=>esc(r.level)+' <b class="'+gapCls(r.gap)+'">'+(r.gap>0?'+':'')+fmt(r.gap)+' MB</b>').join('，'));
-  const pg = procList().filter(showProc).slice(0,5);
-  out.push('进程 GAP Top5：' + pg.map(p=>'<a href="#proc='+encodeURIComponent(p.name)+'">'+esc(p.name)+'</a> <b class="'+gapCls(p.gap)+'">'+(p.gap>0?'+':'')+fmt(p.gap)+' MB</b>').join('，'));
-  const ga = DATA.meta.gap_abs;
-  const news = procList().filter(p=>showProc(p)&&p.ka===0&&p.rb>=ga).sort((x,y)=>y.rb-x.rb).slice(0,3);
-  const gones = procList().filter(p=>showProc(p)&&p.kb===0&&p.ra>=ga).sort((x,y)=>y.ra-x.ra).slice(0,3);
-  const ng = news.map(p=>'<a href="#proc='+encodeURIComponent(p.name)+'">'+esc(p.name)+'</a> <b class="gap-pos">'+fmt(p.rb)+' MB</b>').join('，') || '无';
-  const gn = gones.map(p=>'<a href="#proc='+encodeURIComponent(p.name)+'">'+esc(p.name)+'</a> <b class="gap-neg">'+fmt(p.ra)+' MB</b>').join('，') || '无';
-  out.push('新增进程 Top3（按轮次均值'+sfx+'）：' + ng + '；消失进程 Top3：' + gn + '。');
-  out.push('独有进程：仅 A <b>'+m.only_a.length+'</b> 个，仅 B <b>'+m.only_b.length+'</b> 个；层级变化进程 <b>'+m.level_changed.length+'</b> 个。');
-  const ihSum = k=>procList().filter(p=>p.inhouse).reduce((s,p)=>s+p[k],0);
-  const ggSum = k=>procList().filter(p=>p.google).reduce((s,p)=>s+p[k],0);
-  const ihA=ihSum('ra'), ihB=ihSum('rb'), ggA=ggSum('ra'), ggB=ggSum('rb');
-  out.push('自研合计 A '+fmt(ihA)+' → B '+fmt(ihB)+' MB（'+(ihB-ihA>0?'+':'')+fmt(ihB-ihA)+'）；'
-    +'Google 合计 A '+fmt(ggA)+' → B '+fmt(ggB)+' MB（'+(ggB-ggA>0?'+':'')+fmt(ggB-ggA)+'）。');
-  const sys = {}; DATA.system.forEach(r=>sys[r.name]=r);
-  const dm = sys['DMA-BUF'], gp = sys['GPU'];
-  out.push('DMA-BUF 均值变化 <b class="'+gapCls(dm.gap)+'">'+(dm.gap>0?'+':'')+fmt(dm.gap)+' MB</b>，GPU 均值变化 <b class="'+gapCls(gp.gap)+'">'+(gp.gap>0?'+':'')+fmt(gp.gap)+' MB</b>。');
-  if (DATA.growth.length) out.push('疑似增长（提示，非泄漏结论）：<b>'+DATA.growth.length+'</b> 项，见「标准与风险」。');
-  return out;
-}
 RENDER.overview = function(){
   const el = document.getElementById('page-overview');
   let h = '';
   const warns = DS.map((d,i)=>d.warnings.map(w=>String.fromCharCode(65+i)+'：'+w)).flat();
   if (warns.length) h += '<div class="warn">'+warns.map(esc).join('<br>')+'</div>';
-  const sys = {}; DATA.system.forEach(r=>sys[r.name]=r);
-  h += '<div class="card">'+cardHd('核心指标','轮次均值 · MB · 红=变差 绿=改善')+'<div class="grid-kpi">';
-  KPI_NAMES.forEach(t=>{
-    const r = sys[t]; if(!r) return;
-    h += '<div class="kpi"><div class="kpi-hd"><span class="kpi-name">'+esc(t)+'</span><span class="kpi-src">'+esc(r.src)+'</span></div>'
-      +'<div class="kpi-v">'+fmt(r.rb)+'<span class="u">MB</span></div>'
-      +'<div class="kpi-ab"><span style="color:var(--c-a)">A '+fmt(r.ra)+'</span><span class="arr">→</span><span style="color:var(--c-b)">B '+fmt(r.rb)+'</span></div>'
-      +'<div class="kpi-delta">'+(r.gap==null?'<span class="muted">—</span>':deltaBadge((r.gap>0?'+':'')+fmt(r.gap)+' · '+gapTxt(r), deltaCls(r.gap,r.hb,r.gapt), r.gap))+'</div>'
-      + sparkSvg(r.a, r.b)
-      +'</div>';
+  // 测试判定
+  h += '<div class="card">'+cardHd('测试判定','平台 Exception_Summary_Report vs memscope 阈值判定')
+    +'<div class="tbl-wrap no-max"><table><thead><tr><th></th><th>平台判定</th><th>memscope 判定</th><th>超标项</th><th class="num">有效轮</th><th class="num">无效轮</th><th class="num">时长 h</th><th class="num">重启</th></tr></thead><tbody>';
+  ['a','b'].forEach((sd,i)=>{
+    const st = DATA.standards[sd], d = DS[i];
+    const plat = d.platform.result || '—';
+    const ver = st ? st.verdict : '—';
+    const items = st && st.fail_items.length ? st.fail_items.join('、') : '—';
+    h += '<tr><td><b>'+String.fromCharCode(65+i)+'</b></td>'
+      +'<td>'+(plat==='Fail'?'<span class="st st-bad">Fail</span>':'<span class="st st-ok">'+esc(plat)+'</span>')+'</td>'
+      +'<td>'+(st?(ver==='Fail'?'<span class="st st-bad">Fail</span>':'<span class="st st-ok">Pass</span>'):'<span class="muted">无阈值</span>')+'</td>'
+      +'<td>'+esc(items)+'</td><td class="num">'+d.n+'</td><td class="num">'+d.failed_rounds.length+'</td><td class="num">'+fmt(d.hours_total,1)+'</td><td class="num">'+d.reboots.length+'</td></tr>';
   });
+  h += '</tbody></table></div></div>';
+  // 关键指标（含迷你走势）
+  const ev = DATA.events;
+  h += '<div class="card">'+cardHd('关键指标',metric.toUpperCase()+' 轮均口径 · MB；LMK=次/小时')+'<div class="grid-kpi auto">';
+  const lvNames = ['Native','System','Persistent','Visible'];
+  lvNames.forEach(lv=>{
+    const r = lvRow(lv); if(!r) return;
+    h += kpiCard(lv+' '+metric.toUpperCase(), '层级轮均', r.da.mi, r.db.mi, 'MB', false, 2, sparkSvg(r.a, r.b));
+  });
+  const fr = sysRow('Free RAM'), ma = sysRow('MemAvailable'), ur = sysRow('Used RAM'), cp = sysRow('cached pss');
+  if (fr) h += kpiCard('Free RAM 值均', 'dumpsys tail · 高好', fr.da.mean, fr.db.mean, 'MB', true, 2, sparkSvg(fr.a, fr.b));
+  const stA = DATA.standards.a, stB = DATA.standards.b;
+  h += kpiCard('Free RAM P10', '下限阈值 '+(stB&&stB.free_ram?fmt(stB.free_ram.thr,0):'—'),
+               stA&&stA.free_ram?stA.free_ram.p10:null, stB&&stB.free_ram?stB.free_ram.p10:null, 'MB', true);
+  if (ma) h += kpiCard('MemAvailable', '/proc/meminfo · 高好', ma.da.mean, ma.db.mean, 'MB', true, 2, sparkSvg(ma.a, ma.b));
+  if (ur) h += kpiCard('Used RAM 值均', 'dumpsys tail', ur.da.mean, ur.db.mean, 'MB', false, 2, sparkSvg(ur.a, ur.b));
+  if (cp) h += kpiCard('cached pss', 'dumpsys tail', cp.da.mean, cp.db.mean, 'MB', false, 2, sparkSvg(cp.a, cp.b));
+  h += kpiCard('LMK 次/小时', 'killinfo', ev.a.lmk.per_hour, ev.b.lmk.per_hour, '/h', false, 2,
+               sparkSvg(ev.a.lmk.hourly, ev.b.lmk.hourly));
+  h += kpiCard('ANR + crash', 'events_log', ev.a.anr.length+ev.a.crash.length,
+               ev.b.anr.length+ev.b.crash.length, '次', false, 0);
+  h += kpiCard('重启次数', 'uptime 回退', DS[0].reboots.length, DS[1].reboots.length, '次', false, 0);
   h += '</div></div>';
+  // 自动结论 Top8（Cached 相关条目默认隐藏，右上角开关纳入）
+  const fs = DATA.findings.filter(f=>includeCached||!f.cached);
+  const hidden = DATA.findings.length - fs.length;
+  h += '<div class="card">'+cardHd('自动结论 Top '+Math.min(8,fs.length),'共 '+DATA.findings.length+' 条 · 全部见「标准与风险」页'+(hidden?' · 已隐藏 '+hidden+' 条 Cached 相关':''),
+      '<a href="#tab=risk">全部 →</a>')
+    +'<ul class="findings">'
+    + (fs.slice(0,8).map(f=>'<li>'+sevBadge(f.sev)+'<a href="'+esc(f.link)+'">'+esc(f.title)+'</a> <span class="muted">'+esc(f.detail)+'</span></li>').join('')
+      || '<li class="muted">无自动结论</li>')
+    +'</ul></div>';
+  // 设备与测试信息 + 包差异
   const pd = DATA.pkg_diff;
-  h += '<div class="row-2col">'
-    +'<div class="card">'+cardHd('自动发现','基于 '+metric.toUpperCase()+' 轮次均值'+(includeCached?'（含 Cached）':''))
-    +'<ul class="findings">'+findings().map(x=>'<li>'+x+'</li>').join('')+'</ul></div>'
-    +'<div class="card">'+cardHd('预装包差异','A '+DS[0].packages.length+' 个 / B '+DS[1].packages.length+' 个')
-    +'<div class="pkg-cols">'
-    +'<div><div class="sec-h">仅 A<span class="cnt">'+pd.a.length+'</span></div><ul class="mono-list">'+(pd.a.map(x=>'<li>'+esc(x)+'</li>').join('')||'<li class="muted">无</li>')+'</ul></div>'
-    +'<div><div class="sec-h">仅 B<span class="cnt">'+pd.b.length+'</span></div><ul class="mono-list">'+(pd.b.map(x=>'<li>'+esc(x)+'</li>').join('')||'<li class="muted">无</li>')+'</ul></div>'
-    +'</div></div></div>';
   const diffs = DATA.device_diff.filter(r=>r.diff);
   const showAll = state.devAll || !diffs.length;
-  h += '<div class="card">'+cardHd('设备与测试信息',
+  h += '<div class="row-2col">'
+    +'<div class="card">'+cardHd('设备与测试信息',
       diffs.length ? '差异 '+diffs.length+' / 共 '+DATA.device_diff.length+' 项' : '共 '+DATA.device_diff.length+' 项',
       diffs.length ? '<button class="btn ghost" id="devToggle">'+(showAll?'仅看差异':'显示全部 '+DATA.device_diff.length+' 项')+'</button>' : '')
     +'<div class="tbl-wrap"><table><thead><tr><th>字段</th><th>基线 A</th><th>对比 B</th></tr></thead><tbody>';
   (showAll ? DATA.device_diff : diffs).forEach(r=>{
     h += '<tr'+(r.diff?' class="diff"':'')+'><td>'+esc(r.field)+'</td><td>'+esc(r.a)+'</td><td'+(r.diff?' class="bv"':'')+'>'+esc(r.b)+'</td></tr>';
   });
-  h += '</tbody></table></div></div>';
+  h += '</tbody></table></div></div>'
+    +'<div class="card">'+cardHd('预装包差异','A '+DS[0].packages.length+' 个 / B '+DS[1].packages.length+' 个')
+    +'<div class="pkg-cols">'
+    +'<div><div class="sec-h">仅 A<span class="cnt">'+pd.a.length+'</span></div><ul class="mono-list">'+(pd.a.map(x=>'<li>'+esc(x)+'</li>').join('')||'<li class="muted">无</li>')+'</ul></div>'
+    +'<div><div class="sec-h">仅 B<span class="cnt">'+pd.b.length+'</span></div><ul class="mono-list">'+(pd.b.map(x=>'<li>'+esc(x)+'</li>').join('')||'<li class="muted">无</li>')+'</ul></div>'
+    +'</div></div></div>';
   el.innerHTML = h;
   const dt = document.getElementById('devToggle');
   if (dt) dt.onclick = ()=>{ state.devAll = !state.devAll; RENDER.overview(); };
@@ -536,18 +645,23 @@ RENDER.overview = function(){
 RENDER.system = function(){
   const el = document.getElementById('page-system');
   const defs = DATA.system;
-  if (!state.sysSel) state.sysSel = ['Free RAM','MemAvailable','in swap'];
+  if (!defs.length){ el.innerHTML = '<div class="card"><div class="empty">本测试包无整机内存数据</div></div>'; return; }
+  if (!state.sysSel) state.sysSel = ['Free RAM','MemAvailable','Used RAM','in swap'].filter(n=>defs.some(d=>d.name===n));
   state.sysSel = state.sysSel.filter(n=>defs.some(d=>d.name===n));
-  let h = '<div class="card">'+cardHd('整机内存指标','轮次均值 / MB')+'<div class="tbl-wrap"><table><thead><tr>'
-    +'<th>指标</th><th>来源</th><th class="num">A 均值</th><th class="num">B 均值</th><th class="num">GAP</th><th class="num">GAP%</th>'
-    +'<th class="num">A 最小</th><th class="num">A 最大</th><th class="num">B 最小</th><th class="num">B 最大</th></tr></thead><tbody>';
+  let h = '<div class="card">'+cardHd('整机内存指标','值均 = 出现轮均值 / MB · 斜率 MB/h')+'<div class="tbl-wrap"><table><thead><tr>'
+    +'<th>指标</th><th>来源</th><th class="num">A 值均</th><th class="num">B 值均</th><th class="num">GAP</th><th class="num">GAP%</th>'
+    +'<th class="num">A P90</th><th class="num">B P90</th><th class="num">A 最大</th><th class="num">B 最大</th>'
+    +'<th class="num">斜率A (MB/h)</th><th class="num">斜率B (MB/h)</th><th>泄漏</th></tr></thead><tbody>';
   defs.forEach(d=>{
-    h += '<tr><td>'+esc(d.name)+'</td><td class="muted">'+esc(d.src)+'</td><td class="num">'+fmt(d.ra)+'</td><td class="num">'+fmt(d.rb)+'</td>'
-      + gapCells(d.ra,d.rb,d.gapt,d.gapp,d.hb)
-      + '<td class="num">'+fmt(d.mina)+'</td><td class="num">'+fmt(d.maxa)+'</td><td class="num">'+fmt(d.minb)+'</td><td class="num">'+fmt(d.maxb)+'</td></tr>';
+    h += '<tr><td>'+esc(d.name)+'</td><td class="muted">'+esc(d.src)+'</td><td class="num">'+fmt(d.da.mean)+'</td><td class="num">'+fmt(d.db.mean)+'</td>'
+      + gapCells(d.da.mean||0, d.db.mean||0, d.gapt, d.gapp, d.hb)
+      + '<td class="num">'+fmt(d.da.p90)+'</td><td class="num">'+fmt(d.db.p90)+'</td>'
+      + '<td class="num">'+fmt(d.da.max)+'</td><td class="num">'+fmt(d.db.max)+'</td>'
+      + '<td class="num">'+fmt(d.ta&&d.ta.slope)+'</td><td class="num">'+fmt(d.tb&&d.tb.slope)+'</td>'
+      + '<td>'+(d.leak_a?'<span class="tag tag-sig">A</span>':'')+(d.leak_b?'<span class="tag tag-sig">B</span>':'')+'</td></tr>';
   });
   h += '</tbody></table></div></div>';
-  h += '<div class="card">'+cardHd('逐轮走势','实线=A，虚线=B')
+  h += '<div class="card">'+cardHd('逐轮走势',(AXIS==='round'?'x=轮次':'x=测试小时')+' · 实线=A 虚线=B'+(AXIS==='round'?'':' · 滚轮缩放'))
     +'<div id="sysPick"></div><div id="sysChart" class="chart chart-tall"></div></div>';
   el.innerHTML = h;
   const draw = ()=>{
@@ -555,15 +669,11 @@ RENDER.system = function(){
     state.sysSel.forEach((t,idx)=>{
       const d = defs.find(x=>x.name===t); if(!d) return;
       const col = PROC_PALETTE[idx%PROC_PALETTE.length];
-      series.push({name:t+' · A', type:'line', data:d.a, itemStyle:{color:col}, lineStyle:{type:'solid',color:col}, symbolSize:5});
-      series.push({name:t+' · B', type:'line', data:d.b, itemStyle:{color:col}, lineStyle:{type:'dashed',color:col}, symbolSize:5});
+      const solo = state.sysSel.length===1;
+      series.push(lineSeries(t+'·A', 0, d.a, solo?CA:col, false));
+      series.push(lineSeries(t+'·B', 1, d.b, solo?CB:col, true));
     });
-    makeChart(document.getElementById('sysChart')).setOption({
-      tooltip:{trigger:'axis'}, legend:{type:'scroll',top:0},
-      grid:{top:40,left:60,right:20,bottom:30},
-      xAxis:{type:'category',data:roundCats(Math.max(N(0),N(1)))},
-      yAxis:{type:'value',name:'MB'}, series
-    });
+    makeChart(document.getElementById('sysChart')).setOption(tsOption(series));
   };
   multiPicker({el:document.getElementById('sysPick'), options:defs.map(d=>d.name), selected:state.sysSel,
     colorOf:(n,idx)=>PROC_PALETTE[idx%PROC_PALETTE.length],
@@ -575,57 +685,72 @@ RENDER.system = function(){
 RENDER.levels = function(){
   const el = document.getElementById('page-levels');
   const m = MV();
-  const chartRows = m.level_rows.filter(r=>includeCached||r.level!=='Cached');
+  if (!m.level_rows.length){ el.innerHTML = '<div class="card"><div class="empty">本测试包无层级内存数据</div></div>'; return; }
+  const na = N(0), nb = N(1);
   if (!state.lvInit){
     state.lvInit = true;
+    state.lvSel = ['Native'];
+    state.lvDist = 'Native';
     let best=null,bg=-1;
-    chartRows.forEach(r=>{const g=Math.abs(r.gap);if(g>bg){bg=g;best=r.level;}});
+    m.level_rows.filter(r=>includeCached||r.level!=='Cached').forEach(r=>{const g=Math.abs(r.gap);if(g>bg){bg=g;best=r.level;}});
     if (best) state.expanded.add(best);
   }
-  let h = RULE_NOTE;
-  h += '<div class="card">'+cardHd('层级内存对比',metric.toUpperCase()+' 轮次均值，MB'+(includeCached?'':'（不含 Cached，可在右上角开关纳入）'))+'<div id="lvChart" class="chart"></div></div>';
-  h += '<div class="card">'+cardHd('层级 / 进程明细','点击层级行展开进程；点击进程名查看详情')
+  state.lvSel = (state.lvSel||[]).filter(n=>m.level_rows.some(r=>r.level===n));
+  if (!state.lvSel.length) state.lvSel = ['Native'];
+  if (!m.level_rows.some(r=>r.level===state.lvDist)) state.lvDist = 'Native';
+  // 层级→进程明细表（点击层级行展开）
+  let h = '<div class="card">'+cardHd('层级内存对比',metric.toUpperCase()+' · 轮均 MB · 点击层级行展开进程；点击进程进详情')
     +'<div class="controls"><label>GAP 阈值(MB) <input type="number" id="lvGapMin" min="0" step="1" value="'+state.lvGapMin+'"></label></div>'
-    +'<div class="tbl-wrap"><table><thead><tr><th>层级 / 进程</th><th class="num">出现 A</th><th class="num">出现 B</th><th class="num">轮均 A</th><th class="num">轮均 B</th><th class="num">值均 A</th><th class="num">值均 B</th><th class="num">GAP</th><th class="num">GAP%</th><th class="num">进程数 A/B</th><th>标签</th></tr></thead><tbody id="lvBody"></tbody></table></div></div>';
+    +'<div class="tbl-wrap"><table><thead><tr>'
+    +'<th>层级 / 进程</th><th class="num">出现A</th><th class="num">出现B</th><th class="num">A 轮均</th><th class="num">B 轮均</th><th class="num">GAP</th><th class="num">GAP%</th>'
+    +'<th class="num">A P50</th><th class="num">B P50</th><th class="num">A P90</th><th class="num">B P90</th><th class="num">P90差</th>'
+    +'<th class="num">A 最大</th><th class="num">B 最大</th><th class="num">进程A/B</th>'
+    +'<th class="num">阈值A</th><th class="num">阈值B</th><th>泄漏/显著</th></tr></thead><tbody id="lvBody"></tbody></table></div></div>';
+  const chartRows = m.level_rows.filter(r=>includeCached||r.level!=='Cached');
+  h += '<div class="card">'+cardHd('层级轮均对比',metric.toUpperCase()+(includeCached?'':'（不含 Cached，可在右上角开关纳入）'))+'<div id="lvBar" class="chart"></div></div>';
+  h += '<div class="card">'+cardHd('层级时序',(AXIS==='round'?'x=轮次':'x=测试小时')+' · markLine=各侧阈值（RSS）')+'<div id="lvPick"></div><div id="lvChart" class="chart chart-tall"></div></div>';
+  h += '<div class="card">'+cardHd('分布对比','P50/P90/P95/Max/Mean · <select id="lvDistSel" style="height:28px">'+m.level_rows.map(r=>'<option'+(r.level===state.lvDist?' selected':'')+'>'+esc(r.level)+'</option>').join('')+'</select>')
+    +'<div id="lvDist" class="chart"></div></div>';
   el.innerHTML = h;
-  makeChart(document.getElementById('lvChart')).setOption({
-    tooltip:{trigger:'axis'}, legend:{top:0,icon:'roundRect'},
-    grid:{top:36,left:60,right:20,bottom:60},
-    xAxis:{type:'category',data:chartRows.map(r=>r.level),axisLabel:{rotate:30}},
-    yAxis:{type:'value',name:'MB'},
-    series:[
-      {name:'A '+LA, type:'bar', data:chartRows.map(r=>+r.ra.toFixed(2)), itemStyle:{color:'#3b82f6'}},
-      {name:'B '+LB, type:'bar', data:chartRows.map(r=>+r.rb.toFixed(2)), itemStyle:{color:'#f59e0b'}}
-    ]
-  });
   const body = document.getElementById('lvBody');
   const fill = ()=>{
     let rows='';
-    m.level_rows.forEach(lr=>{
-      const L = lr.level;
+    m.level_rows.forEach(r=>{
+      const L = r.level;
       const off = !includeCached && L==='Cached';
       const open = state.expanded.has(L);
-      rows += '<tr class="lvl-row'+(open?' open':'')+(off?' lv-off':'')+'" data-lv="'+esc(L)+'"><td>'+esc(L)+'</td><td class="num"></td><td class="num"></td><td class="num">'+fmt(lr.ra)+'</td><td class="num">'+fmt(lr.rb)+'</td><td class="num"></td><td class="num"></td>'
-        + gapCells(lr.ra,lr.rb,lr.gapt,lr.gapp) + '<td class="num">'+lr.ca+' / '+lr.cb+'</td><td>'+(off?'<span class="tag tag-cached">未纳入排行</span>':'')+'</td></tr>';
+      const ta=_thrLv.a[L], tb=_thrLv.b[L];
+      rows += '<tr class="lvl-row'+(open?' open':'')+(off?' lv-off':'')+'" data-lv="'+esc(L)+'">'
+        +'<td><span class="pill"><i style="background:'+lvColor(L)+'"></i>'+esc(L)+'</span></td>'
+        +'<td class="num"></td><td class="num"></td>'
+        +'<td class="num">'+fmt(r.da.mi)+'</td><td class="num">'+fmt(r.db.mi)+'</td>'
+        + gapCells(r.da.mi, r.db.mi, r.gapt, r.gapp)
+        +'<td class="num">'+fmt(r.da.p50)+'</td><td class="num">'+fmt(r.db.p50)+'</td>'
+        +'<td class="num">'+fmt(r.da.p90)+'</td><td class="num">'+fmt(r.db.p90)+'</td><td class="num">'+fmt(r.gap_p90)+'</td>'
+        +'<td class="num">'+fmt(r.da.max)+'</td><td class="num">'+fmt(r.db.max)+'</td>'
+        +'<td class="num">'+r.ca+'/'+r.cb+'</td>'
+        +'<td class="num">'+(metric==='rss'?fmt(ta,0):'—')+'</td><td class="num">'+(metric==='rss'?fmt(tb,0):'—')+'</td>'
+        +'<td>'+(r.leak_a?'<span class="tag tag-sig">泄A</span>':'')+(r.leak_b?'<span class="tag tag-sig">泄B</span>':'')+(r.sig?'<span class="tag tag-sig">显著</span>':'')+(off?'<span class="tag tag-cached">未纳入排行</span>':'')+'</td></tr>';
       if (open){
         const prows=[];
         for (const name in m.procs){
           const p = m.procs[name];
-          const sa = p.sa[L], sb = p.sb[L];
-          if (!sa && !sb) continue;
-          const a = sa||new Array(N(0)).fill(null), b = sb||new Array(N(1)).fill(null);
-          const ra=rmean(a,N(0)), rb=rmean(b,N(1));
+          const ka=p.lvc_a[L]||0, kb=p.lvc_b[L]||0;
+          if (!ka && !kb) continue;
+          const ra=p.lmi_a[L]||0, rb=p.lmi_b[L]||0;
+          const va=ka? ra*na/ka : null, vb=kb? rb*nb/kb : null;
           const g = {gap:rb-ra, gapt: ra===0&&rb===0?null:(ra===0?'新增':rb===0?'消失':null), gapp:(ra!==0&&rb!==0)?(rb-ra)/ra*100:null};
-          prows.push({p, ka:cnt(a), kb:cnt(b), ra, rb, va:vmean(a), vb:vmean(b), g});
+          prows.push({p, ka, kb, ra, rb, va, vb, g});
         }
         prows.filter(r=>Math.abs(r.g.gap)>=state.lvGapMin)
              .sort((x,y)=>Math.abs(y.g.gap)-Math.abs(x.g.gap))
              .forEach(r=>{
-          rows += '<tr class="proc-row"><td class="name"><a href="#proc='+encodeURIComponent(r.p.name)+'">'+esc(r.p.name)+'</a></td>'
-            +'<td class="num">'+r.ka+'/'+N(0)+'</td><td class="num">'+r.kb+'/'+N(1)+'</td>'
+          rows += '<tr class="proc-row"><td class="name">'+procLink(r.p.name)+'</td>'
+            +'<td class="num">'+r.ka+'/'+na+'</td><td class="num">'+r.kb+'/'+nb+'</td>'
             +'<td class="num">'+fmt(r.ra)+'</td><td class="num">'+fmt(r.rb)+'</td>'
-            +'<td class="num">'+fmt(r.va)+'</td><td class="num">'+fmt(r.vb)+'</td>'
-            + gapCells(r.ra,r.rb,r.g.gapt,r.g.gapp) + '<td></td><td>'+tags(r.p)+'</td></tr>';
+            + gapCells(r.ra,r.rb,r.g.gapt,r.g.gapp)
+            +'<td colspan="10" class="muted">值均 A '+fmt(r.va)+' / B '+fmt(r.vb)+' MB</td>'
+            +'<td>'+procTags(r.p)+'</td></tr>';
         });
       }
     });
@@ -636,6 +761,49 @@ RENDER.levels = function(){
   };
   document.getElementById('lvGapMin').oninput = e=>{ state.lvGapMin=+e.target.value||0; fill(); };
   fill();
+  // 轮均柱状图
+  makeChart(document.getElementById('lvBar')).setOption({
+    tooltip:{trigger:'axis'}, legend:{top:0,icon:'roundRect'},
+    grid:{top:36,left:60,right:20,bottom:60},
+    xAxis:{type:'category',data:chartRows.map(r=>r.level),axisLabel:{rotate:30}},
+    yAxis:{type:'value',name:'MB'},
+    series:[
+      {name:'A '+LA, type:'bar', data:chartRows.map(r=>+r.da.mi.toFixed(2)), itemStyle:{color:CA}},
+      {name:'B '+LB, type:'bar', data:chartRows.map(r=>+r.db.mi.toFixed(2)), itemStyle:{color:CB}}
+    ]
+  });
+  // 层级时序
+  const draw = ()=>{
+    const series=[];
+    const solo = state.lvSel.length===1;
+    state.lvSel.forEach((lv,idx)=>{
+      const r = m.level_rows.find(x=>x.level===lv); if(!r) return;
+      const col = lvColor(lv);
+      series.push(lineSeries(lv+'·A', 0, r.a, solo?CA:col, false));
+      series.push(lineSeries(lv+'·B', 1, r.b, solo?CB:col, true));
+      const tA=_thrLv.a[lv], tB=_thrLv.b[lv];
+      const ml = (metric==='rss') ? thrMarkLine([{y:tA,n:lv+' A阈',c:CA},{y:tB,n:lv+' B阈',c:CB}]) : null;
+      if (ml) series[series.length-2].markLine = ml;
+    });
+    makeChart(document.getElementById('lvChart')).setOption(tsOption(series));
+  };
+  multiPicker({el:document.getElementById('lvPick'), options:m.level_rows.map(r=>r.level), selected:state.lvSel,
+    colorOf:(n)=>lvColor(n), onChange:sel=>{state.lvSel=sel;draw();}, placeholder:'搜索添加层级…'});
+  draw();
+  const drawDist = ()=>{
+    const r = m.level_rows.find(x=>x.level===state.lvDist); if(!r) return;
+    makeChart(document.getElementById('lvDist')).setOption({
+      tooltip:{trigger:'axis',axisPointer:{type:'shadow'}}, legend:{top:0},
+      grid:{top:36,left:66,right:20,bottom:30},
+      xAxis:{type:'category',data:['P50','P90','P95','Max','Mean']},
+      yAxis:{type:'value',name:'MB'},
+      series:[
+        {name:'A '+LA,type:'bar',data:[r.da.p50,r.da.p90,r.da.p95,r.da.max,r.da.mean].map(v=>v==null?null:+v.toFixed(2)),itemStyle:{color:CA}},
+        {name:'B '+LB,type:'bar',data:[r.db.p50,r.db.p90,r.db.p95,r.db.max,r.db.mean].map(v=>v==null?null:+v.toFixed(2)),itemStyle:{color:CB}}]
+    });
+  };
+  document.getElementById('lvDistSel').onchange = e=>{state.lvDist=e.target.value;drawDist();};
+  drawDist();
 };
 
 /* ============ 4. 进程分析 ============ */
@@ -650,41 +818,67 @@ function stripHtml(pr){
 RENDER.procs = function(){
   const el = document.getElementById('page-procs');
   const m = MV();
-  const list = procList().filter(showProc);
+  const list = m.top.map(n=>m.procs[n]).filter(showProc);
   const top20 = list.slice(0,20);
   const onlyA = m.only_a.map(n=>m.procs[n]), onlyB = m.only_b.map(n=>m.procs[n]);
   const changed = m.level_changed.map(n=>m.procs[n]);
   let h = RULE_NOTE;
-  h += '<div class="card">'+cardHd('GAP Top 20',metric.toUpperCase()+' 进程合计轮次均值，红=增加 绿=减少'+(includeCached?'':'（不含仅 Cached 进程）'))
+  // GAP Top 20
+  h += '<div class="card">'+cardHd('GAP Top 20',metric.toUpperCase()+' 进程合计轮均，红=增加 绿=减少'+(includeCached?'':'（不含仅 Cached 进程）'))
     +'<div id="topChart" class="chart chart-tall"></div>'
     +'<div class="tbl-wrap no-max" style="margin-top:12px"><table><thead><tr><th>进程</th><th class="num">轮均 A</th><th class="num">轮均 B</th><th class="num">GAP</th><th class="num">GAP%</th><th>标签</th></tr></thead><tbody>'
-    + top20.map(p=>'<tr><td class="name"><a href="#proc='+encodeURIComponent(p.name)+'">'+esc(p.name)+'</a></td><td class="num">'+fmt(p.ra)+'</td><td class="num">'+fmt(p.rb)+'</td>'+gapCells(p.ra,p.rb,p.gapt,p.gapp)+'<td>'+tags(p)+'</td></tr>').join('')
+    + (top20.map(p=>'<tr><td class="name">'+procLink(p.name)+'</td><td class="num">'+fmt(p.da.mi)+'</td><td class="num">'+fmt(p.db.mi)+'</td>'+gapCells(p.da.mi,p.db.mi,p.gapt,p.gapp)+'<td>'+procTags(p)+'</td></tr>').join('')
+      || '<tr><td colspan="6" class="muted">无数据</td></tr>')
     +'</tbody></table></div></div>';
-  const utab = (plist,i)=>'<div class="tbl-wrap h320"><table><thead><tr><th>进程</th><th>所在层级</th><th class="num">出现次数</th><th class="num">数值均值</th><th class="num">轮次均值</th></tr></thead><tbody>'
-    + plist.map(p=>'<tr><td class="name"><a href="#proc='+encodeURIComponent(p.name)+'">'+esc(p.name)+'</a></td><td>'+esc((i?p.lb:p.la).join('、'))+'</td><td class="num">'+(i?p.kb:p.ka)+'/'+N(i)+'</td><td class="num">'+fmt(i?p.vb:p.va)+'</td><td class="num">'+fmt(i?p.rb:p.ra)+'</td></tr>').join('')
+  // 独有进程
+  const utab = (plist,i)=>'<div class="tbl-wrap h320"><table><thead><tr><th>进程</th><th>所在层级</th><th class="num">出现次数</th><th class="num">值均</th><th class="num">轮均</th></tr></thead><tbody>'
+    + plist.map(p=>{const d=i?p.db:p.da;return '<tr><td class="name">'+procLink(p.name)+'</td><td>'+esc((i?p.lb:p.la).join('、')||'—')+'</td><td class="num">'+d.k+'/'+d.n+'</td><td class="num">'+fmt(d.mean)+'</td><td class="num">'+fmt(d.mi)+'</td></tr>';}).join('')
     +'</tbody></table></div>';
   h += '<div class="card">'+cardHd('独有进程','仅在单侧数据集中出现')+'<div class="grid2">'
     +'<div><div class="sec-h">仅 A 出现<span class="cnt">'+onlyA.length+'</span></div>'+utab(onlyA,0)+'</div>'
     +'<div><div class="sec-h">仅 B 出现<span class="cnt">'+onlyB.length+'</span></div>'+utab(onlyB,1)+'</div></div></div>';
-  const lvUsed = new Set(); changed.forEach(p=>{p.la.forEach(x=>lvUsed.add(x));p.lb.forEach(x=>lvUsed.add(x));});
-  h += '<div class="card">'+cardHd('层级变化进程（'+changed.length+'）','每格一轮：A/B 各一条，空=未出现')
-    +'<div class="legend">'+[...lvUsed].map(L=>'<span class="lg"><span class="sw" style="background:'+lvColor(L)+'"></span>'+esc(L)+'</span>').join('')+'<span class="lg"><span class="sw" style="background:#f1f5f9;border:1px dashed #cbd5e1"></span>未出现</span></div>'
-    +'<div class="tbl-wrap"><table><thead><tr><th>进程</th><th>A 各轮层级</th><th>B 各轮层级</th><th>标签</th></tr></thead><tbody>'
-    + changed.map(p=>'<tr><td class="name"><a href="#proc='+encodeURIComponent(p.name)+'">'+esc(p.name)+'</a></td><td>'+stripHtml(p.pra)+'</td><td>'+stripHtml(p.prb)+'</td><td>'+tags(p)+'</td></tr>').join('')
-    +'</tbody></table></div></div>';
-  h += '<div class="card">'+cardHd('全量进程表（'+list.length+'）','')
+  // 层级变化进程
+  const hasPr = changed.length && changed[0].pra!=null;
+  if (hasPr){
+    const lvUsed = new Set(); changed.forEach(p=>{p.la.forEach(x=>lvUsed.add(x));p.lb.forEach(x=>lvUsed.add(x));});
+    h += '<div class="card">'+cardHd('层级变化进程（'+changed.length+'）','每格一轮：A/B 各一条，空=未出现')
+      +'<div class="legend">'+[...lvUsed].map(L=>'<span class="lg"><span class="sw" style="background:'+lvColor(L)+'"></span>'+esc(L)+'</span>').join('')+'<span class="lg"><span class="sw" style="background:#f1f5f9;border:1px dashed #cbd5e1"></span>未出现</span></div>'
+      +'<div class="tbl-wrap"><table><thead><tr><th>进程</th><th>A 各轮层级</th><th>B 各轮层级</th><th>标签</th></tr></thead><tbody>'
+      + changed.map(p=>'<tr><td class="name">'+procLink(p.name)+'</td><td>'+stripHtml(p.pra)+'</td><td>'+stripHtml(p.prb)+'</td><td>'+procTags(p)+'</td></tr>').join('')
+      +'</tbody></table></div></div>';
+  } else {
+    const lvdist = p=>p.la.map(l=>l+' '+(p.lvc_a[l]||0)).join('、')||'—';
+    const lvdistB = p=>p.lb.map(l=>l+' '+(p.lvc_b[l]||0)).join('、')||'—';
+    h += '<div class="card">'+cardHd('层级变化进程（'+changed.length+'）','各层级出现轮数分布')
+      +'<div class="tbl-wrap"><table><thead><tr><th>进程</th><th>A 层级出现分布</th><th>B 层级出现分布</th><th>标签</th></tr></thead><tbody>'
+      + (changed.map(p=>'<tr><td class="name">'+procLink(p.name)+'</td><td>'+esc(lvdist(p))+'</td><td>'+esc(lvdistB(p))+'</td><td>'+procTags(p)+'</td></tr>').join('')
+        || '<tr><td colspan="4" class="muted">无层级变化进程</td></tr>')
+      +'</tbody></table></div></div>';
+  }
+  // 全量进程表
+  h += '<div class="card">'+cardHd('全量进程表（'+list.length+'）',metric.toUpperCase()+' · 点击列头排序 · 点击进程进详情')
     +'<div class="controls"><input type="text" id="pkKw" placeholder="关键词，多个用逗号分隔" value="'+esc(state.pkKw)+'" style="width:240px">'
     +'<select id="pkLevel"><option value="">全部层级</option>'+m.levels.map(L=>'<option'+(state.pkLevel===L?' selected':'')+'>'+esc(L)+'</option>').join('')+'</select>'
     +'<select id="pkCat"><option value="">全部归类</option><option value="inhouse"'+(state.pkCat==='inhouse'?' selected':'')+'>自研</option><option value="google"'+(state.pkCat==='google'?' selected':'')+'>Google</option><option value="other"'+(state.pkCat==='other'?' selected':'')+'>其他</option></select>'
     +'<label><input type="checkbox" id="pkSigOnly"'+(state.pkSigOnly?' checked':'')+'> 仅显著</label>'
+    +'<label><input type="checkbox" id="pkResident"'+(state.pkResident?' checked':'')+'> 仅常驻B</label>'
+    +'<label><input type="checkbox" id="pkLeak"'+(state.pkLeak?' checked':'')+'> 仅泄漏</label>'
     +'<label>|GAP| ≥ <input type="number" id="pkGapMin" min="0" step="1" value="'+state.pkGapMin+'"> MB</label></div>'
-    +'<div class="tbl-wrap"><table><thead><tr><th>进程</th><th>层级 A</th><th>层级 B</th><th class="num">出现 A</th><th class="num">出现 B</th><th class="num">轮均 A</th><th class="num">轮均 B</th><th class="num">值均 A</th><th class="num">值均 B</th><th class="num">GAP</th><th class="num">GAP%</th><th>标签</th></tr></thead><tbody id="pkBody"></tbody></table></div></div>';
-  h += '<div class="card">'+cardHd('逐轮走势对比','默认 |GAP| Top5；实线=A 虚线=B')
+    +'<div class="tbl-wrap"><table><thead><tr>'
+    +'<th>进程</th><th>层级 A</th><th>层级 B</th>'
+    +'<th class="num sort" data-k="rate">出现率A/B</th>'
+    +'<th class="num sort" data-k="mi">轮均 A</th><th class="num sort" data-k="mi">轮均 B</th>'
+    +'<th class="num sort" data-k="p90">P90 A</th><th class="num sort" data-k="p90">P90 B</th>'
+    +'<th class="num sort" data-k="max">最大A/B</th>'
+    +'<th class="num sort" data-k="gap">GAP</th><th class="num">GAP%</th><th>标签</th></tr></thead><tbody id="pkBody"></tbody></table></div></div>';
+  // 走势对比
+  h += '<div class="card">'+cardHd('走势对比','默认 |GAP| Top5 · '+(AXIS==='round'?'x=轮次':'x=测试小时')+' · 实线=A 虚线=B')
     +'<div id="trPick"></div><div id="trChart" class="chart chart-tall"></div></div>';
   el.innerHTML = h;
+  // Top20 bar
   const t20 = [...top20].sort((a,b)=>a.gap-b.gap);
-  makeChart(document.getElementById('topChart')).setOption({
-    tooltip:{trigger:'axis',axisPointer:{type:'shadow'},formatter:ps=>{const p=t20[ps[0].dataIndex];return esc(p.name)+'<br>GAP '+fmt(p.gap)+' MB<br>A '+fmt(p.ra)+' / B '+fmt(p.rb);}},
+  if (t20.length) makeChart(document.getElementById('topChart')).setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'},formatter:ps=>{const p=t20[ps[0].dataIndex];return esc(p.name)+'<br>GAP '+fmt(p.gap)+' MB<br>A '+fmt(p.da.mi)+' / B '+fmt(p.db.mi);}},
     grid:{top:10,left:10,right:60,bottom:20,containLabel:true},
     xAxis:{type:'value',name:'MB'},
     yAxis:{type:'category',data:t20.map(p=>p.name),axisLabel:{fontSize:11,width:170,overflow:'truncate'}},
@@ -693,28 +887,47 @@ RENDER.procs = function(){
   const pkBody = document.getElementById('pkBody');
   const fillPk = ()=>{
     const kws = state.pkKw.split(/[,，]/).map(s=>s.trim()).filter(Boolean);
-    const rows = list.filter(p=>{
+    let rows = list.filter(p=>{
       if (kws.length && !kws.some(k=>p.name.includes(k))) return false;
       if (state.pkLevel && !p.la.includes(state.pkLevel) && !p.lb.includes(state.pkLevel)) return false;
       if (state.pkCat==='inhouse' && !p.inhouse) return false;
       if (state.pkCat==='google' && !p.google) return false;
       if (state.pkCat==='other' && (p.inhouse||p.google)) return false;
       if (state.pkSigOnly && !p.sig) return false;
+      if (state.pkResident && !p.resident_b) return false;
+      if (state.pkLeak && !p.leak_a && !p.leak_b) return false;
       if (Math.abs(p.gap) < state.pkGapMin) return false;
       return true;
     });
-    pkBody.innerHTML = rows.map(p=>'<tr><td class="name"><a href="#proc='+encodeURIComponent(p.name)+'">'+esc(p.name)+'</a></td>'
-      +'<td>'+esc(p.la.join('、')||'—')+'</td><td>'+esc(p.lb.join('、')||'—')+'</td>'
-      +'<td class="num">'+p.ka+'/'+N(0)+'</td><td class="num">'+p.kb+'/'+N(1)+'</td>'
-      +'<td class="num">'+fmt(p.ra)+'</td><td class="num">'+fmt(p.rb)+'</td><td class="num">'+fmt(p.va)+'</td><td class="num">'+fmt(p.vb)+'</td>'
-      + gapCells(p.ra,p.rb,p.gapt,p.gapp) + '<td>'+tags(p)+'</td></tr>').join('');
+    const k = state.pkSort, dir = state.pkDir;
+    rows.sort((x,y)=>{
+      const vx = k==='gap'? x.gap : k==='mi'? x.db.mi : k==='p90'? (x.db.p90??-1) : k==='max'? (x.db.max??-1) : x.db.rate;
+      const vy = k==='gap'? y.gap : k==='mi'? y.db.mi : k==='p90'? (y.db.p90??-1) : k==='max'? (y.db.max??-1) : y.db.rate;
+      return (vx-vy)*dir;
+    });
+    pkBody.innerHTML = rows.map(p=>'<tr><td class="name pname" title="'+esc(p.name)+'">'+procLink(p.name)+'</td>'
+      +'<td class="lvcell" title="'+esc(p.la.join('、')||'—')+'">'+esc(p.la[0]||'—')+(p.la.length>1?' +'+(p.la.length-1):'')+'</td>'
+      +'<td class="lvcell" title="'+esc(p.lb.join('、')||'—')+'">'+esc(p.lb[0]||'—')+(p.lb.length>1?' +'+(p.lb.length-1):'')+'</td>'
+      +'<td class="num">'+Math.round(p.da.rate*100)+'%/'+Math.round(p.db.rate*100)+'%</td>'
+      +'<td class="num">'+fmt(p.da.mi)+'</td><td class="num">'+fmt(p.db.mi)+'</td>'
+      +'<td class="num">'+fmt(p.da.p90)+'</td><td class="num">'+fmt(p.db.p90)+'</td>'
+      +'<td class="num">'+fmt(p.da.max)+' / '+fmt(p.db.max)+'</td>'
+      + gapCells(p.da.mi, p.db.mi, p.gapt, p.gapp) + '<td>'+procTags(p)+'</td></tr>').join('')
+      || '<tr><td colspan="12" class="muted">无匹配进程</td></tr>';
   };
   document.getElementById('pkKw').oninput = e=>{state.pkKw=e.target.value;fillPk();};
   document.getElementById('pkLevel').onchange = e=>{state.pkLevel=e.target.value;fillPk();};
   document.getElementById('pkCat').onchange = e=>{state.pkCat=e.target.value;fillPk();};
   document.getElementById('pkSigOnly').onchange = e=>{state.pkSigOnly=e.target.checked;fillPk();};
+  document.getElementById('pkResident').onchange = e=>{state.pkResident=e.target.checked;fillPk();};
+  document.getElementById('pkLeak').onchange = e=>{state.pkLeak=e.target.checked;fillPk();};
   document.getElementById('pkGapMin').oninput = e=>{state.pkGapMin=+e.target.value||0;fillPk();};
+  el.querySelectorAll('th.sort').forEach(th=>{
+    th.style.cursor='pointer';
+    th.onclick = ()=>{ state.pkSort = th.dataset.k; state.pkDir = -state.pkDir; fillPk(); };
+  });
   fillPk();
+  // 走势对比
   if (!state.trSel) state.trSel = list.slice(0,5).map(p=>p.name);
   state.trSel = state.trSel.filter(n=>list.some(p=>p.name===n));
   const drawTr = ()=>{
@@ -722,15 +935,10 @@ RENDER.procs = function(){
     state.trSel.forEach((name,idx)=>{
       const p = m.procs[name]; if(!p) return;
       const col = PROC_PALETTE[idx%PROC_PALETTE.length];
-      series.push({name:name+' · A',type:'line',data:p.ta,itemStyle:{color:col},lineStyle:{color:col},symbolSize:5,connectNulls:false});
-      series.push({name:name+' · B',type:'line',data:p.tb,itemStyle:{color:col},lineStyle:{color:col,type:'dashed'},symbolSize:5,connectNulls:false});
+      series.push(lineSeries(name+'·A', 0, p.a, col, false));
+      series.push(lineSeries(name+'·B', 1, p.b, col, true));
     });
-    makeChart(document.getElementById('trChart')).setOption({
-      tooltip:{trigger:'axis'}, legend:{type:'scroll',top:0},
-      grid:{top:40,left:60,right:20,bottom:30},
-      xAxis:{type:'category',data:roundCats(Math.max(N(0),N(1)))},
-      yAxis:{type:'value',name:'MB'}, series
-    });
+    makeChart(document.getElementById('trChart')).setOption(tsOption(series));
   };
   multiPicker({el:document.getElementById('trPick'), options:list.map(p=>p.name), selected:state.trSel,
     colorOf:(n,idx)=>PROC_PALETTE[idx%PROC_PALETTE.length],
@@ -738,133 +946,270 @@ RENDER.procs = function(){
   drawTr();
 };
 
-/* ============ 5. 自研 / Google 应用 ============ */
+/* ============ 5/6. 自研 / Google 应用 ============ */
 function renderCategory(key){
   const el = document.getElementById('page-'+key);
   const m = MV();
   const isIh = key==='inhouse';
   const cn = isIh?'自研':'Google';
-  const rows = procList().filter(p=>isIh?p.inhouse:p.google);
-  const nA = rows.filter(p=>p.ka>0).length, nB = rows.filter(p=>p.kb>0).length;
-  const sumA = rows.reduce((s,p)=>s+p.ra,0), sumB = rows.reduce((s,p)=>s+p.rb,0);
-  const g = sumB - sumA;
+  const rows = m.top.map(n=>m.procs[n]).filter(p=>isIh?p.inhouse:p.google);
+  const nA = rows.filter(p=>p.da.k>0).length, nB = rows.filter(p=>p.db.k>0).length;
+  const sumA = rows.reduce((s,p)=>s+p.da.mi,0), sumB = rows.reduce((s,p)=>s+p.db.mi,0);
   let h = RULE_NOTE;
   h += '<div class="grid-kpi auto" style="margin-bottom:16px">'
-    +'<div class="kpi"><div class="kpi-hd"><span class="kpi-name">'+cn+'进程数</span><span class="kpi-src">'+metric.toUpperCase()+'</span></div>'
-    +'<div class="kpi-v">'+nB+'<span class="u">个</span></div>'
-    +'<div class="kpi-ab"><span style="color:var(--c-a)">A '+nA+'</span><span class="arr">→</span><span style="color:var(--c-b)">B '+nB+'</span></div>'
-    +'<div class="kpi-delta">'+deltaBadge((nB-nA>0?'+':'')+(nB-nA)+' 个', deltaCls(nB-nA,false,null), nB-nA)+'</div></div>'
-    +'<div class="kpi"><div class="kpi-hd"><span class="kpi-name">'+cn+'总轮次均值</span><span class="kpi-src">'+metric.toUpperCase()+'</span></div>'
-    +'<div class="kpi-v">'+fmt(sumB)+'<span class="u">MB</span></div>'
-    +'<div class="kpi-ab"><span style="color:var(--c-a)">A '+fmt(sumA)+' MB</span><span class="arr">→</span><span style="color:var(--c-b)">B '+fmt(sumB)+' MB</span></div>'
-    +'<div class="kpi-delta">'+deltaBadge((g>0?'+':'')+fmt(g)+' MB', deltaCls(g,false,null), g)+'</div></div>'
+    + kpiCard(cn+'进程数', metric.toUpperCase(), nA, nB, '个', false, 0)
+    + kpiCard(cn+' 轮均合计', metric.toUpperCase(), sumA, sumB, 'MB', false)
     +'</div>';
   h += '<div class="card">'+cardHd(cn+'进程明细','')+'<div class="tbl-wrap"><table><thead><tr>'
-    +'<th>进程</th>'+(isIh?'<th>判定</th>':'')+'<th>层级 A</th><th>层级 B</th><th class="num">出现 A</th><th class="num">出现 B</th><th class="num">轮均 A</th><th class="num">轮均 B</th><th class="num">值均 A</th><th class="num">值均 B</th><th class="num">GAP</th><th class="num">GAP%</th><th>标签</th></tr></thead><tbody>'
-    + rows.map(p=>'<tr><td class="name"><a href="#proc='+encodeURIComponent(p.name)+'">'+esc(p.name)+'</a></td>'
+    +'<th>进程</th>'+(isIh?'<th>判定</th>':'')+'<th>层级 A</th><th>层级 B</th><th class="num">出现率A/B</th>'
+    +'<th class="num">轮均 A</th><th class="num">轮均 B</th><th class="num">值均 A</th><th class="num">值均 B</th>'
+    +'<th class="num">GAP</th><th class="num">GAP%</th><th>标签</th></tr></thead><tbody>'
+    + (rows.map(p=>'<tr><td class="name">'+procLink(p.name)+'</td>'
       +(isIh?'<td class="muted">'+(p.ih_src==='whitelist'?'白名单':'前缀')+'</td>':'')
       +'<td>'+esc(p.la.join('、')||'—')+'</td><td>'+esc(p.lb.join('、')||'—')+'</td>'
-      +'<td class="num">'+p.ka+'/'+N(0)+'</td><td class="num">'+p.kb+'/'+N(1)+'</td>'
-      +'<td class="num">'+fmt(p.ra)+'</td><td class="num">'+fmt(p.rb)+'</td><td class="num">'+fmt(p.va)+'</td><td class="num">'+fmt(p.vb)+'</td>'
-      +gapCells(p.ra,p.rb,p.gapt,p.gapp)+'<td>'+tags(p)+'</td></tr>').join('')
+      +'<td class="num">'+Math.round(p.da.rate*100)+'%/'+Math.round(p.db.rate*100)+'%</td>'
+      +'<td class="num">'+fmt(p.da.mi)+'</td><td class="num">'+fmt(p.db.mi)+'</td>'
+      +'<td class="num">'+fmt(p.da.mean)+'</td><td class="num">'+fmt(p.db.mean)+'</td>'
+      +gapCells(p.da.mi,p.db.mi,p.gapt,p.gapp)+'<td>'+procTags(p)+'</td></tr>').join('')
+      || '<tr><td colspan="12" class="muted">无' + cn + '进程</td></tr>')
     +'</tbody></table></div></div>';
   el.innerHTML = h;
 }
 RENDER.inhouse = ()=>renderCategory('inhouse');
 RENDER.google = ()=>renderCategory('google');
 
-/* ============ 6. 启动/唤醒 ============ */
+/* ============ 7. 进程事件 ============ */
 RENDER.events = function(){
   const el = document.getElementById('page-events');
-  let h = '<div class="card">'+cardHd('启动原因分布','仅统计 test 阶段（测试窗口内）的 start 事件')+'<div id="evChart" class="chart"></div></div>';
-  h += '<div class="card">'+cardHd('唤醒链','输入进程名或关键词：被谁拉起 → 进程 → 拉起了谁')
-    +'<div class="controls"><input type="text" id="evKw" placeholder="进程关键词（如 atomicbrain）" value="'+esc(state.evQ)+'" style="width:280px"></div>'
-    +'<div id="wakePanel"></div></div>';
-  h += '<div class="card">'+cardHd('事件明细','灰色 = boot 阶段（开机至第 1 轮前）')
-    +'<div class="tbl-wrap"><table><thead><tr><th>数据集</th><th>时间</th><th>阶段</th><th>类型</th><th>进程</th><th>原因</th><th>组件</th><th>调用方</th><th>adj</th></tr></thead><tbody id="evBody"></tbody></table></div></div>';
+  const ea = DATA.events.a, eb = DATA.events.b;
+  let h = '<div class="grid-kpi auto" style="margin-bottom:16px">'
+    + kpiCard('LMK 次数', 'killinfo', ea.lmk.total, eb.lmk.total, '次', false, 0)
+    + kpiCard('LMK 次/小时', '', ea.lmk.per_hour, eb.lmk.per_hour, '/h', false)
+    + kpiCard('am_kill', '', ea.am_kill.total, eb.am_kill.total, '次', false, 0)
+    + kpiCard('proc_died', '', ea.died_total, eb.died_total, '次', false, 0)
+    + kpiCard('proc_start', '反复拉起', ea.starts_total, eb.starts_total, '次', false, 0)
+    + kpiCard('am_low_memory', '', ea.lowmem_total, eb.lowmem_total, '次', false, 0)
+    + kpiCard('ANR', '', ea.anr.length, eb.anr.length, '次', false, 0)
+    + kpiCard('crash', '', ea.crash.length, eb.crash.length, '次', false, 0)
+    +'</div>';
+  h += '<div class="card">'+cardHd('LMK 每小时分布','killinfo · test 阶段')+'<div id="lmkChart" class="chart"></div></div>';
+  const lvSet = new Set([...Object.keys(ea.lmk.by_level), ...Object.keys(eb.lmk.by_level)]);
+  const rMap = new Map();
+  [ea,eb].forEach(e=>e.lmk.by_reason.forEach(r=>{ const k=r.code+' '+r.name; rMap.set(k,(rMap.get(k)||[0,0])); }));
+  [ea,eb].forEach((e,i)=>e.lmk.by_reason.forEach(r=>{ rMap.get(r.code+' '+r.name)[i]=r.n; }));
+  const tMap = new Map();
+  [ea,eb].forEach((e,i)=>e.lmk.top.forEach(t=>{ if(!tMap.has(t.proc)) tMap.set(t.proc,{a:0,b:0,ra:null,rb:null}); const o=tMap.get(t.proc); if(i){o.b=t.n;o.rb=t.rss_mean;}else{o.a=t.n;o.ra=t.rss_mean;} }));
+  h += '<div class="row-2col"><div class="card">'+cardHd('LMK 按层级','')
+    +'<div class="tbl-wrap h320"><table><thead><tr><th>层级</th><th class="num">A</th><th class="num">B</th></tr></thead><tbody>'
+    + ([...lvSet].sort((x,y)=>((eb.lmk.by_level[y]||0)-(eb.lmk.by_level[x]||0))).map(lv=>'<tr><td>'+esc(lv)+'</td><td class="num">'+(ea.lmk.by_level[lv]||0)+'</td><td class="num">'+(eb.lmk.by_level[lv]||0)+'</td></tr>').join('')
+      || '<tr><td colspan="3" class="muted">无 LMK 事件</td></tr>')
+    +'</tbody></table></div></div>'
+    +'<div class="card">'+cardHd('LMK 按原因','kill_reason 枚举（AOSP）')
+    +'<div class="tbl-wrap h320"><table><thead><tr><th>code</th><th>原因</th><th class="num">A</th><th class="num">B</th></tr></thead><tbody>'
+    + ([...rMap.entries()].sort((x,y)=>y[1][1]-x[1][1]).map(([k,v])=>{const cd=k.split(' ')[0];return '<tr><td class="num">'+esc(cd)+'</td><td>'+esc(k.slice(cd.length+1))+'</td><td class="num">'+v[0]+'</td><td class="num">'+v[1]+'</td></tr>';}).join('')
+      || '<tr><td colspan="4" class="muted">无 LMK 事件</td></tr>')
+    +'</tbody></table></div></div></div>';
+  const tops = [...tMap.entries()].sort((x,y)=>(y[1].a+y[1].b)-(x[1].a+x[1].b)).slice(0,30);
+  h += '<div class="card">'+cardHd('LMK Top 被杀进程','rss_mean=被杀时 RSS 均值 MB')
+    +'<div class="tbl-wrap"><table><thead><tr><th>进程</th><th class="num">A 次数</th><th class="num">A RSS均值</th><th class="num">B 次数</th><th class="num">B RSS均值</th></tr></thead><tbody>'
+    + (tops.map(([p,o])=>'<tr><td class="name">'+procLink(p)+'</td><td class="num">'+(o.a||'')+'</td><td class="num">'+fmt(o.ra)+'</td><td class="num">'+(o.b||'')+'</td><td class="num">'+fmt(o.rb)+'</td></tr>').join('')
+      || '<tr><td colspan="5" class="muted">无 LMK 事件</td></tr>')
+    +'</tbody></table></div></div>';
+  const krMap = new Map();
+  [ea,eb].forEach((e,i)=>e.am_kill.by_reason.forEach(r=>{ if(!krMap.has(r.reason)) krMap.set(r.reason,[0,0]); krMap.get(r.reason)[i]=r.n; }));
+  h += '<div class="grid2">'
+    +'<div class="card">'+cardHd('am_kill 原因 Top','非 LMK 的主动查杀')
+    +'<div class="tbl-wrap h320"><table><thead><tr><th>reason</th><th class="num">A</th><th class="num">B</th></tr></thead><tbody>'
+    + ([...krMap.entries()].sort((x,y)=>(y[1][0]+y[1][1])-(x[1][0]+x[1][1])).slice(0,20).map(([r,v])=>'<tr><td class="name">'+esc(r)+'</td><td class="num">'+v[0]+'</td><td class="num">'+v[1]+'</td></tr>').join('')
+      || '<tr><td colspan="3" class="muted">无 am_kill 事件</td></tr>')
+    +'</tbody></table></div></div>'
+    +'<div class="card">'+cardHd('反复拉起 Top','am_proc_start 次数最多')
+    +'<div class="tbl-wrap h320"><table><thead><tr><th>进程</th><th class="num">A</th><th class="num">B</th></tr></thead><tbody>'
+    + (()=>{const mm=new Map();[ea,eb].forEach((e,i)=>e.start_top.forEach(t=>{if(!mm.has(t.proc))mm.set(t.proc,[0,0]);mm.get(t.proc)[i]=t.n;}));const rows=[...mm.entries()].sort((x,y)=>(y[1][0]+y[1][1])-(x[1][0]+x[1][1])).slice(0,30).map(([p,v])=>'<tr><td class="name">'+procLink(p)+'</td><td class="num">'+v[0]+'</td><td class="num">'+v[1]+'</td></tr>').join('');return rows||'<tr><td colspan="3" class="muted">无</td></tr>';})()
+    +'</tbody></table></div></div></div>';
+  // 启动原因分布
+  h += '<div class="card">'+cardHd('启动原因分布','仅统计 test 阶段（测试窗口内）的 start 事件')+'<div id="evChart" class="chart"></div></div>';
+  // 唤醒链 + 事件明细（事件列表过大时不内嵌）
+  const hasEv = DS[0].events && DS[1].events;
+  if (hasEv){
+    h += '<div class="card">'+cardHd('唤醒链','输入进程名或关键词：被谁拉起 → 进程 → 拉起了谁')
+      +'<div class="controls"><input type="text" id="evKw" placeholder="进程关键词（如 atomicbrain）" value="'+esc(state.evQ)+'" style="width:280px"></div>'
+      +'<div id="wakePanel"></div></div>';
+    h += '<div class="card">'+cardHd('事件明细','灰色 = boot 阶段（开机至第 1 轮前）')
+      +'<div class="tbl-wrap"><table><thead><tr><th>数据集</th><th>时间</th><th>阶段</th><th>类型</th><th>进程</th><th>原因</th><th>组件</th><th>调用方</th><th>adj</th></tr></thead><tbody id="evBody"></tbody></table></div></div>';
+  } else {
+    h += '<div class="card">'+cardHd('唤醒链 / 事件明细','')
+      +'<div class="empty">事件共 '+DS[0].events_total+' / '+DS[1].events_total+' 条，数量过多未内嵌，明细见 data.xlsx</div></div>';
+  }
+  // ANR / crash
+  h += '<div class="grid2">'
+    +'<div class="card">'+cardHd('ANR（'+ea.anr.length+' / '+eb.anr.length+'）','')
+    +'<div class="tbl-wrap h320"><table><thead><tr><th>侧</th><th>时间</th><th>进程</th><th>原因</th></tr></thead><tbody>'
+    + (ea.anr.map(e=>'<tr><td>A</td><td class="mono">'+esc(e.t)+'</td><td class="name">'+esc(e.proc)+'</td><td class="name">'+esc(e.reason)+'</td></tr>').join('')
+    + eb.anr.map(e=>'<tr><td>B</td><td class="mono">'+esc(e.t)+'</td><td class="name">'+esc(e.proc)+'</td><td class="name">'+esc(e.reason)+'</td></tr>').join('')
+      || '<tr><td colspan="4" class="muted">无</td></tr>')
+    +'</tbody></table></div></div>'
+    +'<div class="card">'+cardHd('crash（'+ea.crash.length+' / '+eb.crash.length+'）','')
+    +'<div class="tbl-wrap h320"><table><thead><tr><th>侧</th><th>时间</th><th>进程</th><th>原因</th></tr></thead><tbody>'
+    + (ea.crash.map(e=>'<tr><td>A</td><td class="mono">'+esc(e.t)+'</td><td class="name">'+esc(e.proc)+'</td><td class="name">'+esc(e.reason)+'</td></tr>').join('')
+    + eb.crash.map(e=>'<tr><td>B</td><td class="mono">'+esc(e.t)+'</td><td class="name">'+esc(e.proc)+'</td><td class="name">'+esc(e.reason)+'</td></tr>').join('')
+      || '<tr><td colspan="4" class="muted">无</td></tr>')
+    +'</tbody></table></div></div></div>';
+  const rbA = DS[0].reboots, rbB = DS[1].reboots;
+  h += '<div class="card">'+cardHd('重启（'+rbA.length+' / '+rbB.length+'）','相邻有效轮 uptime 回退')
+    +(rbA.length+rbB.length? '<ul class="findings">'
+      + rbA.map(r=>'<li>A：第 '+r.after_round+' 轮 → 第 '+r.round+' 轮之间</li>').join('')
+      + rbB.map(r=>'<li>B：第 '+r.after_round+' 轮 → 第 '+r.round+' 轮之间</li>').join('')+'</ul>'
+      : '<div class="muted">未检测到重启</div>')+'</div>';
   el.innerHTML = h;
+  // LMK 每小时分布
+  const nh = Math.max(ea.lmk.hourly.length, eb.lmk.hourly.length);
+  makeChart(document.getElementById('lmkChart')).setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}}, legend:{top:0},
+    grid:{top:36,left:50,right:20,bottom:30},
+    xAxis:{type:'category',data:Array.from({length:nh},(_,i)=>i+'h'),name:'测试小时'},
+    yAxis:{type:'value',name:'次'},
+    series:[
+      {name:'A '+LA,type:'bar',data:ea.lmk.hourly,itemStyle:{color:CA}},
+      {name:'B '+LB,type:'bar',data:eb.lmk.hourly,itemStyle:{color:CB}}]
+  });
+  // 启动原因分布
   const reasons = new Map();
-  DS.forEach(d=>{ for (const r in d.reason_counts) reasons.set(r,(reasons.get(r)||0)+d.reason_counts[r]); });
+  DS.forEach(d=>{ for (const r in (d.reason_counts||{})) reasons.set(r,(reasons.get(r)||0)+d.reason_counts[r]); });
   const rlist = [...reasons.keys()].sort((a,b)=>reasons.get(b)-reasons.get(a));
   makeChart(document.getElementById('evChart')).setOption({
     tooltip:{trigger:'axis'}, legend:{type:'scroll',top:0,icon:'roundRect'},
     grid:{top:36,left:50,right:20,bottom:30},
     xAxis:{type:'category',data:['A '+LA,'B '+LB]},
     yAxis:{type:'value',name:'次数'},
-    series:rlist.map(r=>({name:r,type:'bar',stack:'s',barMaxWidth:90,itemStyle:{borderRadius:0},data:[DS[0].reason_counts[r]||0,DS[1].reason_counts[r]||0]}))
+    series:rlist.map(r=>({name:r,type:'bar',stack:'s',barMaxWidth:90,itemStyle:{borderRadius:0},data:[(DS[0].reason_counts||{})[r]||0,(DS[1].reason_counts||{})[r]||0]}))
   });
-  const kw = document.getElementById('evKw'), evBody = document.getElementById('evBody'), wake = document.getElementById('wakePanel');
-  const fill = ()=>{
-    state.evQ = kw.value.trim();
-    const k = state.evQ;
-    let rows='';
-    DS.forEach((d,i)=>d.events.forEach(e=>{
-      if (k && !(e.proc||'').includes(k) && !(e.comp||'').includes(k) && !(e.caller||'').includes(k)) return;
-      rows += '<tr'+(e.phase==='boot'?' class="phaseboot"':'')+'><td>'+(i?'B':'A')+'</td><td class="mono">'+esc(e.t.slice(5))+'</td><td>'+esc(e.phase)+'</td><td>'+esc(e.kind)+'</td><td class="name">'+esc(e.proc||'')+'</td><td>'+esc(e.reason||'')+'</td><td class="mono comp">'+esc(e.comp||'')+'</td><td>'+esc(e.caller||'')+'</td><td>'+esc(e.adj||'')+'</td></tr>';
-    }));
-    evBody.innerHTML = rows || '<tr><td colspan="9" class="muted">无匹配事件</td></tr>';
-    if (!k){ wake.innerHTML='<div class="muted">输入进程关键词以查看唤醒链。</div>'; return; }
-    const procs = new Set();
-    DS.forEach(d=>d.events.forEach(e=>{ if(e.proc) procs.add(e.proc); if(e.caller) procs.add(e.caller); }));
-    let target = procs.has(k) ? k : [...procs].find(p=>p.includes(k));
-    if (!target){ wake.innerHTML='<div class="muted">未在事件中找到匹配进程。</div>'; return; }
-    const box = i=>{
-      const pulledBy = DS[i].events.filter(e=>e.kind==='start' && e.proc===target);
-      const pulls = DS[i].events.filter(e=>e.kind==='start' && e.caller===target && e.proc!==target);
-      const tag = e => e.phase==='boot' ? '（启动期）' : '';
-      const chip = '<span class="sc sc-'+(i?'b':'a')+'">'+(i?'B':'A')+'</span>';
-      const li1 = pulledBy.map(e=>'<li><b>'+esc(e.caller||'(未知)')+'</b> · '+esc(e.reason||'')+' · '+esc(e.t.slice(5))+tag(e)+'</li>').join('')||'<li class="muted">无</li>';
-      const li2 = pulls.map(e=>'<li><b>'+esc(e.proc)+'</b> · '+esc(e.reason||'')+' · '+esc(e.t.slice(5))+tag(e)+'</li>').join('')||'<li class="muted">无</li>';
-      return '<div class="box"><h5>'+chip+'被谁拉起</h5><ul>'+li1+'</ul></div>'
-        +'<span class="warr">→</span>'
-        +'<div class="mid">'+chip+esc(target)+'</div>'
-        +'<span class="warr">→</span>'
-        +'<div class="box"><h5>'+chip+'拉起了谁</h5><ul>'+li2+'</ul></div>';
+  if (hasEv){
+    const kw = document.getElementById('evKw'), evBody = document.getElementById('evBody'), wake = document.getElementById('wakePanel');
+    const fill = ()=>{
+      state.evQ = kw.value.trim();
+      const k = state.evQ;
+      let rows='';
+      DS.forEach((d,i)=>d.events.forEach(e=>{
+        if (k && !(e.proc||'').includes(k) && !(e.comp||'').includes(k) && !(e.caller||'').includes(k)) return;
+        rows += '<tr'+(e.phase==='boot'?' class="phaseboot"':'')+'><td>'+(i?'B':'A')+'</td><td class="mono">'+esc(e.t.slice(5))+'</td><td>'+esc(e.phase)+'</td><td>'+esc(e.kind)+'</td><td class="name">'+esc(e.proc||'')+'</td><td>'+esc(e.reason||'')+'</td><td class="mono comp">'+esc(e.comp||'')+'</td><td>'+esc(e.caller||'')+'</td><td>'+esc(e.adj||'')+'</td></tr>';
+      }));
+      evBody.innerHTML = rows || '<tr><td colspan="9" class="muted">无匹配事件</td></tr>';
+      if (!k){ wake.innerHTML='<div class="muted">输入进程关键词以查看唤醒链。</div>'; return; }
+      const procs = new Set();
+      DS.forEach(d=>d.events.forEach(e=>{ if(e.proc) procs.add(e.proc); if(e.caller) procs.add(e.caller); }));
+      let target = procs.has(k) ? k : [...procs].find(p=>p.includes(k));
+      if (!target){ wake.innerHTML='<div class="muted">未在事件中找到匹配进程。</div>'; return; }
+      const box = i=>{
+        const pulledBy = DS[i].events.filter(e=>e.kind==='start' && e.proc===target);
+        const pulls = DS[i].events.filter(e=>e.kind==='start' && e.caller===target && e.proc!==target);
+        const tag = e => e.phase==='boot' ? '（启动期）' : '';
+        const chip = '<span class="sc sc-'+(i?'b':'a')+'">'+(i?'B':'A')+'</span>';
+        const li1 = pulledBy.map(e=>'<li><b>'+esc(e.caller||'(未知)')+'</b> · '+esc(e.reason||'')+' · '+esc(e.t.slice(5))+tag(e)+'</li>').join('')||'<li class="muted">无</li>';
+        const li2 = pulls.map(e=>'<li><b>'+esc(e.proc)+'</b> · '+esc(e.reason||'')+' · '+esc(e.t.slice(5))+tag(e)+'</li>').join('')||'<li class="muted">无</li>';
+        return '<div class="box"><h5>'+chip+'被谁拉起</h5><ul>'+li1+'</ul></div>'
+          +'<span class="warr">→</span>'
+          +'<div class="mid">'+chip+esc(target)+'</div>'
+          +'<span class="warr">→</span>'
+          +'<div class="box"><h5>'+chip+'拉起了谁</h5><ul>'+li2+'</ul></div>';
+      };
+      wake.innerHTML = '<div class="wake">'+box(0)+'</div><div class="wake" style="margin-top:14px">'+box(1)+'</div>';
     };
-    wake.innerHTML = '<div class="wake">'+box(0)+'</div><div class="wake" style="margin-top:14px">'+box(1)+'</div>';
-  };
-  kw.oninput = fill; fill();
+    kw.oninput = fill; fill();
+  }
 };
 
-/* ============ 7. 标准与风险 ============ */
+/* ============ 8. 内存压力 ============ */
+RENDER.pressure = function(){
+  const el = document.getElementById('page-pressure');
+  const cs = DATA.pressure.counters;
+  if (!cs.length){
+    el.innerHTML = '<div class="card"><div class="empty">本测试包无 proc_vmstat 数据</div></div>';
+    return;
+  }
+  if (!state.psSel) state.psSel = cs.length? [cs[0].name] : [];
+  state.psSel = state.psSel.filter(n=>cs.some(c=>c.name===n));
+  const pf = v => v==null ? '—' : (Math.abs(v)>=1000 ? fmt0(v) : fmt(v));
+  let h = '<div class="card">'+cardHd('内存压力计数器','proc_vmstat 每轮增量汇总 · /小时 = 总量/覆盖小时')
+    +'<div class="tbl-wrap"><table><thead><tr><th>计数器</th><th>单位</th>'
+    +'<th class="num">A 总量</th><th class="num">A /小时</th><th class="num">A P90/轮</th>'
+    +'<th class="num">B 总量</th><th class="num">B /小时</th><th class="num">B P90/轮</th>'
+    +'<th class="num">GAP/h</th><th class="num">GAP%</th></tr></thead><tbody>';
+  cs.forEach(c=>{
+    h += '<tr><td>'+esc(c.name)+'</td><td class="muted">'+esc(c.unit)+'</td>'
+      +'<td class="num">'+pf(c.sa&&c.sa.total)+'</td><td class="num">'+pf(c.sa&&c.sa.per_hour)+'</td><td class="num">'+pf(c.sa&&c.sa.p90)+'</td>'
+      +'<td class="num">'+pf(c.sb&&c.sb.total)+'</td><td class="num">'+pf(c.sb&&c.sb.per_hour)+'</td><td class="num">'+pf(c.sb&&c.sb.p90)+'</td>'
+      +'<td class="num">'+pf(c.gap)+'</td><td class="num">'+(c.gapp==null?'—':(c.gapp>0?'+':'')+c.gapp.toFixed(1)+'%')+'</td></tr>';
+  });
+  h += '</tbody></table></div></div>';
+  h += '<div class="card">'+cardHd('每轮增量时序',(AXIS==='round'?'x=轮次':'x=测试小时'))+'<div id="psPick"></div><div id="psChart" class="chart chart-tall"></div></div>';
+  el.innerHTML = h;
+  const draw = ()=>{
+    const series=[];
+    state.psSel.forEach((nm,idx)=>{
+      const c = cs.find(x=>x.name===nm); if(!c) return;
+      const solo = state.psSel.length===1;
+      const col = PROC_PALETTE[idx%PROC_PALETTE.length];
+      if (c.a) series.push(lineSeries(nm+'·A', 0, c.a, solo?CA:col, false));
+      if (c.b) series.push(lineSeries(nm+'·B', 1, c.b, solo?CB:col, true));
+    });
+    makeChart(document.getElementById('psChart')).setOption(tsOption(series,{yAxis:{type:'value',name:'增量/轮'}}));
+  };
+  multiPicker({el:document.getElementById('psPick'), options:cs.map(c=>c.name), selected:state.psSel,
+    colorOf:(n,idx)=>PROC_PALETTE[idx%PROC_PALETTE.length],
+    onChange:sel=>{state.psSel=sel;draw();}, placeholder:'搜索添加计数器…'});
+  draw();
+};
+
+/* ============ 9. 标准与风险 ============ */
 RENDER.risk = function(){
   const el = document.getElementById('page-risk');
   let h = '';
   ['a','b'].forEach((side,i)=>{
     const st = DATA.standards[side];
-    h += '<div class="card">'+cardHd('健康标准对照 — '+String.fromCharCode(65+i),'RSS 口径；Free RAM 为下限，其余为上限');
+    h += '<div class="card">'+cardHd('健康标准对照 — '+String.fromCharCode(65+i),'RSS 口径 · 判定：<b>'+(st?st.verdict:'无阈值')+'</b>');
     if (!st){ h += '<div class="muted">无阈值数据（缺少或无法解析 all_memory_data.xls）</div></div>'; return; }
     if (st.levels.length || st.free_ram){
-      h += '<div class="tbl-wrap"><table><thead><tr><th>层级/指标</th><th class="num">阈值 MB</th><th class="num">均值</th><th class="num">峰值'+(st.free_ram?'(最低)':'')+'</th><th>均值判定</th><th>峰值判定</th></tr></thead><tbody>';
+      h += '<div class="tbl-wrap"><table><thead><tr><th>层级/指标</th><th class="num">阈值 MB</th><th class="num">值均</th><th class="num">P90 / P10</th><th class="num">峰值 / 最低</th><th class="num">超标轮</th><th>判定</th></tr></thead><tbody>';
       if (st.free_ram){
         const r = st.free_ram;
-        h += '<tr'+(r.viol||r.peak_viol?' class="viol"':'')+'><td>Free RAM（下限）</td><td class="num">'+fmt(r.thr)+'</td><td class="num">'+fmt(r.mean)+'</td><td class="num">'+fmt(r.low)+'</td><td>'+(r.viol?'<span class="st st-bad">超标</span>':'<span class="st st-ok">达标</span>')+'</td><td>'+(r.peak_viol?'<span class="st st-bad">峰值超标</span>':'<span class="muted">—</span>')+'</td></tr>';
+        h += '<tr'+(r.viol?' class="viol"':'')+'><td>Free RAM（下限）</td><td class="num">'+fmt(r.thr)+'</td><td class="num">'+fmt(r.mean)+'</td><td class="num">'+fmt(r.p10)+'</td><td class="num">'+fmt(r.low)+'</td><td class="num">'+(r.exceed_rate*100).toFixed(1)+'%</td><td>'+(r.viol?'<span class="st st-bad">超标</span>':'<span class="st st-ok">达标</span>')+'</td></tr>';
       }
       st.levels.forEach(r=>{
-        h += '<tr'+(r.viol||r.peak_viol?' class="viol"':'')+'><td>'+esc(r.name)+'</td><td class="num">'+fmt(r.thr)+'</td><td class="num">'+fmt(r.mean)+'</td><td class="num">'+fmt(r.peak)+'</td><td>'+(r.viol?'<span class="st st-bad">超标</span>':'<span class="st st-ok">达标</span>')+'</td><td>'+(r.peak_viol?'<span class="st st-bad">峰值超标</span>':'<span class="muted">—</span>')+'</td></tr>';
+        h += '<tr'+(r.viol?' class="viol"':'')+'><td>'+esc(r.name)+'</td><td class="num">'+fmt(r.thr)+'</td><td class="num">'+fmt(r.mean)+'</td><td class="num">'+fmt(r.p90)+'</td><td class="num">'+fmt(r.peak)+'</td><td class="num">'+(r.exceed_rate*100).toFixed(1)+'%</td><td>'+(r.viol?'<span class="st st-bad">超标</span>':'<span class="st st-ok">达标</span>')+'</td></tr>';
       });
       h += '</tbody></table></div>';
     }
     if (st.procs.length){
-      h += '<div class="tbl-wrap" style="margin-top:12px"><table><thead><tr><th>进程（RSS）</th><th>层级</th><th class="num">阈值 MB</th><th class="num">数值均值</th><th class="num">峰值</th><th>均值判定</th><th>峰值判定</th></tr></thead><tbody>';
+      h += '<div class="tbl-wrap" style="margin-top:12px"><table><thead><tr><th>进程（RSS）</th><th>层级</th><th class="num">阈值 MB</th><th class="num">值均</th><th class="num">峰值</th><th class="num">超标轮</th><th>判定</th></tr></thead><tbody>';
       st.procs.forEach(r=>{
-        h += '<tr'+(r.viol||r.peak_viol?' class="viol"':'')+'><td class="name">'+esc(r.name)+'</td><td>'+esc(r.level)+'</td><td class="num">'+fmt(r.thr)+'</td><td class="num">'+fmt(r.mean)+'</td><td class="num">'+fmt(r.peak)+'</td><td>'+(r.viol?'<span class="st st-bad">超标</span>':'<span class="st st-ok">达标</span>')+'</td><td>'+(r.peak_viol?'<span class="st st-bad">峰值超标</span>':'<span class="muted">—</span>')+'</td></tr>';
+        h += '<tr'+(r.viol?' class="viol"':'')+'><td class="name">'+procLink(r.name)+'</td><td>'+esc(r.level)+'</td><td class="num">'+fmt(r.thr)+'</td><td class="num">'+fmt(r.mean)+'</td><td class="num">'+fmt(r.peak)+'</td><td class="num">'+(r.exceed_rate*100).toFixed(1)+'%</td><td>'+(r.viol?'<span class="st st-bad">超标</span>':'<span class="st st-ok">达标</span>')+'</td></tr>';
       });
       h += '</tbody></table></div>';
     }
     h += '</div>';
   });
-  h += '<div class="card">'+cardHd('疑似增长（提示，非泄漏结论）','逐轮线性回归：进程斜率 ≥ '+DATA.meta.growth_slope+' MB/轮，整机 ≥ '+DATA.meta.sys_growth_slope+' MB/轮，R² ≥ '+DATA.meta.growth_r2);
-  if (DATA.growth.length){
-    h += '<div class="tbl-wrap"><table><thead><tr><th>数据集</th><th>对象</th><th>类型</th><th class="num">斜率 MB/轮</th><th class="num">R²</th></tr></thead><tbody>'
-      + DATA.growth.map(g=>'<tr><td>'+g.ds+'</td><td class="'+(g.kind==='proc'?'name':'')+'">'+(g.kind==='proc'?'<a href="#proc='+encodeURIComponent(g.name)+'">'+esc(g.name)+'</a>':esc(g.name))+'</td><td>'+(g.kind==='proc'?'进程(PSS)':'整机')+'</td><td class="num">'+(g.slope>0?'+':'')+fmt(g.slope)+'</td><td class="num">'+g.r2.toFixed(2)+'</td></tr>').join('')
+  const meta = DATA.meta;
+  h += '<div class="card">'+cardHd('疑似泄漏','趋势回归，提示非定论 · 常驻≥'+meta.resident
+    +' · delta≥max('+meta.leak_delta+' MB, head×'+meta.leak_pct+'%) · R²≥'+meta.leak_r2
+    +' · 层级/整机 delta≥'+meta.sys_leak_delta+' MB');
+  if (DATA.leaks.length){
+    h += '<div class="tbl-wrap"><table><thead><tr><th>数据集</th><th>类型</th><th>口径</th><th>对象</th><th class="num">head</th><th class="num">tail</th><th class="num">delta</th><th class="num">斜率/h</th><th class="num">R²</th></tr></thead><tbody>'
+      + DATA.leaks.map(lk=>'<tr><td>'+lk.ds+'</td><td>'+esc(lk.kind)+'</td><td>'+esc(lk.metric.toUpperCase()||'—')+'</td><td class="name">'+(lk.kind==='proc'?procLink(lk.name):esc(lk.name))+'</td><td class="num">'+fmt(lk.head)+'</td><td class="num">'+fmt(lk.tail)+'</td><td class="num">'+(lk.delta>0?'+':'')+fmt(lk.delta)+'</td><td class="num">'+(lk.slope>0?'+':'')+fmt(lk.slope)+'</td><td class="num">'+fmt(lk.r2)+'</td></tr>').join('')
       +'</tbody></table></div>';
-  } else h += '<div class="muted">未发现疑似增长项。</div>';
+  } else h += '<div class="muted">未发现疑似泄漏项。</div>';
   h += '</div>';
+  const fs = DATA.findings.filter(f=>includeCached||!f.cached);
+  const hidden = DATA.findings.length - fs.length;
+  h += '<div class="card">'+cardHd('自动结论（'+fs.length+'）','按严重度排序'+(hidden?' · 已隐藏 '+hidden+' 条 Cached 相关':''))
+    +'<div class="tbl-wrap"><table><thead><tr><th>级别</th><th>类别</th><th>标题</th><th>详情</th></tr></thead><tbody>'
+    + (fs.map(f=>'<tr><td>'+sevBadge(f.sev)+'</td><td>'+esc(f.cat)+'</td><td class="name"><a href="'+esc(f.link)+'">'+esc(f.title)+'</a></td><td class="name">'+esc(f.detail)+'</td></tr>').join('')
+      || '<tr><td colspan="4" class="muted">无自动结论</td></tr>')
+    +'</tbody></table></div></div>';
   el.innerHTML = h;
 };
 
-/* ============ 8. Markdown 报告 ============ */
+/* ============ 10. Markdown 报告 ============ */
 function mdToHtml(md){
   const lines = md.split('\n');
   const inline = s => esc(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/`(.+?)`/g,'<code>$1</code>');
@@ -906,6 +1251,15 @@ RENDER.report = function(){
 };
 
 /* ============ 进程详情 ============ */
+function distRow(d){
+  return '<td class="num">'+d.k+'/'+d.n+'</td><td class="num">'+Math.round(d.rate*100)+'%</td>'
+    +'<td class="num">'+fmt(d.mi)+'</td><td class="num">'+fmt(d.mean)+'</td><td class="num">'+fmt(d.min)+'</td>'
+    +'<td class="num">'+fmt(d.p50)+'</td><td class="num">'+fmt(d.p90)+'</td><td class="num">'+fmt(d.p95)+'</td><td class="num">'+fmt(d.max)+'</td>';
+}
+function trendRow(t){
+  if (!t) return '<td colspan="5" class="muted">出现轮数不足，不判定</td>';
+  return '<td class="num">'+fmt(t.head)+'</td><td class="num">'+fmt(t.tail)+'</td><td class="num">'+(t.delta>0?'+':'')+fmt(t.delta)+'</td><td class="num">'+(t.slope>0?'+':'')+fmt(t.slope)+'</td><td class="num">'+fmt(t.r2)+'</td>';
+}
 function openProc(name){
   const ov = document.getElementById('procOverlay');
   ov.classList.add('open');
@@ -917,45 +1271,60 @@ function openProc(name){
     return;
   }
   const dc = deltaCls(p.gap, false, p.gapt);
+  const tA = metric==='rss' ? _thrProc.a[name] : null;
+  const tB = metric==='rss' ? _thrProc.b[name] : null;
+  const hasEv = DS[0].events && DS[1].events;
   let h = '<button class="btn ghost" id="procBack">← 返回 '+(PAGES[state.tab]||'')+'</button>'
-    +'<div class="pd-head"><h2>'+esc(name)+'</h2><div>'+tags(p)+'<span class="tag tag-cached">'+metric.toUpperCase()+'</span></div></div>'
+    +'<div class="pd-head"><h2>'+esc(name)+'</h2><div>'+procTags(p)+'<span class="tag tag-cached">'+metric.toUpperCase()+'</span>'
+    +(tA!=null||tB!=null?'<span class="tag tag-lv">阈值 A '+fmt(tA,0)+' / B '+fmt(tB,0)+' MB</span>':'')+'</div></div>'
     +'<div class="pd-stats">'
-    +'<div class="stat"><div class="t">A 轮均</div><div class="v" style="color:var(--c-a)">'+fmt(p.ra)+'<span class="uu"> MB</span></div></div>'
-    +'<div class="stat"><div class="t">B 轮均</div><div class="v" style="color:var(--c-b)">'+fmt(p.rb)+'<span class="uu"> MB</span></div></div>'
+    +'<div class="stat"><div class="t">A 轮均</div><div class="v" style="color:var(--c-a)">'+fmt(p.da.mi)+'<span class="uu"> MB</span></div></div>'
+    +'<div class="stat"><div class="t">B 轮均</div><div class="v" style="color:var(--c-b)">'+fmt(p.db.mi)+'<span class="uu"> MB</span></div></div>'
     +'<div class="stat"><div class="t">GAP</div><div class="v">'+(p.gap==null?'<span class="muted">—</span>':deltaBadge((p.gap>0?'+':'')+fmt(p.gap)+' MB', dc, p.gap))+'</div></div>'
-    +'<div class="stat"><div class="t">GAP%</div><div class="v">'+(gapTxt(p)==='—'?'<span class="muted">—</span>':deltaBadge(gapTxt(p), dc, p.gap))+'</div></div>'
+    +'<div class="stat"><div class="t">GAP%</div><div class="v">'+(p.gapp==null&&p.gapt==null?'<span class="muted">—</span>':deltaBadge(p.gapt||(p.gapp>0?'+':'')+(p.gapp==null?'—':p.gapp.toFixed(1))+'%', dc, p.gap))+'</div></div>'
     +'</div>'
-    +'<div class="card">'+cardHd('逐轮走势','实线=A '+LA+'，虚线=B '+LB+' · '+metric.toUpperCase()+' (MB)')+'<div id="pdChart" class="chart"></div></div>'
-    +'<div class="card">'+cardHd('逐轮明细','')
-    +'<div class="tbl-wrap"><table><thead><tr><th>轮次</th><th>A 层级</th><th class="num">A '+metric.toUpperCase()+' (MB)</th><th>B 层级</th><th class="num">B '+metric.toUpperCase()+' (MB)</th></tr></thead><tbody>';
-  const nR = Math.max(N(0),N(1));
-  for(let r=0;r<nR;r++){
-    const la=p.pra[r], lb=p.prb[r];
-    h += '<tr><td>第'+(r+1)+'轮</td><td>'+(la?'<span class="pill"><i style="background:'+lvColor(la)+'"></i>'+esc(la)+'</span>':'<span class="muted">—</span>')+'</td><td class="num">'+fmt(p.ta[r])+'</td>'
-      +'<td>'+(lb?'<span class="pill"><i style="background:'+lvColor(lb)+'"></i>'+esc(lb)+'</span>':'<span class="muted">—</span>')+'</td><td class="num">'+fmt(p.tb[r])+'</td></tr>';
+    +'<div class="card">'+cardHd('逐轮走势',(AXIS==='round'?'x=轮次':'x=测试小时')+' · 实线=A '+LA+'，虚线=B '+LB+' · '+metric.toUpperCase()+' (MB)')+'<div id="pdChart" class="chart"></div></div>'
+    +'<div class="grid2">'
+    +'<div class="card">'+cardHd('分布统计','出现轮口径')+'<div class="tbl-wrap no-max"><table><thead><tr><th></th><th class="num">出现</th><th class="num">出现率</th><th class="num">轮均</th><th class="num">值均</th><th class="num">最小</th><th class="num">P50</th><th class="num">P90</th><th class="num">P95</th><th class="num">最大</th></tr></thead><tbody>'
+    +'<tr><td><b>A</b></td>'+distRow(p.da)+'</tr><tr><td><b>B</b></td>'+distRow(p.db)+'</tr>'
+    +'</tbody></table></div></div>'
+    +'<div class="card">'+cardHd('趋势','线性回归 · head/tail=前/后10%中位')+'<div class="tbl-wrap no-max"><table><thead><tr><th></th><th class="num">head</th><th class="num">tail</th><th class="num">delta</th><th class="num">斜率/h</th><th class="num">R²</th></tr></thead><tbody>'
+    +'<tr><td><b>A</b></td>'+trendRow(p.ta)+'</tr><tr><td><b>B</b></td>'+trendRow(p.tb)+'</tr>'
+    +'</tbody></table></div></div></div>'
+    +'<div class="card">'+cardHd('层级出现分布','进程在各层级出现的轮数')+'<div class="tbl-wrap no-max"><table><thead><tr><th>层级</th><th class="num">A 轮数</th><th class="num">B 轮数</th></tr></thead><tbody>'
+    + (()=>{const ls=new Set([...Object.keys(p.lvc_a),...Object.keys(p.lvc_b)]);return [...ls].map(l=>'<tr><td><span class="pill"><i style="background:'+lvColor(l)+'"></i>'+esc(l)+'</span></td><td class="num">'+(p.lvc_a[l]||0)+'</td><td class="num">'+(p.lvc_b[l]||0)+'</td></tr>').join('')||'<tr><td colspan="3" class="muted">无</td></tr>';})()
+    +'</tbody></table></div></div>';
+  // 逐轮明细（轮次 ≤30 时可用）
+  if (p.pra!=null || p.prb!=null){
+    h += '<div class="card">'+cardHd('逐轮明细','')
+      +'<div class="tbl-wrap"><table><thead><tr><th>轮次</th><th>A 层级</th><th class="num">A '+metric.toUpperCase()+' (MB)</th><th>B 层级</th><th class="num">B '+metric.toUpperCase()+' (MB)</th></tr></thead><tbody>';
+    const nR = Math.max(N(0),N(1));
+    const pra = p.pra||[], prb = p.prb||[], ta = p.a||[], tb = p.b||[];
+    for(let r=0;r<nR;r++){
+      const la=pra[r], lb=prb[r];
+      h += '<tr><td>第'+(r+1)+'轮</td><td>'+(la?'<span class="pill"><i style="background:'+lvColor(la)+'"></i>'+esc(la)+'</span>':'<span class="muted">—</span>')+'</td><td class="num">'+fmt(ta[r])+'</td>'
+        +'<td>'+(lb?'<span class="pill"><i style="background:'+lvColor(lb)+'"></i>'+esc(lb)+'</span>':'<span class="muted">—</span>')+'</td><td class="num">'+fmt(tb[r])+'</td></tr>';
+    }
+    h += '</tbody></table></div></div>';
   }
-  h += '</tbody></table></div></div>';
-  h += '<div class="card">'+cardHd('相关事件','含该进程启动/消亡，及作为调用方拉起其他进程')
-    +'<div class="tbl-wrap"><table><thead><tr><th>数据集</th><th>时间</th><th>阶段</th><th>类型</th><th>进程</th><th>原因</th><th>组件</th><th>调用方</th></tr></thead><tbody>';
-  let any=false;
-  DS.forEach((d,i)=>d.events.forEach(e=>{
-    if (e.proc!==name && e.caller!==name) return;
-    any=true;
-    h += '<tr'+(e.phase==='boot'?' class="phaseboot"':'')+'><td>'+(i?'B':'A')+'</td><td class="mono">'+esc(e.t.slice(5))+'</td><td>'+esc(e.phase)+'</td><td>'+esc(e.kind)+'</td><td>'+esc(e.proc||'')+'</td><td>'+esc(e.reason||'')+'</td><td class="mono comp">'+esc(e.comp||'')+'</td><td>'+esc(e.caller||'')+'</td></tr>';
-  }));
-  h += (any?'':'<tr><td colspan="8" class="muted">无相关事件</td></tr>')+'</tbody></table></div></div>';
+  // 相关事件（仅当事件明细内嵌时）
+  if (hasEv){
+    h += '<div class="card">'+cardHd('相关事件','含该进程启动/消亡，及作为调用方拉起其他进程')
+      +'<div class="tbl-wrap"><table><thead><tr><th>数据集</th><th>时间</th><th>阶段</th><th>类型</th><th>进程</th><th>原因</th><th>组件</th><th>调用方</th></tr></thead><tbody>';
+    let any=false;
+    DS.forEach((d,i)=>d.events.forEach(e=>{
+      if (e.proc!==name && e.caller!==name) return;
+      any=true;
+      h += '<tr'+(e.phase==='boot'?' class="phaseboot"':'')+'><td>'+(i?'B':'A')+'</td><td class="mono">'+esc(e.t.slice(5))+'</td><td>'+esc(e.phase)+'</td><td>'+esc(e.kind)+'</td><td>'+esc(e.proc||'')+'</td><td>'+esc(e.reason||'')+'</td><td class="mono comp">'+esc(e.comp||'')+'</td><td>'+esc(e.caller||'')+'</td></tr>';
+    }));
+    h += (any?'':'<tr><td colspan="8" class="muted">无相关事件</td></tr>')+'</tbody></table></div></div>';
+  }
   inner.innerHTML = h;
   document.getElementById('procBack').onclick = ()=>setHash({proc:null, tab:state.tab});
-  makeChart(document.getElementById('pdChart')).setOption({
-    tooltip:{trigger:'axis'}, legend:{top:0},
-    grid:{top:36,left:60,right:20,bottom:30},
-    xAxis:{type:'category',data:roundCats(nR)},
-    yAxis:{type:'value',name:'MB'},
-    series:[
-      {name:'A '+LA,type:'line',data:p.ta,itemStyle:{color:'#3b82f6'},lineStyle:{color:'#3b82f6'},symbolSize:6,connectNulls:false},
-      {name:'B '+LB,type:'line',data:p.tb,itemStyle:{color:'#f59e0b'},lineStyle:{color:'#f59e0b',type:'dashed'},symbolSize:6,connectNulls:false}
-    ]
-  });
+  const sA = abLine(0, p.a), sB = abLine(1, p.b);
+  const ml = thrMarkLine([{y:tA,n:'A阈 '+fmt(tA,0),c:CA},{y:tB,n:'B阈 '+fmt(tB,0),c:CB}]);
+  if (ml) sA.markLine = ml;
+  makeChart(document.getElementById('pdChart')).setOption(tsOption([sA, sB]));
   ov.scrollTop = 0;
 }
 

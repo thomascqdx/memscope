@@ -2,7 +2,7 @@
 import json
 import pytest
 
-from memscope import dynamic_analysis as da
+from memscope import analysis as da
 from memscope.loader import check_test_type, load_dataset
 from memscope.model import Dataset, RoundData
 from memscope.parsers.dumpsys import parse_dumpsys
@@ -67,10 +67,14 @@ def _mk_ds(proc_series, level='Native', proc='procX', vmstats=None,
     return ds
 
 
+def _dyn_opts(**kw):
+    return da.Options(**{**da.default_options('dynamic'), **kw})
+
+
 def _analyze(proc_a, proc_b, opts=None, n=20):
     dsa = _mk_ds(proc_a, n=n)
     dsb = _mk_ds(proc_b, n=n)
-    return da.analyze(dsa, dsb, opts or da.DynOptions())
+    return da.analyze(dsa, dsb, opts or _dyn_opts())
 
 
 def test_leak_positive_negative():
@@ -163,9 +167,18 @@ def test_events_extra_kinds():
     assert k.pid == 10973 and k.rss_mb == pytest.approx(86880 / 1024)
 
 
-def test_events_static_no_extra():
-    evs, _ = parse_events(dedupe_lines(LINES), 2026, R1, 60000, extra=False)
-    assert not any(e.kind in ('lmk', 'anr', 'crash', 'lowmem') for e in evs)
+def test_events_static_load_includes_extra(tmp_path):
+    """静态包加载同样解析 killinfo/anr/crash/lowmem（extra 统一开启）。"""
+    import zipfile
+    root = _mk_pkg(tmp_path / 'pkgs', 'R1', 'SN_A', n=2)
+    (root / 'device_info.txt').write_text(
+        (root / 'device_info.txt').read_text(encoding='utf-8')
+        .replace('Test Type: dynamic', 'Test Type: static'), encoding='utf-8')
+    with zipfile.ZipFile(root / 'mobilelog.zip', 'w') as z:
+        z.writestr('events_log_2026', '\n'.join(LINES))
+    ds = load_dataset(root, 'A', kind='static')
+    kinds = {e.kind for e in ds.events}
+    assert 'lmk' in kinds and 'anr' in kinds and 'crash' in kinds
 
 
 def test_lmk_reason_names():
@@ -268,7 +281,7 @@ def test_dynamic_e2e_dir_pkg(tmp_path):
     assert any(d['index'] == 3 for d in dsb.failed_rounds)
     assert any(d['index'] == 9 for d in dsa.failed_rounds)  # failed_rounds.log
     assert dsa.rounds[0].vmstat.get('pswpout') == 100
-    R = da.analyze(dsa, dsb, da.DynOptions())
+    R = da.analyze(dsa, dsb, _dyn_opts())
     json.dumps(R, ensure_ascii=False)
     R['report_md'] = 'x'
     json.dumps(R, ensure_ascii=False)
@@ -281,13 +294,13 @@ def test_level_leak_resident_only():
     grow = [100.0 + i * 10 for i in range(20)]
     R = _analyze(flat, grow) if False else None
     r_vis = da.analyze(_mk_ds(flat, level='Visible'),
-                       _mk_ds(grow, level='Visible'), da.DynOptions())
+                       _mk_ds(grow, level='Visible'), _dyn_opts())
     lv = r_vis['metrics']['rss']['level_rows']
     assert lv[0]['level'] == 'Visible' and not lv[0]['leak_b']
     # 层级不报，但进程 procX 是常驻进程，仍应报进程泄漏
     assert r_vis['leaks'] and all(l['kind'] == 'proc' for l in r_vis['leaks'])
     r_nat = da.analyze(_mk_ds(flat, level='Native'),
-                       _mk_ds(grow, level='Native'), da.DynOptions())
+                       _mk_ds(grow, level='Native'), _dyn_opts())
     lv2 = r_nat['metrics']['rss']['level_rows']
     assert lv2[0]['level'] == 'Native' and lv2[0]['leak_b']
 
@@ -298,7 +311,7 @@ def test_test_tool_no_leak_no_proc_finding():
     grow = [100.0 + i * 10 for i in range(20)]
     r = da.analyze(_mk_ds(flat, proc='com.android.commands.monkey.transsion'),
                    _mk_ds(grow, proc='com.android.commands.monkey.transsion'),
-                   da.DynOptions())
+                   _dyn_opts())
     p = r['metrics']['rss']['procs']['com.android.commands.monkey.transsion']
     assert p['db']['k'] == 20            # 数据保留
     assert not p['leak_b']
@@ -315,7 +328,7 @@ def test_leak_findings_merged_and_sev():
     grow = [100.0 + i * 10 for i in range(20)]
     flat = [100.0] * 20
     # 仅 B 泄漏（RSS+PSS 同对象）→ 一条 high finding
-    r = da.analyze(_mk_ds(flat), _mk_ds(grow), da.DynOptions())
+    r = da.analyze(_mk_ds(flat), _mk_ds(grow), _dyn_opts())
     fs = _leak_findings(r, 'procX')
     assert len(fs) == 1
     f = fs[0]
@@ -325,13 +338,13 @@ def test_leak_findings_merged_and_sev():
     # result['leaks'] 仍逐条（rss+pss 各一条）
     assert sum(1 for l in r['leaks'] if l['name'] == 'procX') == 2
     # 两侧都泄漏 → mid，且不再单独出 A 侧条目
-    r2 = da.analyze(_mk_ds(grow), _mk_ds(grow), da.DynOptions())
+    r2 = da.analyze(_mk_ds(grow), _mk_ds(grow), _dyn_opts())
     fs2 = _leak_findings(r2, 'procX')
     assert len(fs2) == 1
     assert fs2[0]['sev'] == 'mid' and '两侧均疑似泄漏' in fs2[0]['title']
     assert 'A/RSS' in fs2[0]['detail'] and 'B/RSS' in fs2[0]['detail']
     # 仅 A → low
-    r3 = da.analyze(_mk_ds(grow), _mk_ds(flat), da.DynOptions())
+    r3 = da.analyze(_mk_ds(grow), _mk_ds(flat), _dyn_opts())
     fs3 = _leak_findings(r3, 'procX')
     assert len(fs3) == 1 and fs3[0]['sev'] == 'low'
 
@@ -340,7 +353,7 @@ def test_findings_score_sort():
     """排序键 (sev, 类别序, -score)：high 内 标准 先于 泄漏/层级。"""
     flat = [100.0] * 20
     grow = [100.0 + i * 10 for i in range(20)]
-    r = da.analyze(_mk_ds(flat), _mk_ds(grow), da.DynOptions())
+    r = da.analyze(_mk_ds(flat), _mk_ds(grow), _dyn_opts())
     keys = [(da._SEV_ORDER[f['sev']], da._CAT_ORDER[f['cat']], -f['score'])
             for f in r['findings']]
     assert keys == sorted(keys)
@@ -369,7 +382,7 @@ def test_findings_cached_flag():
     a = _mk_ds_levels({'Cached': {'procC': flat}, 'Native': {'procN': flat}})
     b = _mk_ds_levels({'Cached': {'procC': [150.0] * 20},
                        'Native': {'procN': [200.0] * 20}})
-    r = da.analyze(a, b, da.DynOptions())
+    r = da.analyze(a, b, _dyn_opts())
     assert all('cached' in f for f in r['findings'])
     lv_f = [f for f in r['findings'] if f['cat'] == '层级']
     cached_lv = [f for f in lv_f if 'Cached' in f['title']]
