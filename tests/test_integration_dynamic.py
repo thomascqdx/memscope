@@ -11,7 +11,7 @@ from memscope.inhouse import (load_google_prefixes, load_prefixes,
                               load_whitelist)
 
 SAMPLES = os.path.join(os.path.dirname(__file__), '..', 'samples',
-                       'dynamic_memory_datas')
+                       'dynamic_memory_datas-model3.0')
 
 
 def _find(sn):

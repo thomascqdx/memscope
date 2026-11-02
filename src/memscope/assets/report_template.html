@@ -250,6 +250,7 @@ th.sort:hover{background:#eef2ff}
       <span class="hint" tabindex="0">ⓘ<span class="hint-pop"><p>Cached 是后台缓存进程所在的 OOM 层级，内存紧张时可被系统随时回收，数值受测试时机和 LMK 影响波动大，默认不参与差异排行。</p><p>打开后纳入：概览与风险页「自动结论」中 Cached 层级 / 仅 Cached 进程相关条目、进程分析 Top20 与全量进程表、层级轮均柱状图。</p><p>始终显示：关键指标（含 cached pss）、整机、层级表、自研 / Google 明细。</p></span></span>
     </div>
   </div>
+  <div id="crossBanner" style="display:none"></div>
   <nav id="tabnav"></nav>
 </header>
 <main id="main">
@@ -428,8 +429,18 @@ function tsData(dsIdx, series){
     return (series||[]).map((v,i)=> v==null ? null
       : {value:v, r:DS[dsIdx].rounds[i], t:DS[dsIdx].start_times[i]});
   const H = DS[dsIdx].hours, R = DS[dsIdx].rounds, T = DS[dsIdx].start_times;
+  const gapRs = (DS[dsIdx].gaps||[]).map(g=>g.round);
   const out = [];
-  (series||[]).forEach((v,i)=>{ if(v!=null) out.push({value:[H[i],v], r:R[i], t:T[i]}); });
+  let lastX = null, lastR = null;
+  (series||[]).forEach((v,i)=>{
+    const x = H[i], r = R[i];
+    if (v!=null){
+      if (lastX!=null && gapRs.some(gr=> lastR<gr && r>=gr))
+        out.push({value:[(lastX+x)/2,null]});
+      out.push({value:[x,v], r, t:T[i]});
+      lastX = x; lastR = r;
+    }
+  });
   return out;
 }
 function lineSeries(name, dsIdx, series, col, dash){
@@ -528,9 +539,15 @@ for (const id in PAGES){
   nav.appendChild(b);
 }
 document.getElementById('pageTitle').textContent = (DATA.kind==='static'?'静态':'动态')+'内存对比分析';
-document.getElementById('chipA').textContent = LA;
-document.getElementById('chipB').textContent = LB;
+const _ddRow = f => { const r = DATA.device_diff.find(x=>x.field===f); return r||{a:'',b:''}; };
+document.getElementById('chipA').textContent = LA+' · '+_ddRow('体验模型').a+' · '+_ddRow('芯片平台').a;
+document.getElementById('chipB').textContent = LB+' · '+_ddRow('体验模型').b+' · '+_ddRow('芯片平台').b;
 document.getElementById('foot').textContent = '由 '+DATA.meta.tool+' 生成 · A '+LA+' vs B '+LB;
+const _CHIP_CN = {mtk:'MTK',unisoc:'展锐',qcom:'高通'};
+const _cn = [];
+if (DATA.meta.cross_model) _cn.push('注意：两侧体验模型不同（A '+DS[0].model+' / B '+DS[1].model+'），标准阈值、层级口径与采集方式不同，对比结论仅供参考。');
+if (DATA.meta.cross_chip) _cn.push('注意：两侧芯片平台不同（A '+(_CHIP_CN[DS[0].chip]||DS[0].chip)+' / B '+(_CHIP_CN[DS[1].chip]||DS[1].chip)+'），Native 进程构成差异大，进程级对比仅供参考。');
+if (_cn.length){ const b=document.getElementById('crossBanner'); b.className='warn'; b.style.display='block'; b.style.margin='0 20px 4px'; b.innerHTML=_cn.map(esc).join('<br>'); }
 document.querySelectorAll('.toggles .seg').forEach(b=>{
   b.onclick = ()=>{ if(b.dataset.m!==metric) setHash({metric:b.dataset.m}); };
 });
@@ -575,7 +592,7 @@ RENDER.overview = function(){
   if (warns.length) h += '<div class="warn">'+warns.map(esc).join('<br>')+'</div>';
   // 测试判定
   h += '<div class="card">'+cardHd('测试判定','平台 Exception_Summary_Report vs memscope 阈值判定')
-    +'<div class="tbl-wrap no-max"><table><thead><tr><th></th><th>平台判定</th><th>memscope 判定</th><th>超标项</th><th class="num">有效轮</th><th class="num">无效轮</th><th class="num">时长 h</th><th class="num">重启</th></tr></thead><tbody>';
+    +'<div class="tbl-wrap no-max"><table><thead><tr><th></th><th>平台判定</th><th>memscope 判定</th><th>超标项</th><th class="num">有效轮</th><th class="num">无效轮</th><th class="num">时长 h</th><th class="num">有效时长 h</th><th class="num">重启</th></tr></thead><tbody>';
   ['a','b'].forEach((sd,i)=>{
     const st = DATA.standards[sd], d = DS[i];
     const plat = d.platform.result || '—';
@@ -584,7 +601,7 @@ RENDER.overview = function(){
     h += '<tr><td><b>'+String.fromCharCode(65+i)+'</b></td>'
       +'<td>'+(plat==='Fail'?'<span class="st st-bad">Fail</span>':'<span class="st st-ok">'+esc(plat)+'</span>')+'</td>'
       +'<td>'+(st?(ver==='Fail'?'<span class="st st-bad">Fail</span>':'<span class="st st-ok">Pass</span>'):'<span class="muted">无阈值</span>')+'</td>'
-      +'<td>'+esc(items)+'</td><td class="num">'+d.n+'</td><td class="num">'+d.failed_rounds.length+'</td><td class="num">'+fmt(d.hours_total,1)+'</td><td class="num">'+d.reboots.length+'</td></tr>';
+      +'<td>'+esc(items)+'</td><td class="num">'+d.n+'</td><td class="num">'+d.failed_rounds.length+'</td><td class="num">'+fmt(d.hours_total,1)+'</td><td class="num">'+fmt(d.valid_hours,1)+'</td><td class="num">'+d.reboots.length+'</td></tr>';
   });
   h += '</tbody></table></div></div>';
   // 关键指标（含迷你走势）
@@ -979,10 +996,24 @@ RENDER.inhouse = ()=>renderCategory('inhouse');
 RENDER.google = ()=>renderCategory('google');
 
 /* ============ 7. 进程事件 ============ */
+const _ES_CN = {mtk_mobilelog:'MTK mobilelog',mtk_debuglogger:'MTK debuglogger',unisoc_ylog:'展锐 ylog',bugreport:'bugreport（仅覆盖测试末段）'};
+function evSrcLine(i){
+  const es = (DS[i].event_source)||{}, ev = DATA.events[i?'b':'a'];
+  const k = es.kind;
+  if (!k || !(DS[i].events_total||es.events)) return '事件来源：无事件日志';
+  let t = '事件来源：'+(_ES_CN[k]||k)+'（'+es.files+' 文件，过滤后 '+es.lines+' 行，事件 '+es.events+' 条'
+    +(es.first?'，测试期覆盖 '+String(es.first).slice(0,16)+' ~ '+String(es.last).slice(0,16):'')+'）';
+  if (DS[i].lmk_total!=null) t += '；lmkcnt 累计 '+DS[i].lmk_total+' 次 / killinfo 解析 '+ev.lmk.total+' 次';
+  const evh=ev.ev_hours, ht=DS[i].hours_total;
+  if (evh!=null && ht!=null && Math.abs(evh-ht)>0.05) t += '；LMK 频率按事件覆盖时长 '+evh.toFixed(1)+' h 计';
+  return t;
+}
 RENDER.events = function(){
   const el = document.getElementById('page-events');
   const ea = DATA.events.a, eb = DATA.events.b;
-  let h = '<div class="grid-kpi auto" style="margin-bottom:16px">'
+  let h = '<div class="muted" style="margin-bottom:10px">'
+    + '<b>A</b> '+esc(evSrcLine(0))+'<br><b>B</b> '+esc(evSrcLine(1))+'</div>'
+    + '<div class="grid-kpi auto" style="margin-bottom:16px">'
     + kpiCard('LMK 次数', 'killinfo', ea.lmk.total, eb.lmk.total, '次', false, 0)
     + kpiCard('LMK 次/小时', '', ea.lmk.per_hour, eb.lmk.per_hour, '/h', false)
     + kpiCard('am_kill', '', ea.am_kill.total, eb.am_kill.total, '次', false, 0)
@@ -1176,7 +1207,8 @@ RENDER.risk = function(){
         h += '<tr'+(r.viol?' class="viol"':'')+'><td>Free RAM（下限）</td><td class="num">'+fmt(r.thr)+'</td><td class="num">'+fmt(r.mean)+'</td><td class="num">'+fmt(r.p10)+'</td><td class="num">'+fmt(r.low)+'</td><td class="num">'+(r.exceed_rate*100).toFixed(1)+'%</td><td>'+(r.viol?'<span class="st st-bad">超标</span>':'<span class="st st-ok">达标</span>')+'</td></tr>';
       }
       st.levels.forEach(r=>{
-        h += '<tr'+(r.viol?' class="viol"':'')+'><td>'+esc(r.name)+'</td><td class="num">'+fmt(r.thr)+'</td><td class="num">'+fmt(r.mean)+'</td><td class="num">'+fmt(r.p90)+'</td><td class="num">'+fmt(r.peak)+'</td><td class="num">'+(r.exceed_rate*100).toFixed(1)+'%</td><td>'+(r.viol?'<span class="st st-bad">超标</span>':'<span class="st st-ok">达标</span>')+'</td></tr>';
+        const nm = r.name + ((r.members&&r.members.length>1)?'（含 '+r.members.filter(m=>m!==r.name).join('、')+'）':'');
+        h += '<tr'+(r.viol?' class="viol"':'')+'><td>'+esc(nm)+'</td><td class="num">'+fmt(r.thr)+'</td><td class="num">'+fmt(r.mean)+'</td><td class="num">'+fmt(r.p90)+'</td><td class="num">'+fmt(r.peak)+'</td><td class="num">'+(r.exceed_rate*100).toFixed(1)+'%</td><td>'+(r.viol?'<span class="st st-bad">超标</span>':'<span class="st st-ok">达标</span>')+'</td></tr>';
       });
       h += '</tbody></table></div>';
     }

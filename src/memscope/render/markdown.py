@@ -4,6 +4,8 @@
 """
 from __future__ import annotations
 
+from . import cross_notices, ev_src_text, std_level_name
+
 
 def _f(v, nd=2):
     return '—' if v is None else f'{v:.{nd}f}'
@@ -65,10 +67,19 @@ def render(R: dict) -> str:
     L.append(f"# {'静态' if kind == 'static' else '动态'}内存对比报告")
     L.append('')
     L.append(f'- 基线 A：**{la}**　对比 B：**{lb}**（{meta["tool"]}）')
+    dd = {d['field']: d for d in R['device_diff']}
+    if '体验模型' in dd or '芯片平台' in dd:
+        L.append(f"- 体验模型：A {dd.get('体验模型', {}).get('a', '—')} / "
+                 f"B {dd.get('体验模型', {}).get('b', '—')}；"
+                 f"芯片平台：A {dd.get('芯片平台', {}).get('a', '—')} / "
+                 f"B {dd.get('芯片平台', {}).get('b', '—')}")
     L.append(f"- 有效轮次：A {dsA['n']} / B {dsB['n']}；"
              f"测试时长：A {_fmt_hours(dsA)} h / B {_fmt_hours(dsB)} h；"
              f"显著性阈值：|GAP| ≥ {meta['gap_abs']} MB 且 ≥ {meta['gap_pct']}%")
     L.append('')
+    for n in cross_notices(R):
+        L.append(f'> {n}')
+        L.append('')
 
     # ---- 1. 测试信息 ----
     L.append('## 1. 测试信息（设备与判定）')
@@ -134,7 +145,7 @@ def render(R: dict) -> str:
                          '超标' if r['viol'] else '达标',
                          f"{r['exceed_rate'] * 100:.1f}%"])
         for r in st['levels']:
-            rows.append([r['name'], _f(r['thr']), _f(r['mean']),
+            rows.append([std_level_name(r), _f(r['thr']), _f(r['mean']),
                          _f(r['p90']) + '(P90)', _f(r['peak']),
                          '超标' if r['viol'] else '达标',
                          f"{r['exceed_rate'] * 100:.1f}%"])
@@ -349,6 +360,7 @@ def render(R: dict) -> str:
     L.append(f"| 重启 | {len(dsA['reboots'])} | {len(dsB['reboots'])} |")
     L.append('')
     for lab, e, ds in (('A', ea, dsA), ('B', eb, dsB)):
+        L.append(f'- {lab} {ev_src_text(ds, e)}')
         if ds['reason_counts']:
             L.append(f"- {lab} 启动原因分布：" + '；'.join(
                 f"{r}×{n}" for r, n in sorted(ds['reason_counts'].items(),

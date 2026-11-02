@@ -25,6 +25,15 @@ def _default_labels(dsa, dsb):
     return la, lb
 
 
+class _Pair(argparse.Action):
+    """1 值两侧同用，2 值对应 A B；更多 → argparse error。"""
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        if len(values) > 2:
+            parser.error(f'{option_string} 接受 1 或 2 个值（A B）')
+        setattr(namespace, self.dest, values)
+
+
 def _add_compare_args(c, kind):
     d = analysis.default_options(kind)
     cn = '静态' if kind == 'static' else '动态'
@@ -54,6 +63,13 @@ def _add_compare_args(c, kind):
                    help=f"LMK/压力频率对比阈值 %%（默认 {d['rate_pct']:g}）")
     c.add_argument('--tmpdir', default=None,
                    help='临时文件目录（嵌套包解压物化位置，默认系统临时目录）')
+    c.add_argument('--model', nargs='+', action=_Pair,
+                   choices=('auto', '2.0', '3.0'), default=['auto'],
+                   help='体验模型 auto/2.0/3.0；1 值两用，2 值对应 A B')
+    c.add_argument('--platform', nargs='+', action=_Pair,
+                   choices=('auto', 'mtk', 'unisoc', 'qcom'),
+                   default=['auto'],
+                   help='芯片平台 auto/mtk/unisoc/qcom；1 值两用，2 值对应 A B')
 
 
 def build_parser():
@@ -91,6 +107,23 @@ def main(argv=None):
     return 2
 
 
+_CHIP_CN = {'mtk': 'MTK', 'unisoc': '展锐', 'qcom': '高通'}
+
+
+def _load_line(side: str, ds, dt: float):
+    m = f'体验模型 {ds.model or "?"}'
+    if ds.detect_src.get('model') == 'cli':
+        m += '（命令行指定）'
+    plat = ds.device.get('Platform') or '?'
+    c = f'{_CHIP_CN[ds.chip]}({plat})' if ds.chip in _CHIP_CN else f'平台 {plat}'
+    if ds.detect_src.get('chip') == 'cli':
+        c += '（命令行指定）'
+    es = ds.event_source.get('kind') or '无'
+    print(f'[memscope]   {side}: {m} / {c}，有效轮次 {ds.n}/{ds.round_dirs}，'
+          f'事件 {len(ds.events)} 条({es})，耗时 {dt:.0f} s',
+          file=sys.stderr)
+
+
 def _cmd_compare(args, kind):
     print(f'[memscope] memscope {__version__}', file=sys.stderr)
     try:
@@ -105,15 +138,16 @@ def _cmd_compare(args, kind):
         t0 = time.time()
         print(f'[memscope] 加载 A: {args.base}', file=sys.stderr)
         dsa = loader.load_dataset(args.base, 'A', kind=kind,
-                                  tmpdir=args.tmpdir)
-        print(f'[memscope]   有效轮次 {dsa.n}，耗时 {time.time() - t0:.0f} s',
-              file=sys.stderr)
+                                  tmpdir=args.tmpdir,
+                                  model=args.model[0], chip=args.platform[0])
+        _load_line('A', dsa, time.time() - t0)
         t0 = time.time()
         print(f'[memscope] 加载 B: {args.target}', file=sys.stderr)
         dsb = loader.load_dataset(args.target, 'B', kind=kind,
-                                  tmpdir=args.tmpdir)
-        print(f'[memscope]   有效轮次 {dsb.n}，耗时 {time.time() - t0:.0f} s',
-              file=sys.stderr)
+                                  tmpdir=args.tmpdir,
+                                  model=args.model[-1],
+                                  chip=args.platform[-1])
+        _load_line('B', dsb, time.time() - t0)
     except loader.LoadError as e:
         print(f'[memscope] {e}', file=sys.stderr)
         return 2

@@ -18,10 +18,11 @@ pip install -e .
 python -m pytest -q
 ```
 
-Integration tests require `samples/static_memory_datas/*.zip` and are skipped when absent. Dynamic integration tests additionally need `$env:MEMSCOPE_SLOW=1` (loads two ~5GB packages, takes minutes):
+Integration tests require `samples/static_memory_datas-model3.0/*.zip` and are skipped when absent. Dynamic integration tests additionally need `$env:MEMSCOPE_SLOW=1` (loads ~10GB packages, takes minutes):
 
 ```powershell
-$env:MEMSCOPE_SLOW=1; python -m pytest -q tests/test_integration_dynamic.py
+$env:MEMSCOPE_SLOW=1; python -m pytest -q tests/test_integration_dynamic.py   # 3.0 包
+$env:MEMSCOPE_SLOW=1; python -m pytest -q tests/test_integration_v2.py       # 2.0 包（samples/dynamic_memory_datas-model2.0）
 ```
 
 ## Run
@@ -31,10 +32,17 @@ memscope static compare <baseline.zip> <target.zip> [-o outdir] [--labels A B] [
 memscope dynamic compare <baseline.(zip|rar)> <target.(zip|rar)> [-o outdir] [--labels A B] [--tmpdir DIR]
 ```
 
-Outputs `report.md`, `report.html`, `data.xlsx` into `out/<static|dynamic>/<labelA>_vs_<labelB>/` by default. Both subcommands share one pipeline and the same flags: `--labels -o --whitelist --prefixes --google-prefixes --gap-abs --gap-pct --resident --leak-delta --leak-pct --leak-r2 --sys-leak-delta --rate-pct --tmpdir` (per-kind argparse defaults come from `analysis.default_options(kind)`).
+Outputs `report.md`, `report.html`, `data.xlsx` into `out/<static|dynamic>/<labelA>_vs_<labelB>/` by default. Both subcommands share one pipeline and the same flags: `--labels -o --whitelist --prefixes --google-prefixes --gap-abs --gap-pct --resident --leak-delta --leak-pct --leak-r2 --sys-leak-delta --rate-pct --tmpdir --model --platform` (per-kind argparse defaults come from `analysis.default_options(kind)`).
 
-- Inputs may be platform zip / rar / extracted dirs. rar support needs system `tar` (Windows 10 1803+ ships bsdtar); `debuglogger/` is excluded during extraction.
+- 体验模型自动识别：3.0（`device_info.txt`/`round_info.txt`/`tw_rpt_*rounds.zip`）或 2.0（`devinfo/deviceinfo.txt` + 顶层 `log`）；芯片按 `Platform` 判定（`mt*`→mtk，`ums*`/`sp*`/`sc*`/`ud*`→unisoc，`sm*`/`sdm*`/`msm*`/`qcom*`/`lahaina`/`kona`/`taro`→qcom）。`--model`（auto/2.0/3.0）与 `--platform`（auto/mtk/unisoc/qcom）：1 值两侧同用，2 值对应 A B。
+- Inputs may be platform zip / rar / extracted dirs. rar needs system `tar` (Win10 1803+ ships bsdtar): whitelist members (`device_info.txt`, `round_*` core files, `mobilelog.zip`, `devinfo/*`, `log`, `lmkcnt_*`, `*_Exception_Summary_Report.xlsx`, `bugreport-*.zip`, debuglogger events_log…) are extracted once to tmpdir (bsdtar `*` crosses `/`); ylog 等大文件经 `tar -xOf` 流式读取不落盘。
+- 事件源按存在性取第一个：mobilelog.zip（MTK）→ debuglogger/mobilelog/**/events_log* → ylog/ap/*.ylog（Unisoc 容器流式解码）→ bugreport-*.zip EVENT LOG 区段（仅末段兜底）。
+- 2.0 包：轮次时间取顶层 `log`（start=本轮 log 行、end=下一轮 start）；设备时钟偏移 = (主机−设备) 各轮中位数，加在事件时间上；阈值/平台判定解析 `*_Exception_Summary_Report.xlsx`；标准 Persistent 合并 `Persistent + Persistent Service`（`Thresholds.level_groups`，仅 2.0——3.0 不合并已验证）。
 - Nested `tw_rpt_*_rounds.zip` / `mobilelog.zip` are materialized to a temp dir (peak temp space ≈ one package, ~5GB); use `--tmpdir` to redirect when the system temp drive is tight.
+
+## Regression method
+
+`python scripts/dump_result.py <static|dynamic> <A> <B> <out.json> [tmpdir]` loads both packages and dumps the full `analyze()` result dict to JSON — used to diff behavior across changes (PYTHONPATH selects the code under test, e.g. `.work/baseline_src` worktree pinned to a baseline commit). Diff result JSONs ignoring `meta.tool`.
 
 ## Build single-file exe
 

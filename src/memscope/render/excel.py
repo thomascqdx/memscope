@@ -10,8 +10,12 @@ from openpyxl import Workbook
 from openpyxl.cell import WriteOnlyCell
 from openpyxl.styles import Font, PatternFill
 
+from . import cross_notices, ev_src_text, std_level_name
+
 HEAD_FONT = Font(bold=True)
 HEAD_FILL = PatternFill('solid', fgColor='E2E8F0')
+WARN_FONT = Font(bold=True, color='9F1239')
+WARN_FILL = PatternFill('solid', fgColor='FFF1CD')
 
 
 def _sheet(wb, title, header):
@@ -44,6 +48,11 @@ def render(R: dict, out_path) -> Path:
 
     # 测试信息
     ws = _sheet(wb, '测试信息', ['字段', 'A（基线）', 'B（对比）', '差异'])
+    for note in cross_notices(R):
+        c = WriteOnlyCell(ws, value=note)
+        c.font = WARN_FONT
+        c.fill = WARN_FILL
+        ws.append([c, '', '', ''])
     ws.append(['工具版本', meta['tool'], meta['tool'], ''])
     for d in R['device_diff']:
         ws.append([d['field'], d['a'], d['b'], '不同' if d['diff'] else ''])
@@ -80,7 +89,7 @@ def render(R: dict, out_path) -> Path:
                        '超标' if r['viol'] else '达标',
                        round(r['exceed_rate'], 4)])
         for r in st['levels']:
-            ws.append([lab, r['name'], '', r['thr'], _f(r['mean']),
+            ws.append([lab, std_level_name(r), '', r['thr'], _f(r['mean']),
                        _f(r['p90']), _f(r['peak']),
                        '超标' if r['viol'] else '达标',
                        round(r['exceed_rate'], 4)])
@@ -225,6 +234,9 @@ def render(R: dict, out_path) -> Path:
                 ['数据集', '时间', '进程', 'adj', '层级', 'rss_mb', 'code',
                  '原因'])
     for side, lab in (('a', 'A'), ('b', 'B')):
+        ws.append([lab, ev_src_text(R['datasets'][0 if side == 'a' else 1],
+                                    R['events'][side])] + [''] * 6)
+    for side, lab in (('a', 'A'), ('b', 'B')):
         e = R['events'][side]['lmk']
         rname = {r['code']: r['name'] for r in e['by_reason']}
         for x in e['list']:
@@ -256,6 +268,8 @@ def render(R: dict, out_path) -> Path:
                  '调用方', 'adj'])
     for i, lab in ((0, 'A'), (1, 'B')):
         ds = R['datasets'][i]
+        ws.append([lab, ev_src_text(ds, R['events']
+                                    ['a' if i == 0 else 'b'])] + [''] * 7)
         if ds['events'] is None:
             ws.append([lab, f"事件共 {ds['events_total']} 条，"
                             '数量过多未内嵌明细（见 HTML 说明）']

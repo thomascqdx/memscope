@@ -66,7 +66,10 @@ def _parse_tail(lines: list) -> dict:
     try:
         i = lines.index('Global Mapped Bitmaps:')
     except ValueError:
-        return {}
+        i = next((j for j, l in enumerate(lines)
+                  if re.match(r'\s*Total RAM:', l)), None)
+        if i is None:
+            return {}
     t = '\n'.join(lines[i:])
 
     def g(p):

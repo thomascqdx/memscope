@@ -13,7 +13,7 @@ from memscope.inhouse import (load_google_prefixes, load_prefixes,
 from memscope.model import Dataset
 
 SAMPLES = os.path.join(os.path.dirname(__file__), '..', 'samples',
-                       'static_memory_datas')
+                       'static_memory_datas-model3.0')
 
 
 def _find(sn):

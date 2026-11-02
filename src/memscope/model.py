@@ -43,6 +43,8 @@ class Thresholds:
     procs: dict = field(default_factory=dict)         # name -> {'level':..,'threshold':..}
     free_ram: Optional[float] = None                  # 下限阈值
     available: bool = False
+    # 标准层级 -> 求和比较的工具层级 tuple（2.0: Persistent 合并 Persistent Service）
+    level_groups: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -60,6 +62,13 @@ class Dataset:
     reboots: list = field(default_factory=list)        # list[dict(after_round, round)]
     platform: dict = field(default_factory=dict)       # 平台判定（Exception_Summary_Report.xlsx）
 
+    model: Optional[str] = None                        # '2.0' | '3.0' 体验模型
+    chip: Optional[str] = None                         # 'mtk' | 'unisoc' | 'qcom'
+    detect_src: dict = field(default_factory=dict)     # {'model','chip'}: auto|cli
+    round_dirs: int = 0                                # 去重轮次序号数（含无效轮）
+    lmk_total: Optional[int] = None                    # lmkcnt_end - lmkcnt_start
+    clock_offset_s: Optional[float] = None             # 主机时钟 - 设备时钟（秒）
+    event_source: dict = field(default_factory=dict)   # 事件日志来源信息
     @property
     def n(self) -> int:
         return len(self.rounds)

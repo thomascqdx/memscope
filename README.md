@@ -29,7 +29,20 @@ memscope dynamic compare <基线A.(zip|rar)> <对比B.(zip|rar)> [-o 输出目�
 --whitelist 白名单.txt --prefixes 前缀.txt --google-prefixes 前缀.txt
 --gap-abs 5 --gap-pct 10 --resident <出现率> --leak-delta 10 --leak-pct <%>
 --leak-r2 <R²> --sys-leak-delta <MB> --rate-pct 20 --tmpdir 临时目录
+--model <auto|2.0|3.0> --platform <auto|mtk|unisoc|qcom>
 ```
+
+`--model`/`--platform` 取 1 个值时两侧同用，2 个值时分别对应 A/B；默认 auto 按包内特征自动识别。
+
+支持的测试包：
+
+| 体验模型 | 芯片 | 状态 |
+|---|---|---|
+| 3.0 | MTK | 已验证 |
+| 2.0 | 展锐 (Unisoc) | 已验证 |
+| 其它组合 | — | 未验证 |
+
+跨模型/跨芯片对比时报告顶部显示注意横幅（HTML/md/xlsx），结论仅供参考。
 
 按类型默认值：
 

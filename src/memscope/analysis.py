@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import statistics
 from dataclasses import dataclass
+from datetime import datetime
 from math import ceil
 
 from . import __version__
@@ -56,7 +57,7 @@ PRESSURE_COUNTERS = [
 _SYS_LEAK_FIELDS = (('Used RAM', 'up'), ('Free RAM', 'down'),
                     ('MemAvailable', 'down'))
 _SEV_ORDER = {'high': 0, 'mid': 1, 'low': 2, 'info': 3}
-_CAT_ORDER = {'标准': 0, 'LMK': 1, '泄漏': 2, '稳定性': 3, '压力': 4,
+_CAT_ORDER = {'数据': -1, '标准': 0, 'LMK': 1, '泄漏': 2, '稳定性': 3, '压力': 4,
               '层级': 5, '整机': 6, '进程': 7, '归类': 8}
 # 只有常驻层级做泄漏判定；其余层级成员随负载变化，趋势不代表泄漏
 LEAK_LEVELS = {'Native', 'System', 'Persistent', 'Persistent Service'}
@@ -213,13 +214,14 @@ def trend(hours, series, min_points=10):
 
 # ---------- 时间轴 ----------
 def _hours(ds: Dataset):
-    """每轮距测试开始的小时数；start 缺失时按 序号×平均间隔 回退。"""
+    """每轮距测试开始的小时数；采样间隔取相邻有效轮 start 差的中位数；
+    另返回中断区间 gaps 与有效时长 valid_hours（扣除中断净时长）。"""
+    pairs = [(ds.rounds[j - 1], ds.rounds[j])
+             for j in range(1, len(ds.rounds))
+             if ds.rounds[j - 1].start and ds.rounds[j].start]
+    diffs = [(c.start - p.start).total_seconds() for p, c in pairs]
+    iv = statistics.median(diffs) if diffs else None  # 秒
     starts = [r.start for r in ds.rounds if r.start]
-    iv = None
-    if len(starts) > 1:
-        d = sum((starts[i] - starts[i - 1]).total_seconds()
-                for i in range(1, len(starts))) / (len(starts) - 1)
-        iv = d  # 秒
     base = starts[0] if starts else None
     hours = []
     for i, r in enumerate(ds.rounds):
@@ -230,7 +232,19 @@ def _hours(ds: Dataset):
         else:
             hours.append(float(i))
     total = hours[-1] if hours else 0.0
-    return hours, (iv / 60.0 if iv else None), total
+    gaps = []
+    if iv:
+        thr_s = max(3 * iv, 1800)
+        for p, c in pairs:
+            d = (c.start - p.start).total_seconds()
+            if d > thr_s:
+                gaps.append({'after_round': p.index, 'round': c.index,
+                             'start': p.start.strftime('%Y-%m-%d %H:%M:%S'),
+                             'end': c.start.strftime('%Y-%m-%d %H:%M:%S'),
+                             'hours': d / 3600.0})
+    iv_h = (iv / 3600.0) if iv else 0.0
+    valid_hours = total - sum(g['hours'] - iv_h for g in gaps)
+    return hours, (iv / 60.0 if iv else None), total, gaps, valid_hours
 
 
 # ---------- 单指标（pss / rss）数据集内聚合 ----------
@@ -494,7 +508,17 @@ def _lmk_reason(code):
     return LMK_REASONS.get(code, f'厂商扩展({code})')
 
 
-def build_events(ds: Dataset, hours_total: float):
+def build_events(ds: Dataset, hours_total: float, gaps=None, iv_s=None):
+    # 事件覆盖率口径：仅剔除零事件覆盖的中断区间（日志可能在 adb 离线时继续）
+    ev_hours = hours_total
+    if gaps:
+        iv_h = (iv_s or 0) / 3600.0
+        test_ts = [e.t for e in ds.events if e.phase == 'test']
+        for g in gaps:
+            gs = datetime.strptime(g['start'], '%Y-%m-%d %H:%M:%S')
+            ge = datetime.strptime(g['end'], '%Y-%m-%d %H:%M:%S')
+            if not any(gs < t < ge for t in test_ts):
+                ev_hours -= g['hours'] - iv_h
     t0 = ds.rounds[0].start if ds.rounds and ds.rounds[0].start else None
     evs = [e for e in ds.events if e.phase == 'test']
 
@@ -531,7 +555,7 @@ def build_events(ds: Dataset, hours_total: float):
                     'code': e.code})
     lmk = {
         'total': len(lmk_evs),
-        'per_hour': (len(lmk_evs) / hours_total) if hours_total else None,
+        'per_hour': (len(lmk_evs) / ev_hours) if ev_hours else None,
         'by_level': by_level,
         'by_reason': [{'code': c, 'name': nm, 'n': n}
                       for (c, nm), n in sorted(by_reason.items(),
@@ -575,6 +599,7 @@ def build_events(ds: Dataset, hours_total: float):
         'crash': [{'t': e.t.strftime('%Y-%m-%d %H:%M:%S'), 'proc': e.proc,
                    'reason': e.reason} for e in evs if e.kind == 'crash'],
         'lowmem_total': sum(1 for e in evs if e.kind == 'lowmem'),
+        'ev_hours': ev_hours,
     }
 
 
@@ -584,20 +609,23 @@ def build_standards(ds: Dataset, mrss, side: str, opts: Options):
     if not th.available:
         return None
     n = ds.n
-    rows = {r['level']: r for r in mrss['level_rows']}
+    rss_levels = _dataset_metric(ds, 'rss')[0]
     res = {'levels': [], 'free_ram': None, 'procs': []}
     fail = []
     for lv, t in th.levels.items():
-        r = rows.get(lv)
-        if not r:
-            continue
-        s = r[side]
-        d = r['d' + side]
+        members = th.level_groups.get(lv, (lv,))
+        s = []
+        for i in range(n):
+            vals = [rss_levels[m][i] for m in members
+                    if m in rss_levels and rss_levels[m][i] is not None]
+            s.append(sum(vals) if vals else None)
+        d = dist(s)
         if d['mean'] is None:
             continue
         viol = d['mean'] > t
         res['levels'].append({
-            'name': lv, 'thr': t, 'mean': d['mean'], 'p90': d['p90'],
+            'name': lv, 'members': list(members), 'thr': t,
+            'mean': d['mean'], 'p90': d['p90'],
             'peak': d['max'], 'viol': viol,
             'exceed_rate': cnt([x for x in s if x is not None and x > t]) / n
             if n else 0.0})
@@ -650,7 +678,7 @@ def _events_json(ds: Dataset):
 
 
 def _dataset_json(ds: Dataset, hours, interval_min, hours_total,
-                  opts: Options):
+                  opts: Options, gaps, valid_hours, ev_hours):
     starts = [r.start for r in ds.rounds if r.start]
     reasons = {}
     for e in ds.events:
@@ -662,6 +690,9 @@ def _dataset_json(ds: Dataset, hours, interval_min, hours_total,
         'static_result': ds.platform.get('static_result') or '—',
         'dynamic_result': ds.platform.get('dynamic_result') or '—',
         'tool_version': ds.platform.get('tool_version') or '—',
+        'std_version': ds.platform.get('std_version') or '—',
+        'std_tier': ds.platform.get('std_tier') or '—',
+        'valid_count': ds.platform.get('valid_count'),
         'result': ds.platform.get(pk) or '—',
     }
     return {
@@ -681,6 +712,16 @@ def _dataset_json(ds: Dataset, hours, interval_min, hours_total,
                       if ds.boot_time else None),
         'failed_rounds': ds.failed_rounds,
         'reboots': ds.reboots,
+        'model': ds.model,
+        'chip': ds.chip,
+        'detect_src': ds.detect_src,
+        'round_dirs': ds.round_dirs,
+        'valid_hours': round(valid_hours, 4),
+        'ev_hours': round(ev_hours, 4),
+        'gaps': gaps,
+        'lmk_total': ds.lmk_total,
+        'clock_offset_s': ds.clock_offset_s,
+        'event_source': ds.event_source,
         'platform': platform,
         'warnings': ds.warnings,
         'reason_counts': reasons,
@@ -694,9 +735,70 @@ def _fmt_h(h):
     return f'{h:.1f}' if h is not None else '—'
 
 
+_CHIP_CN = {'mtk': 'MTK', 'unisoc': '展锐', 'qcom': '高通'}
+_ES_CN = {'mtk_mobilelog': 'MTK mobilelog',
+          'mtk_debuglogger': 'MTK debuglogger',
+          'unisoc_ylog': '展锐 ylog',
+          'bugreport': 'bugreport(仅末段)'}
+
+
+def _model_txt(ds):
+    t = ds.model or '未知'
+    if (ds.detect_src or {}).get('model') == 'cli':
+        t += '（命令行指定）'
+    return t
+
+
+def _chip_txt(ds):
+    plat = ds.device.get('Platform') or '—'
+    cn = _CHIP_CN.get(ds.chip)
+    t = f'{cn} ({plat})' if cn else f'未知 ({plat})'
+    if (ds.detect_src or {}).get('chip') == 'cli':
+        t += '（命令行指定）'
+    return t
+
+
+def _gap_txt(gaps):
+    if not gaps:
+        return '无'
+    return '；'.join(
+        f"第{g['after_round']}–{g['round']}轮之间 {g['hours']:.1f}h"
+        for g in gaps)
+
+
+def _ev_src_txt(ds):
+    es = ds.event_source or {}
+    k = es.get('kind')
+    if not k:
+        return '无'
+    return f"{_ES_CN.get(k, k)} {es.get('files', 0)} 文件 / {es.get('events', 0)} 条"
+
+
+def _failed_ranges_txt(ds):
+    """'772–1433(原因)' 式压缩描述；最多 10 段。"""
+    if not ds.failed_rounds:
+        return '无'
+    reason_of = {d['index']: d['reason'] for d in ds.failed_rounds}
+    out = []
+    for i in sorted(reason_of):
+        if out and i == out[-1][1] + 1:
+            out[-1][1] = i
+        else:
+            out.append([i, i])
+    parts = []
+    for a, b in out[:10]:
+        rs = []
+        for i in range(a, b + 1):
+            if reason_of[i] not in rs:
+                rs.append(reason_of[i])
+        span = str(a) if a == b else f'{a}–{b}'
+        parts.append(f"{span}({'|'.join(rs)})")
+    return ', '.join(parts) + (' 等' if len(out) > 10 else '')
+
+
 # ---------- findings ----------
 def _findings(dsa, dsb, mp, system, std_a, std_b, ea, eb, pressure, opts,
-              leaks):
+              leaks, da, db):
     out = []
     pm = opts.primary_metric.upper()
 
@@ -704,6 +806,47 @@ def _findings(dsa, dsb, mp, system, std_a, std_b, ea, eb, pressure, opts,
         out.append({'sev': sev, 'cat': cat, 'title': title,
                     'detail': detail, 'link': link, 'score': score,
                     'cached': cached})
+
+    # 0. 数据质量（模型/芯片/轮次覆盖/事件来源）
+    for side, ds, dj in (('A', dsa, da), ('B', dsb, db)):
+        rd_ = ds.round_dirs or 0
+        if rd_ and ds.n / rd_ < 0.8:
+            add('mid', '数据',
+                f'{side} 侧有效轮仅 {ds.n}/{rd_}（{ds.n / rd_:.0%}），'
+                '样本可信度降低',
+                '无效轮：' + _failed_ranges_txt(ds), '#tab=overview')
+        gs = [g for g in dj['gaps'] if g['hours'] >= 1]
+        if gs:
+            add('mid', '数据',
+                f'{side} 侧数据中断 {len(gs)} 段，'
+                f'共 {sum(g["hours"] for g in gs):.1f} 小时',
+                _gap_txt(gs), '#tab=overview')
+        vc = ds.platform.get('valid_count')
+        if vc is not None and vc != ds.n:
+            add('low', '数据',
+                f'{side} 侧工具有效轮 {ds.n} 与平台有效测试次数 {vc} 不一致',
+                '空数据轮判定口径不同（工具：dumpsys/procStatus 为空即无效）',
+                '#tab=overview')
+        if (ds.event_source or {}).get('kind') == 'bugreport':
+            add('low', '数据',
+                f'{side} 侧事件仅来自 bugreport（覆盖测试末段）',
+                '', '#tab=overview')
+    ta_ = any(e.phase == 'test' for e in dsa.events)
+    tb_ = any(e.phase == 'test' for e in dsb.events)
+    if ta_ != tb_:
+        add('mid', '数据',
+            f"{'A' if not ta_ else 'B'} 侧无事件日志，"
+            'LMK/ANR/crash 对比不可用', '', '#tab=overview')
+    if dsa.model != dsb.model:
+        add('mid', '数据',
+            f'两侧体验模型不同（A {dsa.model} / B {dsb.model}）',
+            '标准阈值、层级口径与采集方式不同，对比结论仅供参考',
+            '#tab=overview')
+    if dsa.chip and dsb.chip and dsa.chip != dsb.chip:
+        add('mid', '数据',
+            f"两侧芯片平台不同（A {_CHIP_CN.get(dsa.chip, dsa.chip)} / "
+            f"B {_CHIP_CN.get(dsb.chip, dsb.chip)}）",
+            'Native 进程构成差异大，进程级对比仅供参考', '#tab=overview')
 
     # 1. 标准
     fa = set((std_a or {}).get('fail_items', []))
@@ -876,33 +1019,52 @@ def _findings(dsa, dsb, mp, system, std_a, std_b, ea, eb, pressure, opts,
 
 # ---------- 顶层 ----------
 def analyze(dsa: Dataset, dsb: Dataset, opts: Options) -> dict:
-    ha, iva, hta = _hours(dsa)
-    hb, ivb, htb = _hours(dsb)
+    ha, iva, hta, ga, vha = _hours(dsa)
+    hb, ivb, htb, gb, vhb = _hours(dsb)
 
     mrss = build_metric(dsa, dsb, 'rss', opts, ha, hb)
     mpss = build_metric(dsa, dsb, 'pss', opts, ha, hb)
     system = build_system(dsa, dsb, opts, ha, hb)
     pressure = build_pressure(dsa, dsb, ha, hb)
-    ea = build_events(dsa, hta)
-    eb = build_events(dsb, htb)
+    ea = build_events(dsa, hta, gaps=ga, iv_s=(iva or 0) * 60)
+    eb = build_events(dsb, htb, gaps=gb, iv_s=(ivb or 0) * 60)
     std_a = build_standards(dsa, mrss, 'a', opts)
     std_b = build_standards(dsb, mrss, 'b', opts)
 
-    dsj = [_dataset_json(dsa, ha, iva, hta, opts),
-           _dataset_json(dsb, hb, ivb, htb, opts)]
+    dsj = [_dataset_json(dsa, ha, iva, hta, opts, ga, vha, ea['ev_hours']),
+           _dataset_json(dsb, hb, ivb, htb, opts, gb, vhb, eb['ev_hours'])]
 
     pa, pb = set(dsa.packages), set(dsb.packages)
     pkg_diff = {'a': sorted(pa - pb), 'b': sorted(pb - pa)}
 
+    model_a, model_b = _model_txt(dsa), _model_txt(dsb)
+    chip_a, chip_b = _chip_txt(dsa), _chip_txt(dsb)
     fields = list(dict.fromkeys(list(dsa.device) + list(dsb.device)))
-    device_diff = [{'field': f, 'a': dsa.device.get(f, ''),
+    device_diff = [
+        {'field': '体验模型', 'a': model_a, 'b': model_b,
+         'diff': model_a != model_b},
+        {'field': '芯片平台', 'a': chip_a, 'b': chip_b,
+         'diff': chip_a != chip_b},
+    ]
+    device_diff += [{'field': f, 'a': dsa.device.get(f, ''),
                     'b': dsb.device.get(f, ''),
                     'diff': dsa.device.get(f, '') != dsb.device.get(f, '')}
                    for f in fields]
     plat_a, plat_b = dsj[0]['platform']['result'], dsj[1]['platform']['result']
+    vc_a = dsj[0]['platform']['valid_count']
+    vc_b = dsj[1]['platform']['valid_count']
+    gap_a, gap_b = _gap_txt(ga), _gap_txt(gb)
+    eva, evb = _ev_src_txt(dsa), _ev_src_txt(dsb)
     device_diff += [
         {'field': '有效轮次', 'a': str(dsa.n), 'b': str(dsb.n),
          'diff': dsa.n != dsb.n},
+        {'field': '轮次目录数', 'a': str(dsa.round_dirs),
+         'b': str(dsb.round_dirs),
+         'diff': dsa.round_dirs != dsb.round_dirs},
+        {'field': '平台有效轮次',
+         'a': str(vc_a) if vc_a is not None else '—',
+         'b': str(vc_b) if vc_b is not None else '—',
+         'diff': vc_a != vc_b},
         {'field': '失败轮次数', 'a': str(len(dsa.failed_rounds)),
          'b': str(len(dsb.failed_rounds)),
          'diff': len(dsa.failed_rounds) != len(dsb.failed_rounds)},
@@ -910,7 +1072,16 @@ def analyze(dsa: Dataset, dsb: Dataset, opts: Options) -> dict:
          'diff': True},
         {'field': '测试时长(小时)', 'a': _fmt_h(hta), 'b': _fmt_h(htb),
          'diff': False},
-        {'field': '平均采样间隔(分钟)',
+        {'field': '有效时长(小时)', 'a': _fmt_h(vha), 'b': _fmt_h(vhb),
+         'diff': False},
+        {'field': '中断区间', 'a': gap_a, 'b': gap_b,
+         'diff': gap_a != gap_b},
+        {'field': '事件来源', 'a': eva, 'b': evb, 'diff': eva != evb},
+        {'field': 'LMK 累计(lmkcnt)',
+         'a': str(dsa.lmk_total) if dsa.lmk_total is not None else '—',
+         'b': str(dsb.lmk_total) if dsb.lmk_total is not None else '—',
+         'diff': dsa.lmk_total != dsb.lmk_total},
+        {'field': '采样间隔(分钟，中位数)',
          'a': f'{iva:.1f}' if iva else '—',
          'b': f'{ivb:.1f}' if ivb else '—', 'diff': False},
         {'field': '平台判定', 'a': plat_a, 'b': plat_b,
@@ -957,7 +1128,7 @@ def analyze(dsa: Dataset, dsb: Dataset, opts: Options) -> dict:
 
     mp = mrss if opts.primary_metric == 'rss' else mpss
     findings = _findings(dsa, dsb, mp, system, std_a, std_b, ea, eb,
-                         pressure, opts, leaks)
+                         pressure, opts, leaks, dsj[0], dsj[1])
     findings.sort(key=lambda f: (_SEV_ORDER.get(f['sev'], 9),
                                  _CAT_ORDER.get(f['cat'], 9),
                                  -f['score']))
@@ -975,6 +1146,9 @@ def analyze(dsa: Dataset, dsb: Dataset, opts: Options) -> dict:
             'resident': opts.resident, 'leak_delta': opts.leak_delta,
             'leak_pct': opts.leak_pct, 'leak_r2': opts.leak_r2,
             'sys_leak_delta': opts.sys_leak_delta, 'rate_pct': opts.rate_pct,
+            'cross_model': dsa.model != dsb.model,
+            'cross_chip': bool(dsa.chip and dsb.chip
+                               and dsa.chip != dsb.chip),
         },
         'datasets': dsj,
         'device_diff': device_diff,

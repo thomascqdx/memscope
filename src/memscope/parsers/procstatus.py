@@ -7,9 +7,13 @@ from __future__ import annotations
 import re
 
 _KB = 1024.0
+# 兼容两种行格式（LevelName 可含空格，数值可带小数）：
+# 3.0: ProcName:/system/bin/init Pid:1 OomScore:-1000 LevelName:Native VmRSS+VmSwap:9992KB VmSwap:3388KB ...
+# 2.0: ProcName: zygote64  Pid: 627  OomScore: -1000 LevelName: Native VmRSS + VmSwap:  121268.00KB VmSwap:  34684KB ...
 _LINE = re.compile(
-    r'ProcName:(\S+) Pid:(\d+) OomScore:(-?\d+) LevelName:(\S+) '
-    r'VmRSS\+VmSwap:(\d+)KB VmSwap:(\d+)KB')
+    r'ProcName:\s*(.+?)\s+Pid:\s*(\d+)\s+OomScore:\s*(-?\d+)\s+'
+    r'LevelName:\s*(.+?)\s+VmRSS\s*\+\s*VmSwap:\s*([\d.]+)\s*KB\s+'
+    r'VmSwap:\s*([\d.]+)\s*KB')
 
 
 def oom_to_level(score: int) -> str:
@@ -53,6 +57,6 @@ def parse_proc_status(text: str) -> dict:
         name, _pid, score, _lname, rss, _sw = m.groups()
         level = oom_to_level(int(score))
         procs = out.setdefault(level, {})
-        v = int(rss) / _KB
+        v = float(rss) / _KB
         procs[name] = procs.get(name, 0.0) + v
     return out

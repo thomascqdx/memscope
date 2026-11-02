@@ -7,8 +7,10 @@ from datetime import datetime, timedelta
 
 from ..model import Event
 
+# bugreport 事件行在时间戳后多一列 uid，(?:\d+\s+)? 兼容两列/三列写法
 _LINE = re.compile(
-    r'(\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})\.(\d+)\s+\d+\s+\d+ I\s+(\w+)\s*:\s*(.*)$')
+    r'(\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})\.(\d+)\s+(?:\d+\s+)?\d+\s+\d+ '
+    r'I\s+(\w+)\s*:\s*(.*)$')
 _CALLER = re.compile(r'caller=([^/,\]]+)')
 _COMP = re.compile(r'\{([^}]*)\}')
 
@@ -34,7 +36,8 @@ def _int(s):
         return None
 
 
-def parse_events(lines, year: int, round1_start, round1_uptime_ms, extra: bool = False):
+def parse_events(lines, year: int, round1_start, round1_uptime_ms,
+                 extra: bool = False, offset: timedelta | None = None):
     """lines: 已去重的原始日志行。返回 (events, boot_time)。
 
     阶段：t < boot_time → 丢弃；boot_time <= t < round1_start → 'boot'；否则 'test'。
@@ -49,6 +52,8 @@ def parse_events(lines, year: int, round1_start, round1_uptime_ms, extra: bool =
         if not p:
             continue
         t, tag, body = p
+        if offset is not None:
+            t += offset  # 设备时钟 → 主机时钟
         if tag == 'boot_progress_start':
             m = re.match(r'\s*(\d+)', body)
             if m:
