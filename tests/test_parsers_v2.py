@@ -279,6 +279,17 @@ def test_parse_summary_static():
     assert th.free_ram == 1911
 
 
+def test_parse_summary_fail_sections():
+    _, platform = parse_summary(_summary_xlsx(), 'dynamic')
+    fs = platform['fail_summary']
+    assert fs['level']['header'][0] == '进程层级'
+    assert [r[0] for r in fs['level']['rows']] == [
+        'Free RAM', 'Native', 'System', 'Visible']
+    # 无该小节 → 空块
+    assert fs['inhouse'] == {'header': [], 'rows': []}
+    assert fs['resident'] == {'header': [], 'rows': []}
+
+
 # ---------- ylog ----------
 
 def _fh():

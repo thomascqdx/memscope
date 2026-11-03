@@ -6,7 +6,7 @@ import pytest
 
 from memscope import analysis as da
 from memscope.loader import _detect_reboots, _load_platform
-from memscope.model import Dataset, Event, RoundData
+from memscope.model import Dataset, Event, RoundData, Thresholds
 from memscope.render import excel, markdown
 from tests.test_dynamic import _mk_ds, _mk_ds_levels, _mk_pkg
 
@@ -191,3 +191,147 @@ def test_html_single_template(tmp_path):
         title = txt.split('<title>')[1].split('</title>')[0]
         assert R['labels'][0] in title and R['labels'][1] in title
         assert cn in title
+
+
+# ---------- 10. lvr 变化点 / swa-swb / fail_summary / 判定依据 ----------
+def _mk_ds_rss(rounds, swaps=None):
+    """rounds: [{level: {proc: mb}}]；swaps: [{proc: swap_mb}|None] 逐轮。"""
+    ds = Dataset(label='x')
+    for i, lvmap in enumerate(rounds):
+        rd = RoundData(index=i + 1, uptime_ms=(i + 1) * 1000)
+        for lv, procs in lvmap.items():
+            rd.rss[lv] = dict(procs)
+            rd.pss[lv] = {'total': sum(procs.values()), 'procs': dict(procs)}
+        if swaps and swaps[i]:
+            rd.swap = dict(swaps[i])
+        ds.rounds.append(rd)
+    return ds
+
+
+def _expand_lvr(lvr, n):
+    """[[i, lv|None] 变化点] → 每轮层级数组。"""
+    out = [None] * n
+    for k, (i, v) in enumerate(lvr):
+        j = lvr[k + 1][0] if k + 1 < len(lvr) else n
+        out[i:j] = [v] * (j - i)
+    return out
+
+
+def test_lvr_change_points_and_pra_parity():
+    a = _mk_ds_rss([
+        {'Native': {'pX': 10.0}},
+        {'Native': {'pX': 10.0}},
+        {'Visible': {'pX': 10.0}},
+        {},
+        {'Native': {'pX': 10.0, 'pY': 1.0}},
+    ])
+    b = _mk_ds_rss([{'Native': {'pZ': 5.0}}] * 5)
+    R = da.analyze(a, b, _opts('static'))
+    p = R['metrics']['rss']['procs']['pX']
+    assert p['lvr_a'] == [[0, 'Native'], [2, 'Visible'], [3, None],
+                          [4, 'Native']]
+    assert p['lvr_b'] is None                     # B 侧从未出现 → 整侧 None
+    # ≤30 轮时展开 lvr 必须与 pra/prb 完全一致
+    for p in R['metrics']['rss']['procs'].values():
+        for lk, pk, n in (('lvr_a', 'pra', a.n), ('lvr_b', 'prb', b.n)):
+            if p[lk] is None:
+                assert p[pk] == [None] * n
+            else:
+                assert _expand_lvr(p[lk], n) == p[pk]
+    # 大轮数：pra/prb 为 None，lvr 仍有
+    a2 = _mk_ds_rss([{'Native': {'pX': 10.0}}] * 35)
+    b2 = _mk_ds_rss([{'Native': {'pX': 10.0}}] * 35)
+    R2 = da.analyze(a2, b2, _opts('dynamic'))
+    p2 = R2['metrics']['rss']['procs']['pX']
+    assert p2['pra'] is None
+    assert p2['lvr_a'] == [[0, 'Native']]
+
+
+def test_swa_swb_series():
+    a = _mk_ds_rss([{'Native': {'pX': 10.0}}, {}, {'Native': {'pX': 10.0}}],
+                   swaps=[{'pX': 1.5}, {'pX': 9.9}, {'pX': 2.0}])
+    b = _mk_ds_rss([{'Native': {'pX': 10.0}}] * 3,
+                   swaps=[{'other': 1.0}, {'pX': 0.5}, {'pX': 0.75}])
+    R = da.analyze(a, b, _opts('static'))
+    p = R['metrics']['rss']['procs']['pX']
+    # 第 2 轮进程缺席 → None（即使 swap 有值）；B 第 1 轮无 pX swap → None
+    assert p['swa'] == [1.5, None, 2.0]
+    assert p['swb'] == [None, 0.5, 0.75]
+    # pss 口径 → 双侧 None
+    p2 = R['metrics']['pss']['procs']['pX']
+    assert p2['swa'] is None and p2['swb'] is None
+    # 单侧出现的进程 → 未出现侧 None
+    a2 = _mk_ds_rss([{'Native': {'pOnly': 1.0}}] * 3,
+                    swaps=[{'pOnly': 0.5}] * 3)
+    R2 = da.analyze(a2, b, _opts('static'))
+    q = R2['metrics']['rss']['procs']['pOnly']
+    assert q['swa'] == [0.5] * 3 and q['swb'] is None
+
+
+def test_load_platform_fail_summary():
+    import openpyxl
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(['内存标准静态测试结果：', 'Fail'])
+    ws.append(['层级内存占用超标 Summary：'])
+    ws.append(['进程层级', '有效测试次数', '异常次数', '内存占用标准(MB)',
+               '异常占用均值(MB)'])
+    ws.append(['Native', 11, 5, 930, 1241.64])
+    ws.append([None])
+    ws.append(['层级自研进程个数超标 Summary：'])
+    ws.append([None])
+    ws.append(['常驻进程内存占用超标 Summary：'])
+    ws.append(['进程名', '进程所属层级', '异常次数', '内存占用标准(MB)',
+               '异常占用均值(MB)'])
+    ws.append(['zygote64', 'Native', 11, 76, 169.11])
+    ws.append(['init', 'Native', 11, 0, 10.45])
+    bio = io.BytesIO()
+    wb.save(bio)
+
+    class _Src:
+        def read(self, name):
+            return bio.getvalue()
+
+    ds = Dataset(label='x')
+    _load_platform(_Src(), {'Exception_Summary_Report.xlsx'}, ds)
+    fs = ds.platform['fail_summary']
+    assert fs['level']['header'][0] == '进程层级'
+    assert fs['level']['rows'] == [['Native', 11, 5, 930, 1241.64]]
+    assert fs['inhouse'] == {'header': [], 'rows': []}
+    assert fs['resident']['header'][0] == '进程名'
+    assert fs['resident']['rows'] == [['zygote64', 'Native', 11, 76, 169.11],
+                                      ['init', 'Native', 11, 0, 10.45]]
+    json.dumps(fs)
+
+
+def test_markdown_verdict_basis():
+    a, b = _pair(11)
+    a.platform['fail_summary'] = {
+        'level': {'header': ['进程层级'], 'rows': [['Native', 11, 5]]},
+        'inhouse': {'header': [], 'rows': []},
+        'resident': {
+            'header': ['进程名', '进程所属层级', '异常次数',
+                       '内存占用标准(MB)', '异常占用均值(MB)'],
+            'rows': [['zygote64', 'Native', 11, 154, 169.11],
+                     ['init', 'Native', 11, 0, 10.45],
+                     ['p1', 'Native', 3, 100, 150.0],
+                     ['p2', 'Native', 2, 50, 80.0],
+                     ['p3', 'Native', 7, 0, 5.0]]}}
+    a.thresholds = Thresholds(
+        levels={'Native': 50.0},
+        procs={'procX': {'level': 'Native', 'threshold': 10.0}},
+        available=True)
+    R = da.analyze(a, b, _opts('static'))
+    basis = R['datasets'][0]['platform']['basis']
+    assert basis[0] == '层级超标 1 项（Native）'
+    # 有标准行按 mean/std 降序列前 3：p2(1.6) > p1(1.5) > zygote64(1.098)
+    assert basis[1] == ('常驻进程异常 3 项（有标准）：p2 80/50 MB（2 次）、'
+                        'p1 150/100 MB（3 次）、zygote64 169.11/154 MB（11 次）')
+    assert basis[2] == '无标准的异常记录 2 条'
+    md = markdown.render(R)
+    assert '层级超标 1 项（Native）' in md
+    assert '常驻进程异常 3 项（有标准）' in md
+    assert '无标准的异常记录 2 条' in md
+    assert ('A memscope 依据：层级 + Free RAM 计入判定；进程超标 1 项'
+            '不计入判定（见标准与风险）' in md)
+    assert 'B 平台依据：报告未提供超标明细' in md

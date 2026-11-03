@@ -2,7 +2,8 @@
 import pytest
 
 from memscope.parsers.dumpsys import parse_dumpsys
-from memscope.parsers.procstatus import oom_to_level, parse_proc_status
+from memscope.parsers.procstatus import (
+    oom_to_level, parse_proc_status, parse_proc_swap)
 from memscope.parsers.procmeminfo import parse_proc_meminfo
 from memscope.parsers.events import parse_events, dedupe_lines
 from memscope.parsers.device import parse_device_info, parse_round_info
@@ -91,6 +92,29 @@ ProcName:com.a.c Pid:101 OomScore:-500 LevelName:Persistent VmRSS+VmSwap:2048KB 
     assert r['Cached']['com.a.b'] == pytest.approx(1.0)
     assert r['Persistent Service']['com.a.c'] == pytest.approx(2.0)
     assert 'Persistent' not in r
+
+
+def test_parse_proc_swap_v3():
+    text = """Uptime:383 Realtime:383
+ProcName:/system/bin/init Pid:1 OomScore:-1000 LevelName:Native VmRSS+VmSwap:10696KB VmSwap:3744KB ProcType:system
+ProcName:/system/bin/init Pid:383 OomScore:-1000 LevelName:Native VmRSS+VmSwap:5728KB VmSwap:2708KB ProcType:system
+ProcName:com.a.b Pid:100 OomScore:905 LevelName:Cached VmRSS+VmSwap:1024KB VmSwap:0KB ProcType:custom
+"""
+    r = parse_proc_swap(text)
+    assert r['/system/bin/init'] == pytest.approx((3744 + 2708) / 1024)
+    assert r['com.a.b'] == pytest.approx(0.0)
+
+
+def test_parse_proc_swap_v2():
+    # 2.0 行格式：数值带小数与空白
+    text = """\
+ProcName: zygote64                       Pid: 627    OomScore: -1000 LevelName: Native          VmRSS + VmSwap:  121268.00KB VmSwap:  34684KB ProcType: native
+ProcName: /system/bin/init               Pid: 1      OomScore: -1000 LevelName: Native          VmRSS + VmSwap:    8108.00KB VmSwap:   2868KB ProcType: native
+ProcName: /system/bin/init               Pid: 383    OomScore: -1000 LevelName: Native          VmRSS + VmSwap:    1000.00KB VmSwap:     10KB ProcType: native
+"""
+    r = parse_proc_swap(text)
+    assert r['zygote64'] == pytest.approx(34684 / 1024)
+    assert r['/system/bin/init'] == pytest.approx(2878 / 1024)
 
 
 def test_parse_proc_meminfo():

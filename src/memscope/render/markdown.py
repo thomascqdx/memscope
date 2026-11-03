@@ -118,6 +118,18 @@ def render(R: dict) -> str:
         items = '、'.join(st['fail_items']) if st and st['fail_items'] else '—'
         L.append(f'| {lab} | {plat} | {ver} | {items} |')
     L.append('')
+    for st, ds, lab in ((sa, dsA, 'A'), (sb, dsB, 'B')):
+        basis = ds['platform'].get('basis') or []
+        if basis:
+            L.append(f"- {lab} 平台依据：" + '；'.join(basis))
+        else:
+            L.append(f"- {lab} 平台依据：" +
+                     (ds['platform'].get('basis_note') or '报告未提供超标明细'))
+        if st:
+            k = sum(1 for r in st['procs'] if r['viol'])
+            L.append(f"- {lab} memscope 依据：层级 + Free RAM 计入判定；"
+                     f'进程超标 {k} 项不计入判定（见标准与风险）')
+    L.append('')
     if R['findings']:
         L.append('自动结论（前 15 条，按严重度排序，完整列表见 HTML「标准与风险」页）：')
         L.append('')

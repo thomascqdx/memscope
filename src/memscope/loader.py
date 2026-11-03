@@ -588,8 +588,9 @@ def _load_round(idx: int, got: dict, times):
         rd.uptime_ms = d['uptime_ms']
         rd.pss = d['pss']
         rd.tail = d['tail']
-        rd.rss = procstatus.parse_proc_status(
-            _decode(got['procStatus_sortedByLevel.txt']()))
+        pst = _decode(got['procStatus_sortedByLevel.txt']())
+        rd.rss = procstatus.parse_proc_status(pst)
+        rd.swap = procstatus.parse_proc_swap(pst)
         if 'proc_meminfo.txt' in got:
             rd.meminfo = procmeminfo.parse_proc_meminfo(
                 _decode(got['proc_meminfo.txt']()))
@@ -637,8 +638,8 @@ def _load_platform(src: _Source, names, ds: Dataset):
     try:
         import openpyxl
         wb = openpyxl.load_workbook(io.BytesIO(src.read(f)), read_only=True)
-        row_iter = wb[wb.sheetnames[0]].iter_rows(values_only=True)
-        for row in row_iter:
+        rows = list(wb[wb.sheetnames[0]].iter_rows(values_only=True))
+        for row in rows:
             if not row or row[0] is None:
                 continue
             k = str(row[0]).strip()
@@ -652,6 +653,7 @@ def _load_platform(src: _Source, names, ds: Dataset):
                 ds.platform['tool_version'] = (str(row[1]).strip()
                                              if len(row) > 1 and row[1] is not None else '')
         wb.close()
+        ds.platform['fail_summary'] = v2summary.parse_fail_sections(rows)
     except Exception as e:  # noqa: BLE001
         ds.warnings.append(f'Exception_Summary_Report.xlsx 解析失败: {e}')
 

@@ -32,6 +32,8 @@ class RoundData:
     pss: dict = field(default_factory=dict)
     # rss[level] = {proc_name: mb}
     rss: dict = field(default_factory=dict)
+    # swap[proc_name] = mb（procStatus VmSwap，不分层级）
+    swap: dict = field(default_factory=dict)
     tail: dict = field(default_factory=dict)     # dumpsys 尾部汇总, MB
     meminfo: dict = field(default_factory=dict)  # /proc/meminfo, MB
     vmstat: dict = field(default_factory=dict)   # /proc/vmstat 累计计数器（存在才解析）

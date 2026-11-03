@@ -60,3 +60,13 @@ def parse_proc_status(text: str) -> dict:
         v = float(rss) / _KB
         procs[name] = procs.get(name, 0.0) + v
     return out
+
+
+def parse_proc_swap(text: str) -> dict:
+    """返回 {proc_name: swap_mb}（VmSwap 字段）。同名多 pid 相加。"""
+    out: dict = {}
+    for m in _LINE.finditer(text):
+        name = m.group(1)
+        v = float(m.group(6)) / _KB
+        out[name] = out.get(name, 0.0) + v
+    return out

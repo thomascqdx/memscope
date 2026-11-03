@@ -279,6 +279,12 @@ def _series2(v):
     return [round(x, 2) if x is not None else None for x in v]
 
 
+def _lv_change_points(full):
+    """每轮层级数组 → [[i, level|None]] 变化点：i=0 必发，之后仅值变时发。"""
+    return [[i, v] for i, v in enumerate(full)
+            if i == 0 or v != full[i - 1]]
+
+
 def _leak_flag(t, resident_ok: bool, delta_thr: float, opts: Options) -> bool:
     if not resident_ok or t is None:
         return False
@@ -327,6 +333,8 @@ def build_metric(dsa: Dataset, dsb: Dataset, kind: str, opts: Options,
         tb_ = [None] * nb
         pra = [None] * na if small else None
         prb = [None] * nb if small else None
+        lva = [None] * na   # 每轮层级（与 pra 同规则：level 迭代序，后者覆盖）
+        lvb = [None] * nb
         lvc_a = {}
         lvc_b = {}
         lmi_a = {}
@@ -339,6 +347,7 @@ def build_metric(dsa: Dataset, dsb: Dataset, kind: str, opts: Options,
             for r, v in enumerate(series):
                 if v is not None:
                     ta_[r] = (ta_[r] or 0.0) + v
+                    lva[r] = lv
                     if small:
                         pra[r] = lv
         for lv, series in (sb or {}).items():
@@ -349,6 +358,7 @@ def build_metric(dsa: Dataset, dsb: Dataset, kind: str, opts: Options,
             for r, v in enumerate(series):
                 if v is not None:
                     tb_[r] = (tb_[r] or 0.0) + v
+                    lvb[r] = lv
                     if small:
                         prb[r] = lv
         da = dist(ta_)
@@ -384,6 +394,16 @@ def build_metric(dsa: Dataset, dsb: Dataset, kind: str, opts: Options,
             'lmi_a': lmi_a, 'lmi_b': lmi_b,
             'level_changed': level_changed,
             'pra': pra, 'prb': prb,
+            'lvr_a': _lv_change_points(lva) if da['k'] else None,
+            'lvr_b': _lv_change_points(lvb) if db['k'] else None,
+            'swa': (_series2([dsa.rounds[i].swap.get(name)
+                              if ta_[i] is not None else None
+                              for i in range(na)])
+                    if kind == 'rss' and da['k'] else None),
+            'swb': (_series2([dsb.rounds[i].swap.get(name)
+                              if tb_[i] is not None else None
+                              for i in range(nb)])
+                    if kind == 'rss' and db['k'] else None),
             'cached_only': cached_only,
             'inhouse': ih is not None, 'ih_src': ih,
             'google': ih is None and is_google(name, opts.google_prefixes),
@@ -668,6 +688,77 @@ def build_standards(ds: Dataset, mrss, side: str, opts: Options):
     return res
 
 
+# ---------- 平台判定依据（Exception_Summary_Report 超标 Summary 区块） ----------
+def _hcol(header, *subs):
+    """按表头文本定位列号；找不到返回 None。"""
+    for i, h in enumerate(header):
+        if any(s in str(h) for s in subs):
+            return i
+    return None
+
+
+def _fnum(v):
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def _gint(v):
+    """单元格 → 次数字符串（数值去尾零）；非数值 → None。"""
+    f = _fnum(v)
+    return f'{f:g}' if f is not None else None
+
+
+def platform_basis(fs):
+    """platform.fail_summary → 平台判定依据片段列表（level→inhouse→resident）。"""
+    parts = []
+    lv_rows = (fs.get('level') or {}).get('rows') or []
+    if lv_rows:
+        names = [str(r[0]) for r in lv_rows if r]
+        tail = '、…' if len(names) > 6 else ''
+        parts.append(f"层级超标 {len(names)} 项（{'、'.join(names[:6])}{tail}）")
+    ih_rows = (fs.get('inhouse') or {}).get('rows') or []
+    if ih_rows:
+        parts.append(f'自研进程数超标 {len(ih_rows)} 项')
+    rs = fs.get('resident') or {}
+    rs_rows = rs.get('rows') or []
+    if rs_rows:
+        h = rs.get('header') or []
+        ic_std = _hcol(h, '内存占用标准')
+        ic_mean = _hcol(h, '异常占用均值')
+        ic_cnt = _hcol(h, '异常次数')
+        std_rows, nostd = [], 0
+        for r in rs_rows:
+            std = (_fnum(r[ic_std])
+                   if ic_std is not None and ic_std < len(r) else None)
+            if std is None:
+                continue
+            if std <= 0:
+                nostd += 1
+                continue
+            mean = (_fnum(r[ic_mean])
+                    if ic_mean is not None and ic_mean < len(r) else None)
+            cnt = (_gint(r[ic_cnt])
+                   if ic_cnt is not None and ic_cnt < len(r) else None)
+            ratio = mean / std if mean is not None else -1.0
+            std_rows.append((ratio, str(r[0]), mean, std, cnt))
+        if std_rows:
+            std_rows.sort(key=lambda x: -x[0])
+            top = '、'.join(
+                f"{n} {f'{m:g}' if m is not None else '—'}/{s:g} MB"
+                + (f'（{c} 次）' if c else '')
+                for _rt, n, m, s, c in std_rows[:3])
+            if len(std_rows) > 3:
+                top += '、…'
+            parts.append(f'常驻进程异常 {len(std_rows)} 项（有标准）：{top}')
+        if nostd:
+            parts.append(f'无标准的异常记录 {nostd} 条')
+        if not std_rows and not nostd:
+            parts.append(f'常驻进程异常记录 {len(rs_rows)} 条')
+    return parts
+
+
 # ---------- 数据集/设备信息 ----------
 def _events_json(ds: Dataset):
     return [{
@@ -686,6 +777,8 @@ def _dataset_json(ds: Dataset, hours, interval_min, hours_total,
             k = e.reason or '(无)'
             reasons[k] = reasons.get(k, 0) + 1
     pk = 'static_result' if opts.kind == 'static' else 'dynamic_result'
+    fsum = ds.platform.get('fail_summary') or {}
+    basis = platform_basis(fsum)
     platform = {
         'static_result': ds.platform.get('static_result') or '—',
         'dynamic_result': ds.platform.get('dynamic_result') or '—',
@@ -694,6 +787,11 @@ def _dataset_json(ds: Dataset, hours, interval_min, hours_total,
         'std_tier': ds.platform.get('std_tier') or '—',
         'valid_count': ds.platform.get('valid_count'),
         'result': ds.platform.get(pk) or '—',
+        'fail_summary': fsum,
+        'basis': basis,
+        'basis_note': ('' if basis else
+                       '超标 Summary 区块均无记录' if fsum
+                       else '报告未提供超标明细'),
     }
     return {
         'label': ds.label,

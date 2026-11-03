@@ -8,26 +8,26 @@
 :root{
   --c-a:#3b82f6; --c-b:#f59e0b;
   --bg:#f5f7fb; --card:#fff; --line:#e6eaf2; --line-soft:#eef2f7;
-  --txt:#0f172a; --sub:#64748b; --brand:#4f46e5; --brand-soft:#eef2ff;
+  --txt:#0f172a; --sub:#64748b; --brand:#0f172a; --brand-soft:#f1f5f9;
   --red:#e11d48; --red-soft:#fff1f2; --green:#059669; --green-soft:#ecfdf5;
   --font:"Segoe UI Variable","Segoe UI","Microsoft YaHei UI","Microsoft YaHei","PingFang SC",system-ui,sans-serif;
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
 body{font-family:var(--font);background:var(--bg);color:var(--txt);font-size:14px;line-height:1.5}
-a{color:var(--brand);text-decoration:none}
-a:hover{text-decoration:underline}
+a{color:var(--txt);text-decoration:underline;text-decoration-color:#cbd5e1;text-underline-offset:3px}
+a:hover{text-decoration-color:var(--txt)}
 a[href^="#proc="]{font-weight:500}
 
 /* ---------- 顶栏 ---------- */
 #topbar{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
 .bar-row{max-width:1400px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 .brand{display:flex;align-items:center;gap:10px}
-.logo{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(79,70,229,.3)}
+.logo{width:30px;height:30px;border-radius:8px;background:#0f172a;color:#fff;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center}
 .bar-row h1{font-size:16px;margin:0;white-space:nowrap;font-weight:600}
 .bar-row h1 .sub{font-size:12px;color:var(--sub);font-weight:400;margin-left:6px}
 .chips{display:flex;gap:8px;flex-wrap:wrap}
-.chip{display:inline-flex;align-items:center;gap:7px;padding:4px 12px;border-radius:999px;font-size:12px;border:1px solid var(--line);background:#fff;color:var(--sub)}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:4px 12px;border-radius:4px;font-size:12px;border:1px solid var(--line);background:#fff;color:var(--sub)}
 .chip .dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
 .chip-a .dot{background:var(--c-a)}
 .chip-b .dot{background:var(--c-b)}
@@ -53,7 +53,7 @@ a[href^="#proc="]{font-weight:500}
 main{max-width:1400px;margin:0 auto;padding:20px 20px 48px}
 .tab-page{display:none}
 .tab-page.active{display:block}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:16px;box-shadow:0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.06)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:16px}
 .card-hd{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
 .card-hd h3{margin:0;font-size:15px;font-weight:600}
 .card-hd .sub{font-size:12px;color:var(--sub);font-weight:400;margin-top:3px}
@@ -70,7 +70,7 @@ main{max-width:1400px;margin:0 auto;padding:20px 20px 48px}
 @media(max-width:999px){.grid-kpi{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:560px){.grid-kpi{grid-template-columns:1fr}}
 .grid-kpi.auto{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
-.kpi{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:8px;padding:14px 16px}
 .kpi-hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .kpi-name{font-size:13px;font-weight:600}
 .kpi-src{font-size:11px;color:var(--sub)}
@@ -82,10 +82,10 @@ main{max-width:1400px;margin:0 auto;padding:20px 20px 48px}
 .spark{display:block;width:100%;height:36px;margin-top:8px}
 
 /* ---------- delta 徽标 / 标签 / 状态 ---------- */
-.delta{display:inline-flex;align-items:center;gap:2px;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;background:#f1f5f9;color:#475569;font-variant-numeric:tabular-nums;white-space:nowrap}
+.delta{display:inline-flex;align-items:center;gap:2px;padding:2px 9px;border-radius:4px;font-size:12px;font-weight:600;background:#f1f5f9;color:#475569;font-variant-numeric:tabular-nums;white-space:nowrap}
 .delta.bad{background:var(--red-soft);color:var(--red)}
 .delta.good{background:var(--green-soft);color:var(--green)}
-.tag{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;margin:0 4px 2px 0;font-weight:500}
+.tag{display:inline-block;padding:1px 8px;border-radius:4px;font-size:11px;margin:0 4px 2px 0;font-weight:500}
 .tag-a{background:#eff6ff;color:#1d4ed8}
 .tag-b{background:#fffbeb;color:#b45309}
 .tag-lv{background:#f5f3ff;color:#6d28d9}
@@ -93,21 +93,22 @@ main{max-width:1400px;margin:0 auto;padding:20px 20px 48px}
 .tag-sig{background:var(--red-soft);color:#be123c}
 .tag-cached{background:#f1f5f9;color:#64748b}
 .tag-gg{background:#e8f0fe;color:#1a73e8}
-.st{display:inline-block;padding:1px 10px;border-radius:999px;font-size:12px;font-weight:500}
+.tag-m{background:none;color:#64748b;padding:0;margin-right:10px;font-weight:400}
+.st{display:inline-block;padding:1px 10px;border-radius:4px;font-size:12px;font-weight:500}
 .st-ok{background:var(--green-soft);color:var(--green)}
 .st-bad{background:var(--red-soft);color:var(--red)}
-.sc{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:1px 9px;border-radius:999px;background:#f1f5f9;color:#475569;margin-right:6px;vertical-align:1px}
+.sc{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:1px 9px;border-radius:4px;background:#f1f5f9;color:#475569;margin-right:6px;vertical-align:1px}
 .sc::before{content:'';width:6px;height:6px;border-radius:50%}
 .sc-a::before{background:var(--c-a)}
 .sc-b::before{background:var(--c-b)}
-.cnt{display:inline-block;min-width:20px;text-align:center;background:var(--brand-soft);color:var(--brand);border-radius:999px;font-size:11px;font-weight:600;padding:1px 7px;margin-left:6px}
+.cnt{display:inline-block;min-width:20px;text-align:center;background:#f1f5f9;color:#0f172a;border-radius:4px;font-size:11px;font-weight:600;padding:1px 7px;margin-left:6px}
 .gap-pos{color:var(--red);font-weight:600}
 .gap-neg{color:var(--green);font-weight:600}
 .muted{color:var(--sub)}
 .sec-h{font-size:13px;font-weight:600;margin-bottom:8px}
 
 /* ---------- 表格 ---------- */
-.tbl-wrap{overflow:auto;max-height:560px;border:1px solid var(--line);border-radius:10px}
+.tbl-wrap{overflow:auto;max-height:560px;border:1px solid var(--line);border-radius:8px}
 .tbl-wrap.no-max{max-height:none}
 .tbl-wrap.h320{max-height:320px}
 table{border-collapse:collapse;width:100%;font-size:13px}
@@ -123,8 +124,8 @@ tr.lvl-row td:first-child::before{content:'›';position:absolute;left:13px;top:
 tr.lvl-row.open td:first-child::before{transform:rotate(90deg)}
 tr.proc-row td{font-weight:400}
 tr.proc-row td:first-child{padding-left:30px}
-tr.diff td{background:#fffbeb}
-tr.diff td:first-child{box-shadow:inset 3px 0 0 #f59e0b}
+tr.diff td{background:#f8fafc}
+tr.diff td:first-child{box-shadow:inset 3px 0 0 #475569}
 tr.viol td{background:var(--red-soft)}
 tr.viol td:first-child{box-shadow:inset 3px 0 0 var(--red)}
 tr.phaseboot td{color:var(--sub);background:#fafbfc}
@@ -132,21 +133,23 @@ tr.phaseboot td{color:var(--sub);background:#fafbfc}
 /* ---------- 控件 ---------- */
 .controls{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:12px;font-size:13px;color:var(--sub)}
 .controls label{display:inline-flex;align-items:center;gap:6px}
-input[type=text],input[type=number],select{height:32px;border:1px solid var(--line);border-radius:8px;padding:0 10px;font-size:13px;background:#fff;color:var(--txt);font-family:var(--font)}
+input[type=text],input[type=number],select{height:32px;border:1px solid var(--line);border-radius:6px;padding:0 10px;font-size:13px;background:#fff;color:var(--txt);font-family:var(--font)}
 input[type=number]{width:84px}
-input[type=text]:focus,input[type=number]:focus,select:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+input[type=text]:focus,input[type=number]:focus,select:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px rgba(15,23,42,.12)}
 input[type=checkbox]{accent-color:var(--brand);width:15px;height:15px}
-.btn{height:32px;border:1px solid var(--line);border-radius:8px;padding:0 14px;font-size:13px;background:#fff;color:var(--txt);cursor:pointer;font-family:var(--font)}
+.btn{height:32px;border:1px solid var(--line);border-radius:6px;padding:0 14px;font-size:13px;background:#fff;color:var(--txt);cursor:pointer;font-family:var(--font)}
 .btn:hover{border-color:#c7cfdd;background:#f8fafc}
 .btn.ghost{background:#fff}
-.btn:focus-visible{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+.btn:focus-visible{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px rgba(15,23,42,.12)}
+#tabnav button:focus-visible,.seg:focus-visible,.btn:focus-visible,a:focus-visible,.switch input:focus-visible+.sl{outline:2px solid #0f172a;outline-offset:2px}
+.btn:focus-visible{box-shadow:none}
 
 /* ---------- 多选选择器 ---------- */
-.mp{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:6px;border:1px solid var(--line);border-radius:10px;background:#fff;padding:6px 8px;min-height:44px;margin-bottom:12px}
-.mp:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
-.mp-chip{display:inline-flex;align-items:center;gap:6px;background:var(--brand-soft);color:#3730a3;border-radius:999px;padding:3px 6px 3px 10px;font-size:12px;font-weight:500}
+.mp{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:6px;border:1px solid var(--line);border-radius:6px;background:#fff;padding:6px 8px;min-height:44px;margin-bottom:12px}
+.mp:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px rgba(15,23,42,.12)}
+.mp-chip{display:inline-flex;align-items:center;gap:6px;background:#f1f5f9;color:#0f172a;border-radius:4px;padding:3px 6px 3px 10px;font-size:12px;font-weight:500}
 .mp-chip i{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
-.mp-chip b{cursor:pointer;color:#818cf8;font-weight:600;padding:0 4px;line-height:1}
+.mp-chip b{cursor:pointer;color:#475569;font-weight:600;padding:0 4px;line-height:1}
 .mp-chip b:hover{color:var(--red)}
 .mp-input{flex:1;min-width:150px;border:none;outline:none;height:28px;font-size:13px;background:transparent;color:var(--txt);font-family:var(--font);padding:0 4px}
 .mp-clear{border:none;background:none;color:var(--sub);font-size:12px;cursor:pointer;padding:2px 6px;font-family:var(--font)}
@@ -173,28 +176,28 @@ input[type=checkbox]{accent-color:var(--brand);width:15px;height:15px}
 .mono-list li{padding:3px 0;border-bottom:1px dashed var(--line-soft);word-break:break-all}
 ul.findings{list-style:none;margin:0;padding:0}
 ul.findings li{position:relative;padding-left:16px;margin:10px 0;line-height:1.6;overflow-wrap:anywhere}
-ul.findings li::before{content:'';position:absolute;left:2px;top:9px;width:6px;height:6px;border-radius:50%;background:var(--brand)}
-details.info{border:1px solid var(--line);background:#fbfcfe;border-radius:10px;margin-bottom:16px;font-size:12.5px;color:var(--sub)}
+ul.findings li::before{content:'';position:absolute;left:2px;top:9px;width:6px;height:6px;border-radius:50%;background:#cbd5e1}
+details.info{border:1px solid var(--line);background:#fbfcfe;border-radius:8px;margin-bottom:16px;font-size:12.5px;color:var(--sub)}
 details.info summary{cursor:pointer;padding:9px 14px;font-weight:500;list-style:none;display:flex;align-items:center;user-select:none}
 details.info summary::-webkit-details-marker{display:none}
-details.info summary::before{content:'ⓘ';color:var(--brand);margin-right:7px}
+details.info summary::before{content:'ⓘ';color:var(--sub);margin-right:7px}
 details.info summary::after{content:'▸';margin-left:auto;color:#94a3b8;transition:transform .15s}
 details.info[open] summary::after{transform:rotate(90deg)}
 details.info .info-body{padding:10px 14px;border-top:1px dashed var(--line);line-height:1.6}
 details.info .info-body code{background:#eef2f7;padding:1px 5px;border-radius:4px;font-family:Consolas,monospace}
-.warn{position:relative;background:var(--red-soft);border:1px solid #fecdd3;color:#9f1239;border-radius:10px;padding:10px 14px 10px 34px;font-size:13px;margin-bottom:16px;line-height:1.6}
+.warn{position:relative;background:var(--red-soft);border:1px solid #fecdd3;color:#9f1239;border-radius:8px;padding:10px 14px 10px 34px;font-size:13px;margin-bottom:16px;line-height:1.6}
 .warn::before{content:'⚠';position:absolute;left:13px;top:10px}
 .wake{display:grid;grid-template-columns:1fr auto auto auto 1fr;gap:10px;align-items:center;margin-top:10px}
-.wake .mid{display:flex;align-items:center;background:var(--brand-soft);color:#3730a3;border-radius:999px;padding:8px 18px;font-weight:600;font-size:13px;white-space:nowrap}
+.wake .mid{display:flex;align-items:center;background:#f1f5f9;color:#0f172a;border-radius:4px;padding:8px 18px;font-weight:600;font-size:13px;white-space:nowrap}
 .wake .warr{color:#94a3b8;font-size:15px}
 .wake .box{background:#fbfcfe;border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:12.5px;align-self:stretch}
 .wake .box h5{margin:0 0 8px;font-size:12.5px;color:var(--sub);font-weight:600}
 .wake .box ul{margin:0;padding-left:16px}
 .wake .box li{margin:4px 0;line-height:1.5}
-.pill{display:inline-flex;align-items:center;background:#f8fafc;border:1px solid var(--line-soft);border-radius:999px;padding:1px 10px;font-size:12px;margin:2px 4px 2px 0}
+.pill{display:inline-flex;align-items:center;background:#f8fafc;border:1px solid var(--line-soft);border-radius:4px;padding:1px 10px;font-size:12px;margin:2px 4px 2px 0}
 .pill i{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;flex:none}
 td.comp{white-space:normal;word-break:break-all;min-width:220px;max-width:380px}
-.hint{position:relative;display:inline-flex;align-items:center;color:var(--brand);font-size:15px;cursor:help;margin-left:2px;outline:none}
+.hint{position:relative;display:inline-flex;align-items:center;color:var(--sub);font-size:15px;cursor:help;margin-left:2px;outline:none}
 .hint-pop{position:absolute;top:calc(100% + 8px);right:-8px;width:320px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(16,24,40,.14);padding:10px 12px;font-size:12px;line-height:1.6;color:var(--sub);display:none;z-index:80;font-weight:400;white-space:normal;cursor:default}
 .hint:hover .hint-pop,.hint:focus-within .hint-pop{display:block}
 .hint-pop p{margin:0 0 6px}
@@ -205,9 +208,11 @@ tr.lv-off td{color:var(--sub)}
 #procOverlay .inner{max-width:1400px;margin:0 auto;padding:20px}
 .pd-head{margin:14px 0 14px}
 .pd-head h2{font-size:20px;margin:0 0 8px;word-break:break-all;font-weight:600}
+.pd-titlerow{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.pd-titlerow h2{margin:0}
 .pd-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
 @media(max-width:800px){.pd-stats{grid-template-columns:repeat(2,1fr)}}
-.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
 .stat .t{font-size:12px;color:var(--sub);margin-bottom:5px}
 .stat .v{font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
 .stat .v .uu{font-size:12px;color:var(--sub);font-weight:400}
@@ -224,16 +229,43 @@ tr.lv-off td{color:var(--sub)}
 .mdview code{background:#f1f5f9;padding:1px 5px;border-radius:4px;font-family:Consolas,monospace;font-size:12.5px}
 .foot{color:var(--sub);font-size:12px;text-align:center;padding:10px 0 0}
 
-.sev{display:inline-block;padding:1px 9px;border-radius:999px;font-size:11px;font-weight:600;margin-right:6px}
-.sev-high{background:var(--red-soft);color:var(--red)}
-.sev-mid{background:#fffbeb;color:#b45309}
-.sev-low{background:#f5f3ff;color:#6d28d9}
-.sev-info{background:#eff6ff;color:#1d4ed8}
-th.sort:hover{background:#eef2ff}
+.sev{display:inline-block;padding:1px 9px;border-radius:4px;font-size:11px;font-weight:600;margin-right:6px}
+.sev-high{background:#e11d48;color:#fff}
+.sev-mid{background:#fff1f2;color:#be123c}
+.sev-low{background:#f1f5f9;color:#475569}
+.sev-info{background:transparent;color:#64748b;border:1px solid #e2e8f0}
+th.sort:hover{background:#f1f5f9}
 .pname{max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pname a{display:block;overflow:hidden;text-overflow:ellipsis}
 .lvcell{white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis}
 .empty{padding:26px 10px;color:var(--sub);font-size:13px;text-align:center}
+
+/* ---------- 判定块（概览顶部） ---------- */
+.verdict{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:22px 24px;margin-bottom:16px}
+.verdict h2{font-size:22px;font-weight:600;margin:0 0 12px;display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.verdict h2 .go{font-size:13px;font-weight:400}
+.vrow{display:flex;gap:10px;align-items:baseline;margin:6px 0;font-size:14px}
+.vrow .vdot{width:9px;height:9px;border-radius:50%;flex:none;transform:translateY(-1px)}
+.vrow .vsub{font-size:13px;color:var(--sub);margin-left:19px;max-width:80ch}
+.vdiv{border-top:1px solid var(--line-soft);margin:14px 0 10px}
+.vfind{display:block;text-decoration:none;color:var(--txt);margin:4px 0}
+.vfind:hover{text-decoration:none}
+.vfind .ft{font-size:14px;font-weight:600}
+.vfind .fd{font-size:13px;color:var(--sub);margin-left:52px;margin-top:2px}
+.tag-a-t{color:#1d4ed8}.tag-b-t{color:#b45309}
+.sm-grid{display:grid;grid-template-columns:1fr;gap:12px}
+@media(min-width:1100px){.sm-grid{grid-template-columns:repeat(2,1fr)}}
+.sm-grid>*:only-child{grid-column:1/-1}
+.sm-chart{height:240px}
+.sm-hd{font-size:13px;font-weight:600;margin:0 0 4px}
+.sm-hd .muted{font-weight:400}
+@media(max-width:700px){
+  .bar-row,.chip{padding:12px}
+  main{padding:12px 12px 40px}
+  .chip{display:flex;width:100%}
+  .chip b{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
@@ -282,8 +314,10 @@ let includeCached = false;
 const MV = () => DATA.metrics[metric];
 const N = i => DS[i].n;
 const FONT = '"Segoe UI Variable","Segoe UI","Microsoft YaHei UI","Microsoft YaHei","PingFang SC",system-ui,sans-serif';
-const LEVEL_COLORS = {'Native':'#64748b','System':'#0ea5e9','Persistent':'#8b5cf6','Persistent Service':'#a78bfa','Foreground':'#22c55e','Visible':'#84cc16','Perceptible':'#eab308','Perceptible Medium':'#f59e0b','Perceptible Low':'#f97316','Backup':'#a16207','Heavy Weight':'#78350f','A Services':'#ec4899','Home':'#10b981','Previous':'#78716c','B Services':'#14b8a6','Cached':'#94a3b8'};
-const PROC_PALETTE = ['#0ea5e9','#e11d48','#8b5cf6','#16a34a','#f97316','#0891b2','#be185d','#65a30d','#7c3aed','#b45309'];
+const LEVEL_COLORS = {'Native':'#475569','System':'#0f766e','Persistent':'#7c3aed','Persistent Service':'#a78bfa','Foreground':'#15803d','Visible':'#84cc16','Perceptible':'#c026d3','Perceptible Medium':'#e879f9','Perceptible Low':'#f0abfc','Backup':'#a8a29e','Heavy Weight':'#57534e','A Services':'#db2777','Home':'#2dd4bf','Previous':'#78716c','B Services':'#f9a8d4','Cached':'#cbd5e1'};
+const PROC_PALETTE = ['#0f766e','#7c3aed','#db2777','#15803d','#475569','#c026d3','#65a30d','#78716c','#6b21a8','#2dd4bf'];
+const SEL_PALETTE = ['#7c3aed','#db2777','#0f766e','#c026d3','#4d7c0f','#334155','#9333ea','#be185d'];
+const RM = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const CA = '#3b82f6', CB = '#f59e0b';
 const lvColor = l => LEVEL_COLORS[l] || '#475569';
 const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -417,6 +451,7 @@ function makeChart(el){
   const old = echarts.getInstanceByDom(el);
   if (old) old.dispose();
   const ch = echarts.init(el,'ms');
+  if (RM) ch.setOption({animation:false});
   LIVE_CHARTS.add(ch);
   requestAnimationFrame(()=>ch.resize());
   return ch;
@@ -478,7 +513,7 @@ function tsOption(series, extra){
   if (AXIS==='round'){
     o.xAxis = {type:'category', data:roundCats(NMAX)};
   } else {
-    o.xAxis = {type:'value',min:0,axisLabel:{formatter:v=>(+v).toFixed(0)+'h'}};
+    o.xAxis = {type:'value',min:0,max:v=>Math.ceil(v.max),axisLabel:{formatter:v=>(+v).toFixed(0)+'h'}};
     o.dataZoom = [{type:'inside'},{type:'slider',height:18,bottom:8}];
   }
   if (extra) Object.assign(o, extra);
@@ -561,13 +596,13 @@ function procTags(p){
   const t = [];
   if (p.da.k>0 && p.db.k===0) t.push('<span class="tag tag-a">仅A</span>');
   if (p.db.k>0 && p.da.k===0) t.push('<span class="tag tag-b">仅B</span>');
-  if (p.level_changed) t.push('<span class="tag tag-lv">层级变化</span>');
-  if (p.inhouse) t.push('<span class="tag tag-ih">自研'+(p.ih_src==='whitelist'?'·白':'')+'</span>');
-  if (p.google) t.push('<span class="tag tag-gg">Google</span>');
-  if (p.cached_only) t.push('<span class="tag tag-cached">Cached</span>');
+  if (p.level_changed) t.push('<span class="tag tag-m">层级变化</span>');
+  if (p.inhouse) t.push('<span class="tag tag-m">自研'+(p.ih_src==='whitelist'?'·白':'')+'</span>');
+  if (p.google) t.push('<span class="tag tag-m">Google</span>');
+  if (p.cached_only) t.push('<span class="tag tag-m">Cached</span>');
   if (p.sig) t.push('<span class="tag tag-sig">显著</span>');
-  if (p.resident_a) t.push('<span class="tag tag-lv">常驻A</span>');
-  if (p.resident_b) t.push('<span class="tag tag-lv">常驻B</span>');
+  if (p.resident_a) t.push('<span class="tag tag-m">常驻A</span>');
+  if (p.resident_b) t.push('<span class="tag tag-m">常驻B</span>');
   if (p.leak_a||p.leak_b) t.push('<span class="tag tag-sig">泄漏'+(p.leak_a?'A':'')+(p.leak_b?'B':'')+'</span>');
   return t.join('');
 }
@@ -590,20 +625,39 @@ RENDER.overview = function(){
   let h = '';
   const warns = DS.map((d,i)=>d.warnings.map(w=>String.fromCharCode(65+i)+'：'+w)).flat();
   if (warns.length) h += '<div class="warn">'+warns.map(esc).join('<br>')+'</div>';
-  // 测试判定
-  h += '<div class="card">'+cardHd('测试判定','平台 Exception_Summary_Report vs memscope 阈值判定')
-    +'<div class="tbl-wrap no-max"><table><thead><tr><th></th><th>平台判定</th><th>memscope 判定</th><th>超标项</th><th class="num">有效轮</th><th class="num">无效轮</th><th class="num">时长 h</th><th class="num">有效时长 h</th><th class="num">重启</th></tr></thead><tbody>';
+  // 测试判定（.verdict 顶部块：结论先行）
+  const fsv = DATA.findings.filter(f=>includeCached||!f.cached);
+  const sevN = {high:'高风险',mid:'中风险',low:'低风险',info:'参考'};
+  const cnts = ['high','mid','low','info'].map(s=>[s,fsv.filter(f=>f.sev===s).length]).filter(x=>x[1]>0);
+  let vh = '<div class="verdict"><h2>B 相比 A：'
+    + (cnts.length? cnts.map(x=>x[1]+' 条'+sevN[x[0]]).join('，') : '无自动结论')
+    + '<a class="go" href="#tab=risk">全部结论</a></h2>';
   ['a','b'].forEach((sd,i)=>{
-    const st = DATA.standards[sd], d = DS[i];
+    const st = DATA.standards[sd], d = DS[i], lab = String.fromCharCode(65+i);
     const plat = d.platform.result || '—';
-    const ver = st ? st.verdict : '—';
-    const items = st && st.fail_items.length ? st.fail_items.join('、') : '—';
-    h += '<tr><td><b>'+String.fromCharCode(65+i)+'</b></td>'
-      +'<td>'+(plat==='Fail'?'<span class="st st-bad">Fail</span>':'<span class="st st-ok">'+esc(plat)+'</span>')+'</td>'
-      +'<td>'+(st?(ver==='Fail'?'<span class="st st-bad">Fail</span>':'<span class="st st-ok">Pass</span>'):'<span class="muted">无阈值</span>')+'</td>'
-      +'<td>'+esc(items)+'</td><td class="num">'+d.n+'</td><td class="num">'+d.failed_rounds.length+'</td><td class="num">'+fmt(d.hours_total,1)+'</td><td class="num">'+fmt(d.valid_hours,1)+'</td><td class="num">'+d.reboots.length+'</td></tr>';
+    const platHtml = plat==='Fail' ? '<b style="color:var(--red)">Fail</b>'
+                   : plat==='Pass' ? '<b style="color:var(--green)">Pass</b>' : esc(plat);
+    const ver = st ? st.verdict : null;
+    const verHtml = ver==='Fail' ? '<b style="color:var(--red)">Fail</b>'
+                  : ver==='Pass' ? '<b style="color:var(--green)">Pass</b>' : '无阈值';
+    const facts = '有效 '+d.n+' 轮，无效 '+d.failed_rounds.length+' 轮，'
+      +fmt(d.hours_total,1)+' h（有效 '+fmt(d.valid_hours,1)+' h），重启 '+d.reboots.length+' 次';
+    const basis = (d.platform.basis && d.platform.basis.length)
+      ? d.platform.basis.join('；') : (d.platform.basis_note || '报告未提供超标明细');
+    const k = st ? st.procs.filter(r=>r.viol).length : 0;
+    const mb = st ? ('层级 + Free RAM 计入判定（超标：'+(st.fail_items.length?st.fail_items.join('、'):'无')+'）；进程超标 '+k+' 项不计入判定（见标准与风险）')
+                  : '无阈值';
+    vh += '<div class="vrow"><span class="vdot" style="background:'+(i?CB:CA)+'"></span>'
+      +'<span><b>'+lab+'</b>&nbsp; '+esc(d.label)+'&nbsp;&nbsp;平台 '+platHtml+'&nbsp;&nbsp;memscope '+verHtml
+      +'&nbsp;&nbsp;<span class="muted" style="font-size:13px">'+esc(facts)+'</span></span></div>'
+      +'<div class="vsub">平台依据：'+esc(basis)+'</div>'
+      +'<div class="vsub">memscope 依据：'+esc(mb)+'</div>';
   });
-  h += '</tbody></table></div></div>';
+  vh += '<div class="vdiv"></div>';
+  vh += fsv.slice(0,3).map(f=>'<a class="vfind" href="'+esc(f.link)+'"><span class="ft">'+sevBadge(f.sev)+esc(f.title)+'</span><div class="fd">'+esc(f.detail)+'</div></a>').join('')
+     || '<div class="muted">无自动结论</div>';
+  vh += '</div>';
+  h += vh;
   // 关键指标（含迷你走势）
   const ev = DATA.events;
   h += '<div class="card">'+cardHd('关键指标',metric.toUpperCase()+' 轮均口径 · MB；LMK=次/小时')+'<div class="grid-kpi auto">';
@@ -626,15 +680,13 @@ RENDER.overview = function(){
                ev.b.anr.length+ev.b.crash.length, '次', false, 0);
   h += kpiCard('重启次数', 'uptime 回退', DS[0].reboots.length, DS[1].reboots.length, '次', false, 0);
   h += '</div></div>';
-  // 自动结论 Top8（Cached 相关条目默认隐藏，右上角开关纳入）
-  const fs = DATA.findings.filter(f=>includeCached||!f.cached);
-  const hidden = DATA.findings.length - fs.length;
-  h += '<div class="card">'+cardHd('自动结论 Top '+Math.min(8,fs.length),'共 '+DATA.findings.length+' 条 · 全部见「标准与风险」页'+(hidden?' · 已隐藏 '+hidden+' 条 Cached 相关':''),
-      '<a href="#tab=risk">全部 →</a>')
-    +'<ul class="findings">'
-    + (fs.slice(0,8).map(f=>'<li>'+sevBadge(f.sev)+'<a href="'+esc(f.link)+'">'+esc(f.title)+'</a> <span class="muted">'+esc(f.detail)+'</span></li>').join('')
-      || '<li class="muted">无自动结论</li>')
-    +'</ul></div>';
+  // 自动结论 #4–#8（Top3 已在 .verdict；Cached 条目按开关过滤）
+  const hidden = DATA.findings.length - fsv.length;
+  h += '<div class="card">'+cardHd('自动结论','共 '+DATA.findings.length+' 条 · Top 3 见上方 · 全部见「标准与风险」页'+(hidden?' · 已隐藏 '+hidden+' 条 Cached 相关':''),
+      '<a href="#tab=risk">全部结论</a>')
+    + (fsv.slice(3,8).map(f=>'<a class="vfind" href="'+esc(f.link)+'"><span class="ft">'+sevBadge(f.sev)+esc(f.title)+'</span><div class="fd">'+esc(f.detail)+'</div></a>').join('')
+      || '<div class="muted">无更多自动结论</div>')
+    +'</div>';
   // 设备与测试信息 + 包差异
   const pd = DATA.pkg_diff;
   const diffs = DATA.device_diff.filter(r=>r.diff);
@@ -678,19 +730,30 @@ RENDER.system = function(){
       + '<td>'+(d.leak_a?'<span class="tag tag-sig">A</span>':'')+(d.leak_b?'<span class="tag tag-sig">B</span>':'')+'</td></tr>';
   });
   h += '</tbody></table></div></div>';
-  h += '<div class="card">'+cardHd('逐轮走势',(AXIS==='round'?'x=轮次':'x=测试小时')+' · 实线=A 虚线=B'+(AXIS==='round'?'':' · 滚轮缩放'))
-    +'<div id="sysPick"></div><div id="sysChart" class="chart chart-tall"></div></div>';
+  h += '<div class="card">'+cardHd('逐轮走势',(AXIS==='round'?'x=轮次':'x=测试小时')+' · 实线=A 虚线=B · 缩放联动')
+    +'<div id="sysPick"></div><div class="sm-grid" id="sysCharts"></div></div>';
   el.innerHTML = h;
   const draw = ()=>{
-    const series=[];
-    state.sysSel.forEach((t,idx)=>{
-      const d = defs.find(x=>x.name===t); if(!d) return;
-      const col = PROC_PALETTE[idx%PROC_PALETTE.length];
-      const solo = state.sysSel.length===1;
-      series.push(lineSeries(t+'·A', 0, d.a, solo?CA:col, false));
-      series.push(lineSeries(t+'·B', 1, d.b, solo?CB:col, true));
+    const wrap = document.getElementById('sysCharts');
+    wrap.innerHTML = state.sysSel.map((t,idx)=>{
+      const d = defs.find(x=>x.name===t); if(!d) return '';
+      return '<div><div class="sm-hd">'+esc(t)+' <span class="muted">A 值均 '+fmt(d.da.mean)+' / B 值均 '+fmt(d.db.mean)+' MB</span></div>'
+        +'<div class="sm-chart" id="sysC'+idx+'"></div></div>';
+    }).join('');
+    const last = wrap.querySelectorAll('.sm-chart').length - 1;
+    const grp = 'sysGrp';
+    wrap.querySelectorAll('.sm-chart').forEach((c,i)=>{
+      const d = defs.find(x=>x.name===state.sysSel[i]); if(!d) return;
+      const o = tsOption([abLine(0, d.a), abLine(1, d.b)]);
+      o.legend = {show:false};
+      o.grid.bottom = 30;
+      if (i===last) o.dataZoom = [{type:'inside'},{type:'slider',height:18,bottom:8}];
+      else o.dataZoom = [{type:'inside'}];
+      const ch = makeChart(c);
+      ch.group = grp;
+      ch.setOption(o);
     });
-    makeChart(document.getElementById('sysChart')).setOption(tsOption(series));
+    echarts.connect(grp);
   };
   multiPicker({el:document.getElementById('sysPick'), options:defs.map(d=>d.name), selected:state.sysSel,
     colorOf:(n,idx)=>PROC_PALETTE[idx%PROC_PALETTE.length],
@@ -1023,7 +1086,9 @@ RENDER.events = function(){
     + kpiCard('ANR', '', ea.anr.length, eb.anr.length, '次', false, 0)
     + kpiCard('crash', '', ea.crash.length, eb.crash.length, '次', false, 0)
     +'</div>';
-  h += '<div class="card">'+cardHd('LMK 每小时分布','killinfo · test 阶段')+'<div id="lmkChart" class="chart"></div></div>';
+  h += '<div class="card">'+cardHd('LMK 每小时分布','killinfo · test 阶段',
+      '<span class="segtrack" id="lmkSeg"><button class="seg active" data-v="cum">累计</button><button class="seg" data-v="hour">每小时</button></span>')
+    +'<div id="lmkChart" class="chart"></div></div>';
   const lvSet = new Set([...Object.keys(ea.lmk.by_level), ...Object.keys(eb.lmk.by_level)]);
   const rMap = new Map();
   [ea,eb].forEach(e=>e.lmk.by_reason.forEach(r=>{ const k=r.code+' '+r.name; rMap.set(k,(rMap.get(k)||[0,0])); }));
@@ -1093,16 +1158,38 @@ RENDER.events = function(){
       + rbB.map(r=>'<li>B：第 '+r.after_round+' 轮 → 第 '+r.round+' 轮之间</li>').join('')+'</ul>'
       : '<div class="muted">未检测到重启</div>')+'</div>';
   el.innerHTML = h;
-  // LMK 每小时分布
+  // LMK 每小时分布（累计 | 每小时）
   const nh = Math.max(ea.lmk.hourly.length, eb.lmk.hourly.length);
-  makeChart(document.getElementById('lmkChart')).setOption({
-    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}}, legend:{top:0},
-    grid:{top:36,left:50,right:20,bottom:30},
-    xAxis:{type:'category',data:Array.from({length:nh},(_,i)=>i+'h'),name:'测试小时'},
-    yAxis:{type:'value',name:'次'},
-    series:[
-      {name:'A '+LA,type:'bar',data:ea.lmk.hourly,itemStyle:{color:CA}},
-      {name:'B '+LB,type:'bar',data:eb.lmk.hourly,itemStyle:{color:CB}}]
+  const cum = arr => { let s=0; return (arr||[]).map(v=>{s+=v;return s;}); };
+  const drawLmk = cumMode => {
+    if (cumMode){
+      makeChart(document.getElementById('lmkChart')).setOption({
+        tooltip:{trigger:'axis'}, legend:{top:0},
+        grid:{top:36,left:50,right:20,bottom:30},
+        xAxis:{type:'category',data:Array.from({length:nh},(_,i)=>i+'h'),name:'测试小时'},
+        yAxis:{type:'value',name:'累计次'},
+        series:[
+          {name:'A '+LA,type:'line',data:cum(ea.lmk.hourly),itemStyle:{color:CA}},
+          {name:'B '+LB,type:'line',data:cum(eb.lmk.hourly),itemStyle:{color:CB},lineStyle:{type:'dashed'}}]
+      }, true);
+    } else {
+      makeChart(document.getElementById('lmkChart')).setOption({
+        tooltip:{trigger:'axis',axisPointer:{type:'shadow'}}, legend:{top:0},
+        grid:{top:36,left:50,right:20,bottom:30},
+        xAxis:{type:'category',data:Array.from({length:nh},(_,i)=>i+'h'),name:'测试小时'},
+        yAxis:{type:'value',name:'次'},
+        series:[
+          {name:'A '+LA,type:'bar',data:ea.lmk.hourly,itemStyle:{color:CA}},
+          {name:'B '+LB,type:'bar',data:eb.lmk.hourly,itemStyle:{color:CB}}]
+      }, true);
+    }
+  };
+  drawLmk(true);
+  document.getElementById('lmkSeg').querySelectorAll('.seg').forEach(b=>{
+    b.onclick = ()=>{
+      document.getElementById('lmkSeg').querySelectorAll('.seg').forEach(x=>x.classList.toggle('active',x===b));
+      drawLmk(b.dataset.v==='cum');
+    };
   });
   // 启动原因分布
   const reasons = new Map();
@@ -1173,54 +1260,137 @@ RENDER.pressure = function(){
       +'<td class="num">'+pf(c.gap)+'</td><td class="num">'+(c.gapp==null?'—':(c.gapp>0?'+':'')+c.gapp.toFixed(1)+'%')+'</td></tr>';
   });
   h += '</tbody></table></div></div>';
-  h += '<div class="card">'+cardHd('每轮增量时序',(AXIS==='round'?'x=轮次':'x=测试小时'))+'<div id="psPick"></div><div id="psChart" class="chart chart-tall"></div></div>';
+  h += '<div class="card">'+cardHd('每轮增量时序',(AXIS==='round'?'x=轮次':'x=测试小时'),
+      '<span class="segtrack" id="psSeg"><button class="seg active" data-v="cum">累计</button><button class="seg" data-v="delta">每轮增量</button></span>')
+    +'<div id="psPick"></div><div class="sm-grid" id="psCharts"></div></div>';
   el.innerHTML = h;
-  const draw = ()=>{
-    const series=[];
-    state.psSel.forEach((nm,idx)=>{
-      const c = cs.find(x=>x.name===nm); if(!c) return;
-      const solo = state.psSel.length===1;
-      const col = PROC_PALETTE[idx%PROC_PALETTE.length];
-      if (c.a) series.push(lineSeries(nm+'·A', 0, c.a, solo?CA:col, false));
-      if (c.b) series.push(lineSeries(nm+'·B', 1, c.b, solo?CB:col, true));
+  const cumDelta = arr => { let s=0; return (arr||[]).map(v=>{ if(v!=null) s+=v; return s; }); };
+  const draw = cumMode => {
+    const wrap = document.getElementById('psCharts');
+    wrap.innerHTML = state.psSel.map((nm,idx)=>{
+      const c = cs.find(x=>x.name===nm); if(!c) return '';
+      return '<div><div class="sm-hd">'+esc(nm)+' <span class="muted">'+(cumMode?'累计':'增量/轮')+' '+esc(c.unit)+'</span></div>'
+        +'<div class="sm-chart" id="psC'+idx+'"></div></div>';
+    }).join('');
+    const last = wrap.querySelectorAll('.sm-chart').length - 1;
+    wrap.querySelectorAll('.sm-chart').forEach((cd,i)=>{
+      const c = cs.find(x=>x.name===state.psSel[i]); if(!c) return;
+      const sa = cumMode ? cumDelta(c.a) : c.a, sb = cumMode ? cumDelta(c.b) : c.b;
+      const s = [];
+      if (sa) s.push(lineSeries('A '+LA, 0, sa, CA, false));
+      if (sb) s.push(lineSeries('B '+LB, 1, sb, CB, true));
+      const o = tsOption(s, {yAxis:{type:'value',name:cumMode?'累计':'增量/轮'}});
+      o.legend = {show:false};
+      o.grid.bottom = 30;
+      o.dataZoom = (i===last) ? [{type:'inside'},{type:'slider',height:18,bottom:8}] : [{type:'inside'}];
+      const ch = makeChart(cd);
+      ch.group = 'psGrp';
+      ch.setOption(o);
     });
-    makeChart(document.getElementById('psChart')).setOption(tsOption(series,{yAxis:{type:'value',name:'增量/轮'}}));
+    echarts.connect('psGrp');
   };
+  draw(true);
+  document.getElementById('psSeg').querySelectorAll('.seg').forEach(b=>{
+    b.onclick = ()=>{
+      document.getElementById('psSeg').querySelectorAll('.seg').forEach(x=>x.classList.toggle('active',x===b));
+      draw(b.dataset.v==='cum');
+    };
+  });
   multiPicker({el:document.getElementById('psPick'), options:cs.map(c=>c.name), selected:state.psSel,
     colorOf:(n,idx)=>PROC_PALETTE[idx%PROC_PALETTE.length],
-    onChange:sel=>{state.psSel=sel;draw();}, placeholder:'搜索添加计数器…'});
-  draw();
+    onChange:sel=>{state.psSel=sel;draw(true);}, placeholder:'搜索添加计数器…'});
 };
 
 /* ============ 9. 标准与风险 ============ */
 RENDER.risk = function(){
   const el = document.getElementById('page-risk');
-  let h = '';
-  ['a','b'].forEach((side,i)=>{
-    const st = DATA.standards[side];
-    h += '<div class="card">'+cardHd('健康标准对照 — '+String.fromCharCode(65+i),'RSS 口径 · 判定：<b>'+(st?st.verdict:'无阈值')+'</b>');
-    if (!st){ h += '<div class="muted">无阈值数据（缺少或无法解析 all_memory_data.xls）</div></div>'; return; }
-    if (st.levels.length || st.free_ram){
-      h += '<div class="tbl-wrap"><table><thead><tr><th>层级/指标</th><th class="num">阈值 MB</th><th class="num">值均</th><th class="num">P90 / P10</th><th class="num">峰值 / 最低</th><th class="num">超标轮</th><th>判定</th></tr></thead><tbody>';
-      if (st.free_ram){
-        const r = st.free_ram;
-        h += '<tr'+(r.viol?' class="viol"':'')+'><td>Free RAM（下限）</td><td class="num">'+fmt(r.thr)+'</td><td class="num">'+fmt(r.mean)+'</td><td class="num">'+fmt(r.p10)+'</td><td class="num">'+fmt(r.low)+'</td><td class="num">'+(r.exceed_rate*100).toFixed(1)+'%</td><td>'+(r.viol?'<span class="st st-bad">超标</span>':'<span class="st st-ok">达标</span>')+'</td></tr>';
-      }
-      st.levels.forEach(r=>{
-        const nm = r.name + ((r.members&&r.members.length>1)?'（含 '+r.members.filter(m=>m!==r.name).join('、')+'）':'');
-        h += '<tr'+(r.viol?' class="viol"':'')+'><td>'+esc(nm)+'</td><td class="num">'+fmt(r.thr)+'</td><td class="num">'+fmt(r.mean)+'</td><td class="num">'+fmt(r.p90)+'</td><td class="num">'+fmt(r.peak)+'</td><td class="num">'+(r.exceed_rate*100).toFixed(1)+'%</td><td>'+(r.viol?'<span class="st st-bad">超标</span>':'<span class="st st-ok">达标</span>')+'</td></tr>';
-      });
-      h += '</tbody></table></div>';
-    }
-    if (st.procs.length){
-      h += '<div class="tbl-wrap" style="margin-top:12px"><table><thead><tr><th>进程（RSS）</th><th>层级</th><th class="num">阈值 MB</th><th class="num">值均</th><th class="num">峰值</th><th class="num">超标轮</th><th>判定</th></tr></thead><tbody>';
-      st.procs.forEach(r=>{
-        h += '<tr'+(r.viol?' class="viol"':'')+'><td class="name">'+procLink(r.name)+'</td><td>'+esc(r.level)+'</td><td class="num">'+fmt(r.thr)+'</td><td class="num">'+fmt(r.mean)+'</td><td class="num">'+fmt(r.peak)+'</td><td class="num">'+(r.exceed_rate*100).toFixed(1)+'%</td><td>'+(r.viol?'<span class="st st-bad">超标</span>':'<span class="st st-ok">达标</span>')+'</td></tr>';
-      });
-      h += '</tbody></table></div>';
-    }
-    h += '</div>';
+  const sa = DATA.standards.a, sb = DATA.standards.b;
+  const fails = st => (st && st.fail_items && st.fail_items.length) ? '（'+st.fail_items.join('、')+'）' : '';
+  let h = '<div class="card">'+cardHd('健康标准对照（A / B）',
+    'RSS 口径；阈值取各侧自己的标准 · A 判定 <b>'+(sa?sa.verdict:'无阈值')+'</b>'+fails(sa)
+    +' · B 判定 <b>'+(sb?sb.verdict:'无阈值')+'</b>'+fails(sb));
+  const thrCell = (ta,tb)=>{
+    if (ta==null && tb==null) return '—';
+    if (ta==null) return fmt(tb);
+    if (tb==null) return fmt(ta);
+    return ta===tb ? fmt(ta) : 'A '+fmt(ta)+' / B '+fmt(tb);
+  };
+  const chg = (ra,rb)=>{
+    const va = ra && ra.viol, vb = rb && rb.viol;
+    if (vb && !va) return '<b style="color:var(--red)">新超标</b>';
+    if (va && vb) return '<span style="color:var(--red)">持续超标</span>';
+    if (va && rb && !rb.viol) return '<span style="color:var(--green)">已解除</span>';
+    return '—';
+  };
+  const jdg = r => r==null ? '—' : (r.viol ? '<span class="st st-bad">超标</span>' : '<span class="st st-ok">达标</span>');
+  // 表1：层级与 Free RAM（Free RAM 在前，其后按 LEVEL 序）
+  const lvKeys = [];
+  [sa,sb].forEach(st=>{
+    if (!st) return;
+    if (st.free_ram && !lvKeys.includes('Free RAM')) lvKeys.push('Free RAM');
+    (st.levels||[]).forEach(r=>{ if (!lvKeys.includes(r.name)) lvKeys.push(r.name); });
   });
+  const lvOrd = ['Free RAM'].concat(Object.keys(LEVEL_COLORS));
+  lvKeys.sort((x,y)=>{
+    const ix = lvOrd.indexOf(x), iy = lvOrd.indexOf(y);
+    return (ix<0?99:ix)-(iy<0?99:iy);
+  });
+  const lvRow = (st,nm) => st ? (nm==='Free RAM' ? st.free_ram : (st.levels||[]).find(r=>r.name===nm)) : null;
+  if (lvKeys.length){
+    h += '<div class="sec-h" style="margin:4px 0 8px">层级与 Free RAM</div>'
+      +'<div class="tbl-wrap"><table><thead><tr><th>项目</th><th class="num">阈值</th>'
+      +'<th class="num">A 值均</th><th class="num">B 值均</th><th class="num">A P90/P10</th><th class="num">B P90/P10</th>'
+      +'<th class="num">A 峰值/最低</th><th class="num">B 峰值/最低</th><th class="num">A 超标轮</th><th class="num">B 超标轮</th>'
+      +'<th>A 判定</th><th>B 判定</th><th>变化</th></tr></thead><tbody>';
+    lvKeys.forEach(nm=>{
+      const free = nm==='Free RAM';
+      const ra = lvRow(sa,nm), rb = lvRow(sb,nm);
+      const r0 = ra || rb;
+      const members = (r0 && r0.members && r0.members.length>1) ? '（含 '+r0.members.filter(m=>m!==r0.name).join('、')+'）' : '';
+      const qq = r => r==null ? ['—','—','—','—'] : [fmt(r.mean), fmt(free?r.p10:r.p90), fmt(free?r.low:r.peak), (r.exceed_rate*100).toFixed(1)+'%'];
+      const qa = qq(ra), qb = qq(rb);
+      h += '<tr'+(rb && rb.viol?' class="viol"':'')+'><td>'+esc(free?'Free RAM（下限）':nm+members)+'</td>'
+        +'<td class="num">'+thrCell(ra&&ra.thr, rb&&rb.thr)+'</td>'
+        +'<td class="num">'+qa[0]+'</td><td class="num">'+qb[0]+'</td>'
+        +'<td class="num">'+qa[1]+'</td><td class="num">'+qb[1]+'</td>'
+        +'<td class="num">'+qa[2]+'</td><td class="num">'+qb[2]+'</td>'
+        +'<td class="num">'+qa[3]+'</td><td class="num">'+qb[3]+'</td>'
+        +'<td>'+jdg(ra)+'</td><td>'+jdg(rb)+'</td><td>'+chg(ra,rb)+'</td></tr>';
+    });
+    h += '</tbody></table></div>';
+  }
+  // 表2：进程（name 并集；排序 新超标>持续超标>已解除>其余，再按阈值 desc）
+  const pkSet = new Set();
+  [sa,sb].forEach(st=>{ if (st) (st.procs||[]).forEach(r=>pkSet.add(r.name)); });
+  const prow = (st,n) => st ? (st.procs||[]).find(r=>r.name===n) : null;
+  const pord = (ra,rb) => { const va=ra&&ra.viol, vb=rb&&rb.viol; return vb&&!va?0 : va&&vb?1 : va?2 : 3; };
+  const thrOf = r => r ? (r.thr||0) : 0;
+  const plist = [...pkSet].sort((x,y)=>{
+    const ox = pord(prow(sa,x),prow(sb,x)), oy = pord(prow(sa,y),prow(sb,y));
+    if (ox!==oy) return ox-oy;
+    return Math.max(thrOf(prow(sa,y)),thrOf(prow(sb,y))) - Math.max(thrOf(prow(sa,x)),thrOf(prow(sb,x)));
+  });
+  if (plist.length){
+    h += '<div class="sec-h" style="margin:14px 0 8px">进程</div>'
+      +'<div class="tbl-wrap"><table><thead><tr><th>进程</th><th>层级</th><th class="num">阈值</th>'
+      +'<th class="num">A 值均</th><th class="num">B 值均</th><th class="num">A 峰值</th><th class="num">B 峰值</th>'
+      +'<th class="num">A 超标轮</th><th class="num">B 超标轮</th><th>A 判定</th><th>B 判定</th><th>变化</th></tr></thead><tbody>';
+    plist.forEach(n=>{
+      const ra = prow(sa,n), rb = prow(sb,n);
+      h += '<tr'+(rb && rb.viol?' class="viol"':'')+'><td class="name">'+procLink(n)+'</td>'
+        +'<td>'+esc((rb&&rb.level)||(ra&&ra.level)||'—')+'</td>'
+        +'<td class="num">'+thrCell(ra&&ra.thr, rb&&rb.thr)+'</td>'
+        +'<td class="num">'+fmt(ra&&ra.mean)+'</td><td class="num">'+fmt(rb&&rb.mean)+'</td>'
+        +'<td class="num">'+fmt(ra&&ra.peak)+'</td><td class="num">'+fmt(rb&&rb.peak)+'</td>'
+        +'<td class="num">'+(ra?(ra.exceed_rate*100).toFixed(1)+'%':'—')+'</td>'
+        +'<td class="num">'+(rb?(rb.exceed_rate*100).toFixed(1)+'%':'—')+'</td>'
+        +'<td>'+jdg(ra)+'</td><td>'+jdg(rb)+'</td><td>'+chg(ra,rb)+'</td></tr>';
+    });
+    h += '</tbody></table></div>';
+  }
+  if (!lvKeys.length && !plist.length)
+    h += '<div class="muted">无阈值数据（缺少或无法解析 all_memory_data.xls）</div>';
+  h += '</div>';
   const meta = DATA.meta;
   h += '<div class="card">'+cardHd('疑似泄漏','趋势回归，提示非定论 · 常驻≥'+meta.resident
     +' · delta≥max('+meta.leak_delta+' MB, head×'+meta.leak_pct+'%) · R²≥'+meta.leak_r2
@@ -1298,7 +1468,7 @@ function openProc(name){
   const inner = document.getElementById('procInner');
   const p = MV().procs[name];
   if (!p){
-    inner.innerHTML = '<button class="btn ghost" id="procBack">← 返回</button><div class="card">当前指标（'+metric.toUpperCase()+'）下无进程 <b>'+esc(name)+'</b></div>';
+    inner.innerHTML = '<button class="btn ghost" id="procBack">返回</button><div class="card">当前指标（'+metric.toUpperCase()+'）下无进程 <b>'+esc(name)+'</b></div>';
     document.getElementById('procBack').onclick = ()=>setHash({proc:null, tab:state.tab});
     return;
   }
@@ -1306,16 +1476,20 @@ function openProc(name){
   const tA = metric==='rss' ? _thrProc.a[name] : null;
   const tB = metric==='rss' ? _thrProc.b[name] : null;
   const hasEv = DS[0].events && DS[1].events;
-  let h = '<button class="btn ghost" id="procBack">← 返回 '+(PAGES[state.tab]||'')+'</button>'
-    +'<div class="pd-head"><h2>'+esc(name)+'</h2><div>'+procTags(p)+'<span class="tag tag-cached">'+metric.toUpperCase()+'</span>'
-    +(tA!=null||tB!=null?'<span class="tag tag-lv">阈值 A '+fmt(tA,0)+' / B '+fmt(tB,0)+' MB</span>':'')+'</div></div>'
+  let h = '<button class="btn ghost" id="procBack">返回 '+(PAGES[state.tab]||'')+'</button>'
+    +'<div class="pd-head"><div class="pd-titlerow"><h2>'+esc(name)+'</h2>'
+    +'<span class="segtrack" id="pdMetric"><button class="seg'+(metric==='pss'?' active':'')+'" data-m="pss">PSS</button><button class="seg'+(metric==='rss'?' active':'')+'" data-m="rss">RSS</button></span>'
+    +'</div><div>'+procTags(p)+'<span class="tag tag-m">'+metric.toUpperCase()+'</span>'
+    +(tA!=null||tB!=null?'<span class="tag tag-m">阈值 A '+fmt(tA,0)+' / B '+fmt(tB,0)+' MB</span>':'')+'</div></div>'
     +'<div class="pd-stats">'
     +'<div class="stat"><div class="t">A 轮均</div><div class="v" style="color:var(--c-a)">'+fmt(p.da.mi)+'<span class="uu"> MB</span></div></div>'
     +'<div class="stat"><div class="t">B 轮均</div><div class="v" style="color:var(--c-b)">'+fmt(p.db.mi)+'<span class="uu"> MB</span></div></div>'
     +'<div class="stat"><div class="t">GAP</div><div class="v">'+(p.gap==null?'<span class="muted">—</span>':deltaBadge((p.gap>0?'+':'')+fmt(p.gap)+' MB', dc, p.gap))+'</div></div>'
     +'<div class="stat"><div class="t">GAP%</div><div class="v">'+(p.gapp==null&&p.gapt==null?'<span class="muted">—</span>':deltaBadge(p.gapt||(p.gapp>0?'+':'')+(p.gapp==null?'—':p.gapp.toFixed(1))+'%', dc, p.gap))+'</div></div>'
     +'</div>'
-    +'<div class="card">'+cardHd('逐轮走势',(AXIS==='round'?'x=轮次':'x=测试小时')+' · 实线=A '+LA+'，虚线=B '+LB+' · '+metric.toUpperCase()+' (MB)')+'<div id="pdChart" class="chart"></div></div>'
+    +'<div class="card">'+cardHd('逐轮走势','x=轮次 · 实线=A '+LA+'，虚线=B '+LB+' · '+metric.toUpperCase()+' (MB) · 点击数据点可多选')+'<div id="pdChart" class="chart"></div></div>'
+    +'<div class="card">'+cardHd('已选数据点','','<button class="btn ghost" id="pdSelClear">清空选择</button>')
+    +'<div id="pdSelBody"></div></div>'
     +'<div class="grid2">'
     +'<div class="card">'+cardHd('分布统计','出现轮口径')+'<div class="tbl-wrap no-max"><table><thead><tr><th></th><th class="num">出现</th><th class="num">出现率</th><th class="num">轮均</th><th class="num">值均</th><th class="num">最小</th><th class="num">P50</th><th class="num">P90</th><th class="num">P95</th><th class="num">最大</th></tr></thead><tbody>'
     +'<tr><td><b>A</b></td>'+distRow(p.da)+'</tr><tr><td><b>B</b></td>'+distRow(p.db)+'</tr>'
@@ -1353,10 +1527,141 @@ function openProc(name){
   }
   inner.innerHTML = h;
   document.getElementById('procBack').onclick = ()=>setHash({proc:null, tab:state.tab});
-  const sA = abLine(0, p.a), sB = abLine(1, p.b);
-  const ml = thrMarkLine([{y:tA,n:'A阈 '+fmt(tA,0),c:CA},{y:tB,n:'B阈 '+fmt(tB,0),c:CB}]);
-  if (ml) sA.markLine = ml;
-  makeChart(document.getElementById('pdChart')).setOption(tsOption([sA, sB]));
+  const pdm = document.getElementById('pdMetric');
+  if (pdm) pdm.querySelectorAll('.seg').forEach(b=>b.onclick=()=>setHash({metric:b.dataset.m}));
+  /* ---- 逐轮走势：x=轮次（数值轴），点击散点选择 ---- */
+  if (!state.pdSel || state.pdSel.name!==name) state.pdSel = {name, items:[]};
+  const pdSel = state.pdSel;
+  const srs = i => (i ? p.b : p.a) || [];
+  const pdPts = i => {
+    const R = DS[i].rounds, out = [];
+    let lastR = null;
+    srs(i).forEach((v,k)=>{
+      const r = R[k];
+      if (v==null) return;
+      if (lastR!=null && r>lastR+1) out.push([lastR+0.5, null]);
+      out.push({value:[r,v], k});
+      lastR = r;
+    });
+    return out;
+  };
+  const allR = DS[0].rounds.concat(DS[1].rounds);
+  const minR = Math.min(...allR), maxR = Math.max(...allR), span = maxR - minR;
+  const tip = ps => {
+    let hh = '';
+    ps.forEach(pp=>{
+      const d = pp.data||{};
+      if (d.k==null) return;
+      const i = pp.seriesIndex===0?0:1;
+      if (!hh) hh = '第 '+DS[i].rounds[d.k]+' 轮<br>';
+      hh += (pp.marker||'')+esc(pp.seriesName)+' <b>'+fmt(d.value[1])+'</b>'
+        +' <span class="muted">'+esc(DS[i].start_times[d.k]||'')+' t+'+fmt(DS[i].hours[d.k])+'h</span><br>';
+    });
+    return hh;
+  };
+  const lvAt = (lvr,k)=>{
+    if (!lvr) return null;
+    let cur=null;
+    for (const e of lvr){ if (e[0]<=k) cur=e[1]; else break; }
+    return cur;
+  };
+  const buildSeries = ()=>{
+    const sA = {name:'A '+LA,type:'line',data:pdPts(0),itemStyle:{color:CA},
+                lineStyle:{color:CA,width:2},showSymbol:span<=60,symbolSize:6,connectNulls:false,z:3};
+    const sB = {name:'B '+LB,type:'line',data:pdPts(1),itemStyle:{color:CB},
+                lineStyle:{color:CB,width:2,type:'dashed'},showSymbol:span<=60,symbolSize:6,connectNulls:false,z:3};
+    const ml = thrMarkLine([{y:tA,n:'A阈 '+fmt(tA,0),c:CA},{y:tB,n:'B阈 '+fmt(tB,0),c:CB}]);
+    if (ml) sA.markLine = ml;
+    const sel = {name:'__sel',type:'scatter',z:9,symbolSize:14,
+      data:pdSel.items.map((it,idx)=>{
+        const v = srs(it.side)[it.k];
+        return {value:[it.round,v], it:idx,
+          itemStyle:{color:'#fff',borderColor:it.color,borderWidth:3},
+          label:{show:true,position:'top',formatter:String(idx+1),color:it.color,fontWeight:600,fontSize:11}};
+      })};
+    sA.id = 'pdA'; sB.id = 'pdB'; sel.id = 'pdSel';
+    return [sA,sB,sel];
+  };
+  const chart = makeChart(document.getElementById('pdChart'));
+  chart.setOption({
+    tooltip:{trigger:'axis',formatter:tip},
+    legend:{top:0,data:['A '+LA,'B '+LB]},
+    grid:{top:40,left:66,right:20,bottom:span>30?58:30},
+    xAxis:{type:'value',minInterval:1,min:minR,max:maxR,interval:span<=30?1:null},
+    yAxis:{type:'value',name:'MB',scale:true},
+    dataZoom:[{type:'inside'}].concat(span>30?[{type:'slider',height:18,bottom:8}]:[]),
+    series:buildSeries()});
+  const drawSelBody = ()=>{
+    const body = document.getElementById('pdSelBody');
+    if (!pdSel.items.length){
+      body.innerHTML = '<div class="empty">点击图中的数据点查看该轮明细，可多选；再次点击同一点取消。</div>';
+      return;
+    }
+    const prs = DATA.metrics.rss.procs[name]||{}, pps = DATA.metrics.pss.procs[name]||{};
+    let rows = pdSel.items.map((it,idx)=>{
+      const i = it.side, k = it.k;
+      const pss = pps[i?'b':'a']||[], rss = prs[i?'b':'a']||[], sw = prs['sw'+(i?'b':'a')]||[];
+      const mlv = lvAt(p['lvr_'+(i?'b':'a')], k);
+      const olv = lvAt((metric==='rss'?prs:pps)===p ? p['lvr_'+(i?'b':'a')] : p['lvr_'+(i?'b':'a')], k);
+      void olv;
+      const otherP = metric==='rss' ? pps : prs;
+      const oLevel = lvAt(otherP['lvr_'+(i?'b':'a')], k);
+      const lvTxt = (oLevel && oLevel!==mlv)
+        ? (metric==='rss'?'RSS: ':'PSS: ')+esc(mlv||'—')+' / '+(metric==='rss'?'PSS: ':'RSS: ')+esc(oLevel)
+        : (mlv?'<span class="pill"><i style="background:'+lvColor(mlv)+'"></i>'+esc(mlv)+'</span>':'—');
+      let prev = null;
+      const cur = srs(i)[k];
+      for (let j=k-1;j>=0;j--){ if (srs(i)[j]!=null){ prev=srs(i)[j]; break; } }
+      const d = (cur!=null && prev!=null) ? cur-prev : null;
+      const dHtml = d==null ? '—' : '<span style="color:'+(d>0?'var(--red)':'var(--green)')+'">'+(d>0?'+':'')+fmt(d)+'</span>';
+      return '<tr><td><span class="pill"><i style="background:'+it.color+'"></i>'+(idx+1)+'</span></td>'
+        +'<td><span class="sc sc-'+(i?'b':'a')+'">'+(i?'B':'A')+'</span>'+esc(DS[i].label)+'</td>'
+        +'<td class="name">'+esc(name)+'</td><td>第 '+it.round+' 轮</td>'
+        +'<td class="mono">'+esc(DS[i].start_times[k]||'—')+'</td><td>'+lvTxt+'</td>'
+        +'<td class="num">'+fmt(pss[k])+'</td><td class="num">'+fmt(rss[k])+'</td><td class="num">'+fmt(sw[k])+'</td>'
+        +'<td class="num">'+dHtml+'</td><td><button class="btn ghost" data-rm="'+idx+'">移除</button></td></tr>';
+    }).join('');
+    body.innerHTML = '<div class="tbl-wrap"><table><thead><tr><th>#</th><th>版本</th><th>进程</th><th>轮次</th><th>采集时间</th><th>层级</th><th class="num">PSS (MB)</th><th class="num">RSS (MB)</th><th class="num">Swap (MB)</th><th class="num">较上一轮</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+    body.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{
+      pdSel.items.splice(+b.dataset.rm,1); refreshSel();
+    });
+  };
+  const refreshSel = ()=>{
+    chart.setOption({series:[buildSeries()[2]]});
+    drawSelBody();
+  };
+  document.getElementById('pdSelClear').onclick = ()=>{ pdSel.items.length=0; refreshSel(); };
+  chart.getZr().off('click');
+  chart.getZr().on('click', ev=>{
+    if (!ev.target || ev.target.topmost) {/* 点击散点也算 */}
+    const px = [ev.offsetX, ev.offsetY];
+    let xr;
+    try { xr = chart.convertFromPixel({xAxisIndex:0}, px[0]); } catch(e){ return; }
+    if (xr==null || isNaN(xr)) return;
+    let best = null;
+    [0,1].forEach(i=>{
+      pdPts(i).forEach(pt=>{
+        if (pt.k==null) return;
+        const r = pt.value[0];
+        if (Math.abs(r-xr)>3) return;
+        try{
+          const pp = chart.convertToPixel({xAxisIndex:0,yAxisIndex:0}, pt.value);
+          const d = Math.hypot(pp[0]-px[0], pp[1]-px[1]);
+          if (d<=24 && (!best || d<best.d)) best = {side:i, k:pt.k, round:r, d};
+        }catch(e){}
+      });
+    });
+    if (!best) return;
+    const ix = pdSel.items.findIndex(it=>it.side===best.side && it.round===best.round);
+    if (ix>=0){ pdSel.items.splice(ix,1); }
+    else {
+      const used = new Set(pdSel.items.map(it=>it.color));
+      const c = SEL_PALETTE.find(c=>!used.has(c)) || SEL_PALETTE[pdSel.items.length%SEL_PALETTE.length];
+      pdSel.items.push({side:best.side, k:best.k, round:best.round, color:c});
+    }
+    refreshSel();
+  });
+  drawSelBody();
   ov.scrollTop = 0;
 }
 
