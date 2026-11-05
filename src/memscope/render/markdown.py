@@ -343,8 +343,9 @@ def render(R: dict) -> str:
             ['数据集', '类型', '口径', '对象', '头(中位)', '尾(中位)',
              'delta MB', '斜率 MB/h', 'R²'],
             [[lk['ds'], {'proc': '进程', 'level': '层级',
-                         'sys': '整机'}[lk['kind']],
-              lk['metric'].upper() or '—', lk['name'],
+                         'sys': '整机', 'heap': '进程堆'}[lk['kind']],
+              (lk['metric'] if lk['kind'] == 'heap'
+               else lk['metric'].upper()) or '—', lk['name'],
               _f(lk['head']), _f(lk['tail']), f"{lk['delta']:+.1f}",
               f"{lk['slope']:+.2f}", f"{lk['r2']:.2f}"]
              for lk in R['leaks']]))
@@ -352,8 +353,44 @@ def render(R: dict) -> str:
         L.append('（无）')
     L.append('')
 
-    # ---- 10. 进程事件 ----
-    L.append('## 10. 进程事件（test 阶段）')
+    # ---- 10. 进程 meminfo 明细 ----
+    L.append('## 10. 进程 meminfo 明细（dumpsys Pss Total，MB）')
+    L.append('')
+    am = R.get('appmem') or {}
+    if am.get('procs'):
+        cov = {'a': [0, 0], 'b': [0, 0]}   # [进程数, 明细点数]
+        for p in am['procs'].values():
+            for sd in ('a', 'b'):
+                if p['cov_' + sd]:
+                    cov[sd][0] += 1
+                    cov[sd][1] += p['cov_' + sd]
+        L.append(f"覆盖进程：A {cov['a'][0]} 个 / B {cov['b'][0]} 个；"
+                 f"明细数据点（进程×轮）：A {cov['a'][1]} / B {cov['b'][1]}。"
+                 '采集哪些进程由测试平台决定，逐轮可能不同。')
+        heap_leaks = [lk for lk in R['leaks'] if lk['kind'] == 'heap']
+        if heap_leaks:
+            L.append('')
+            L.append('堆疑似泄漏（Native Heap / Dalvik Heap 趋势回归）：')
+            L.append('')
+            L.append(_table(
+                ['数据集', '进程', '指标', '头(中位)', '尾(中位)',
+                 'delta MB', '斜率 MB/h', 'R²'],
+                [[lk['ds'], lk['name'], lk['metric'], _f(lk['head']),
+                  _f(lk['tail']), f"{lk['delta']:+.1f}",
+                  f"{lk['slope']:+.2f}", f"{lk['r2']:.2f}"]
+                 for lk in heap_leaks]))
+        else:
+            L.append('')
+            L.append('堆疑似泄漏：无。')
+        L.append('')
+        L.append('逐轮明细见 data.xlsx「进程meminfo明细」、'
+                 '堆趋势判定见「进程堆趋势」；HTML 进程详情页可交互查看。')
+    else:
+        L.append('测试平台没有采集进程级 dumpsys meminfo 明细。')
+    L.append('')
+
+    # ---- 11. 进程事件 ----
+    L.append('## 11. 进程事件（test 阶段）')
     L.append('')
     ea, eb = R['events']['a'], R['events']['b']
     L.append('| 指标 | A | B |')
@@ -402,8 +439,8 @@ def render(R: dict) -> str:
                      '数量过多未内嵌，明细见 data.xlsx')
     L.append('')
 
-    # ---- 11. 内存压力 ----
-    L.append('## 11. 内存压力（proc_vmstat 每轮增量）')
+    # ---- 12. 内存压力 ----
+    L.append('## 12. 内存压力（proc_vmstat 每轮增量）')
     L.append('')
     cs = R['pressure'].get('counters', [])
     if cs:
@@ -424,8 +461,8 @@ def render(R: dict) -> str:
         L.append('（本测试包无 proc_vmstat 数据）')
     L.append('')
 
-    # ---- 12. 口径说明 ----
-    L.append('## 12. 口径说明')
+    # ---- 13. 口径说明 ----
+    L.append('## 13. 口径说明')
     L.append('')
     ih = R['inhouse']
     wl = (f"白名单 `{ih['whitelist_src']}`（{ih['whitelist_count']} 项）"
@@ -454,6 +491,9 @@ def render(R: dict) -> str:
         f"max({meta['leak_delta']}, head×{meta['leak_pct']}%) MB 且 "
         f"slope>0 且 R² ≥ {meta['leak_r2']}；层级/整机泄漏 delta 门限 "
         f"{meta['sys_leak_delta']} MB（Used RAM 升 / Free RAM、MemAvailable 降）。",
+        '- 进程 meminfo 明细：round_N/dumpsys_meminfo_<proc>[_<pid>].txt '
+        '明细表 Pss Total 列；行缺失按 0 计；进程堆趋势（Native/Dalvik '
+        'Heap）按进程泄漏同款门限判定，覆盖率 = 明细覆盖轮/有效轮。',
         '- LMK 来自 events_log `killinfo`（rss=f4/1024 MB，kill_reason=f5）；'
         'reason 枚举按 AOSP LmkdStatsReporter（0-9），其它记 `厂商扩展(N)`；'
         '进程名按同 pid 最近 start 回填，缺失按 10s 内 died/kill 回退。',

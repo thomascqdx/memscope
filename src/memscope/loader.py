@@ -17,11 +17,12 @@ import shutil
 import subprocess
 import tempfile
 import zipfile
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from . import eventsrc
 from .model import Dataset, RoundData
-from .parsers import device as dev
+from .parsers import appmeminfo, device as dev
 from .parsers import dumpsys, procmeminfo, procstatus, thresholds as thr
 from .parsers import v2info, v2summary
 from .parsers import vmstat as vms
@@ -178,7 +179,8 @@ _RAR_WHITELIST = [
     '*devinfo/deviceinfo.txt', '*devinfo/getprop.txt',
     '*devinfo/package_list.txt',
     '*bugreport-*.zip',
-    '*round_*/dumpsys_meminfo.txt', '*round_*/procStatus_sortedByLevel.txt',
+    '*round_*/dumpsys_meminfo.txt', '*round_*/dumpsys_meminfo_*.txt',
+    '*round_*/procStatus_sortedByLevel.txt',
     '*round_*/proc_meminfo.txt', '*round_*/proc_vmstat.txt',
     '*round_*/tran_mem_debug/proc_vmstat.txt',
     '*debuglogger/mobilelog/*events_log*',
@@ -280,7 +282,7 @@ _DYNAMIC_TAGS = ('killinfo', 'am_anr', 'am_crash', 'am_low_memory')
 _ROUND_PAT = re.compile(
     r'(?:^|/)round_(\d+)/(?:tran_mem_debug/)?'
     r'(dumpsys_meminfo\.txt|procStatus_sortedByLevel\.txt|proc_meminfo\.txt'
-    r'|proc_vmstat\.txt)$')
+    r'|proc_vmstat\.txt|dumpsys_meminfo_[^/]+\.txt)$')
 
 
 def detect_model(names) -> str | None:
@@ -397,7 +399,8 @@ def _rounds(src, ds, names, tmp_path, opened, tmap, reason_fn=None):
     rfiles = _round_files(src, names, tmp_path, opened)
     failed = {}
     for idx in sorted(rfiles):
-        rd, reason = _load_round(idx, rfiles[idx], tmap.get(idx, (None, None)))
+        rd, reason = _load_round(idx, rfiles[idx], tmap.get(idx, (None, None)),
+                                 ds.model)
         if reason is None:
             ds.rounds.append(rd)
         else:
@@ -573,7 +576,7 @@ def _test_type_from_name(path) -> str | None:
     return None
 
 
-def _load_round(idx: int, got: dict, times):
+def _load_round(idx: int, got: dict, times, model: str = None):
     """解析单轮；返回 (RoundData, reason)。reason 非 None 表示无效轮。"""
     rd = RoundData(index=idx)
     rd.start, rd.end = times
@@ -598,18 +601,58 @@ def _load_round(idx: int, got: dict, times):
             rd.vmstat = vms.parse_vmstat(_decode(got['proc_vmstat.txt']()))
     except Exception as e:  # noqa: BLE001 - 单轮异常 → 无效轮
         return rd, f'解析失败: {str(e)[:80]}'
+    rd.appmem = _load_appmem(got, d['pids'], model)
     return rd, None
+
+
+# dumpsys_meminfo_<name>[_<pid>].txt：进程名解析
+# (1) 文件头 `** MEMINFO in pid N [name] **`；(2) 文件名 _<pid> 后缀查本轮
+# PSS-by-OOM pid→名 映射（3.0 native）；(3) stem（3.0 剥去 _<pid> 后缀；
+# 2.0 不剥——`..._64` 是进程名一部分）；最后 system_server→system。
+_APPMEM_PREFIX = 'dumpsys_meminfo_'
+_APPMEM_PID_SFX = re.compile(r'^(.*)_(\d+)$')
+_APPMEM_ALIAS = {'system_server': 'system'}
+
+
+def _load_appmem(got: dict, pids: dict, model: str) -> dict:
+    """{proc_name: {row: mb}}；同名多 pid 相加。单文件解析失败只跳过该文件。"""
+    out = {}
+    for fname, thunk in got.items():
+        if not fname.startswith(_APPMEM_PREFIX) or fname == 'dumpsys_meminfo.txt':
+            continue
+        try:
+            am = appmeminfo.parse_app_meminfo(_decode(thunk()))
+        except Exception:  # noqa: BLE001 - 明细文件损坏不影响轮次有效性
+            continue
+        if am is None:
+            continue
+        stem = fname[len(_APPMEM_PREFIX):-len('.txt')]
+        nm = am['name']
+        m = _APPMEM_PID_SFX.match(stem)
+        if nm is None and model == '3.0' and m and int(m.group(2)) in pids:
+            nm = pids[int(m.group(2))]
+        if nm is None:
+            nm = m.group(1) if (model == '3.0' and m) else stem
+        nm = _APPMEM_ALIAS.get(nm, nm)
+        rows = out.setdefault(nm, {})
+        for k, v in am['rows'].items():
+            rows[k] = rows.get(k, 0.0) + v
+    return out
 
 
 def _round_files(src: _Source, names, tmp_path: Path, opened: list):
     """{round_idx: {fname: thunk()->bytes}}。round_N/ 目录或嵌套 rounds.zip。"""
     out = {}
+    appmem = []
     for n in names:
         m = _ROUND_PAT.search(n)
         if m:
-            out.setdefault(int(m.group(1)), {})[m.group(2)] = (
-                lambda n=n: src.read(n))
+            idx, fname = int(m.group(1)), m.group(2)
+            out.setdefault(idx, {})[fname] = lambda n=n: src.read(n)
+            if fname.startswith(_APPMEM_PREFIX):
+                appmem.append((idx, fname, n))
     if out:
+        _prefetch_appmem(src, out, appmem)
         return out
     # 嵌套 tw_rpt_*_rounds.zip：materialize 后按文件打开
     zips = [n for n in names if re.search(r'tw_rpt_.*rounds\.zip$', n)]
@@ -627,6 +670,21 @@ def _round_files(src: _Source, names, tmp_path: Path, opened: list):
             out.setdefault(int(m.group(1)), {})[m.group(2)] = (
                 lambda zi=zi: nz.read(zi))
     return out
+
+
+def _prefetch_appmem(src: _Source, rfiles: dict, appmem: list):
+    """成批预读进程 meminfo 明细字节并把 thunk 改为返回已读 bytes。
+
+    DirSource/RarSource 下 9 万个刚解出的小文件逐个 open 会被 Defender
+    首次扫描拖慢（实测 599s→6s）；ZipSource 单句柄顺序读已足够快，不预读。
+    """
+    if not appmem or not isinstance(src, (DirSource, RarSource)):
+        return
+    names = [a[2] for a in appmem]
+    with ThreadPoolExecutor(max_workers=16) as ex:
+        data = dict(zip(names, ex.map(src.read, names, chunksize=256)))
+    for idx, fname, n in appmem:
+        rfiles[idx][fname] = lambda b=data[n]: b
 
 
 def _load_platform(src: _Source, names, ds: Dataset):

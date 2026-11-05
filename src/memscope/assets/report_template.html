@@ -94,6 +94,7 @@ main{max-width:1400px;margin:0 auto;padding:20px 20px 48px}
 .tag-cached{background:#f1f5f9;color:#64748b}
 .tag-gg{background:#e8f0fe;color:#1a73e8}
 .tag-m{background:none;color:#64748b;padding:0;margin-right:10px;font-weight:400}
+.tag-mm{background:#e2e8f0;color:#334155}
 .st{display:inline-block;padding:1px 10px;border-radius:4px;font-size:12px;font-weight:500}
 .st-ok{background:var(--green-soft);color:var(--green)}
 .st-bad{background:var(--red-soft);color:var(--red)}
@@ -239,6 +240,17 @@ th.sort:hover{background:#f1f5f9}
 .pname a{display:block;overflow:hidden;text-overflow:ellipsis}
 .lvcell{white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis}
 .empty{padding:26px 10px;color:var(--sub);font-size:13px;text-align:center}
+.amctl{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0;font-size:13px;color:var(--sub)}
+.amctl label{display:inline-flex;align-items:center;gap:6px}
+.amchips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.amchip{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 9px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--sub);font-size:12px;cursor:pointer;font-family:var(--font)}
+.amchip .sw{width:14px;height:3px;border-radius:2px;flex:none}
+.amchip .mv{font-variant-numeric:tabular-nums;color:#94a3b8;font-size:11px}
+.amchip[aria-pressed=true]{color:var(--txt);font-weight:500}
+.amchip:focus-visible{outline:2px solid #0f172a;outline-offset:2px}
+.amerr{color:var(--red);font-size:12px;flex-basis:100%}
+#amRibbon{width:100%;display:block;cursor:crosshair;touch-action:none}
+#amCov{font-size:12px;color:var(--sub);margin:2px 0 8px}
 
 /* ---------- 判定块（概览顶部） ---------- */
 .verdict{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:22px 24px;margin-bottom:16px}
@@ -537,13 +549,19 @@ const state = {tab:'overview', sysSel:null, lvSel:null, prSel:null, psSel:null,
                expanded:new Set(), lvGapMin:DATA.meta.gap_abs, trSel:null};
 function parseHash(){
   const q = new URLSearchParams(location.hash.replace(/^#/,''));
-  return {tab:q.get('tab'), proc:q.get('proc'), q:q.get('q'), metric:q.get('metric'), cached:q.get('cached')};
+  return {tab:q.get('tab'), proc:q.get('proc'), q:q.get('q'), metric:q.get('metric'), cached:q.get('cached'),
+          mm:q.get('mm'), mr:q.get('mr'), ms:q.get('ms')};
 }
 function setHash(patch){
   const q = new URLSearchParams(location.hash.replace(/^#/,''));
   for (const k in patch){ if(patch[k]==null) q.delete(k); else q.set(k, patch[k]); }
   const h = q.toString();
   if (location.hash.slice(1) !== h) location.hash = h;
+}
+function updHashQuiet(patch){   // 不触发 hashchange（避免 openProc 重渲染）
+  const q = new URLSearchParams(location.hash.replace(/^#/,''));
+  for (const k in patch){ if(patch[k]==null) q.delete(k); else q.set(k, patch[k]); }
+  history.replaceState(null, '', '#'+q.toString());
 }
 function applyMetric(m){
   if (!DATA.metrics[m]) return;
@@ -604,6 +622,8 @@ function procTags(p){
   if (p.resident_a) t.push('<span class="tag tag-m">常驻A</span>');
   if (p.resident_b) t.push('<span class="tag tag-m">常驻B</span>');
   if (p.leak_a||p.leak_b) t.push('<span class="tag tag-sig">泄漏'+(p.leak_a?'A':'')+(p.leak_b?'B':'')+'</span>');
+  if (amLookup(p.name))
+    t.push('<span class="tag tag-mm">meminfo</span>');
   return t.join('');
 }
 const showProc = p => includeCached || !p.cached_only;
@@ -1397,7 +1417,7 @@ RENDER.risk = function(){
     +' · 层级/整机 delta≥'+meta.sys_leak_delta+' MB');
   if (DATA.leaks.length){
     h += '<div class="tbl-wrap"><table><thead><tr><th>数据集</th><th>类型</th><th>口径</th><th>对象</th><th class="num">head</th><th class="num">tail</th><th class="num">delta</th><th class="num">斜率/h</th><th class="num">R²</th></tr></thead><tbody>'
-      + DATA.leaks.map(lk=>'<tr><td>'+lk.ds+'</td><td>'+esc(lk.kind)+'</td><td>'+esc(lk.metric.toUpperCase()||'—')+'</td><td class="name">'+(lk.kind==='proc'?procLink(lk.name):esc(lk.name))+'</td><td class="num">'+fmt(lk.head)+'</td><td class="num">'+fmt(lk.tail)+'</td><td class="num">'+(lk.delta>0?'+':'')+fmt(lk.delta)+'</td><td class="num">'+(lk.slope>0?'+':'')+fmt(lk.slope)+'</td><td class="num">'+fmt(lk.r2)+'</td></tr>').join('')
+      + DATA.leaks.map(lk=>'<tr><td>'+lk.ds+'</td><td>'+esc(lk.kind)+'</td><td>'+esc((lk.kind==='heap'?lk.metric:lk.metric.toUpperCase())||'—')+'</td><td class="name">'+(lk.kind==='proc'?procLink(lk.name):esc(lk.name))+'</td><td class="num">'+fmt(lk.head)+'</td><td class="num">'+fmt(lk.tail)+'</td><td class="num">'+(lk.delta>0?'+':'')+fmt(lk.delta)+'</td><td class="num">'+(lk.slope>0?'+':'')+fmt(lk.slope)+'</td><td class="num">'+fmt(lk.r2)+'</td></tr>').join('')
       +'</tbody></table></div>';
   } else h += '<div class="muted">未发现疑似泄漏项。</div>';
   h += '</div>';
@@ -1490,6 +1510,7 @@ function openProc(name){
     +'<div class="card">'+cardHd('逐轮走势','x=轮次 · 实线=A '+LA+'，虚线=B '+LB+' · '+metric.toUpperCase()+' (MB) · 点击数据点可多选')+'<div id="pdChart" class="chart"></div></div>'
     +'<div class="card">'+cardHd('已选数据点','','<button class="btn ghost" id="pdSelClear">清空选择</button>')
     +'<div id="pdSelBody"></div></div>'
+    +'<div id="amWrap"></div>'
     +'<div class="grid2">'
     +'<div class="card">'+cardHd('分布统计','出现轮口径')+'<div class="tbl-wrap no-max"><table><thead><tr><th></th><th class="num">出现</th><th class="num">出现率</th><th class="num">轮均</th><th class="num">值均</th><th class="num">最小</th><th class="num">P50</th><th class="num">P90</th><th class="num">P95</th><th class="num">最大</th></tr></thead><tbody>'
     +'<tr><td><b>A</b></td>'+distRow(p.da)+'</tr><tr><td><b>B</b></td>'+distRow(p.db)+'</tr>'
@@ -1662,7 +1683,389 @@ function openProc(name){
     refreshSel();
   });
   drawSelBody();
+  initAppmem(name, document.getElementById('amWrap'));
   ov.scrollTop = 0;
+}
+
+/* ============ meminfo 明细走势 ============ */
+const AM = DATA.appmem || {fields:[], procs:{}};
+const AM_FIXED = {'TOTAL':'#0f172a','Native Heap':'#0d9488','Dalvik Heap':'#7c3aed'};
+const AM_CYCLE = ['#db2777','#65a30d','#0891b2','#a21caf','#475569','#15803d',
+                  '#e11d48','#4d7c0f','#0e7490','#86198f'];
+const amLookup = name => {   // appmem 键是 PSS-by-OOM 名；RSS 进程名可带路径前缀
+  if (AM.procs[name]) return {key:name, data:AM.procs[name]};
+  const base = name.split('/').pop();
+  if (base !== name && AM.procs[base]) return {key:base, data:AM.procs[base]};
+  return null;
+};
+const amColor = f => AM_FIXED[f] || AM_CYCLE[Math.max(0,AM.fields.indexOf(f)) % AM_CYCLE.length];
+const amTint = (hex,a)=>{const n=parseInt(hex.slice(1),16);
+  return 'rgba('+(n>>16)+','+((n>>8)&255)+','+(n&255)+','+a+')';};
+const AM_PARSE = s => {   // '1-50, 100' → {ranges:[[1,50],[100,100]]} 或 {err:token}
+  const ranges=[];
+  for (const tok of String(s).split(/[,，、\s]+/).filter(Boolean)){
+    const m = tok.match(/^(\d+)(?:\s*[-–—~]\s*(\d+))?$/);
+    if (!m) return {err:tok};
+    const a=+m[1], b=m[2]==null?a:+m[2];
+    if (a>b) return {err:tok};
+    ranges.push([a,b]);
+  }
+  if (!ranges.length) return {err:String(s)};
+  ranges.sort((x,y)=>x[0]-y[0]);
+  const out=[];
+  for (const r of ranges){
+    if (out.length && r[0]<=out[out.length-1][1]+1)
+      out[out.length-1][1]=Math.max(out[out.length-1][1],r[1]);
+    else out.push(r);
+  }
+  return {ranges:out};
+};
+const amRangeStr = rs => rs.map(r=>r[0]===r[1]?''+r[0]:r[0]+'-'+r[1]).join(',');
+
+function initAppmem(name, wrap){
+  const am = (amLookup(name)||{}).data;
+  const TITLE = 'meminfo 明细走势';
+  const SUB = 'dumpsys meminfo 明细表 Pss Total（MB） · 实线=A '+esc(LA)+'，虚线=B '+esc(LB);
+  if (!am){
+    wrap.innerHTML = '<div class="card">'+cardHd(TITLE, SUB)
+      +'<div class="empty">测试平台没有采集该进程的 dumpsys meminfo 明细。</div></div>';
+    return;
+  }
+  const RA = DS[0].rounds, RB = DS[1].rounds;
+  const minRA = RA.length?Math.min(...RA):0, maxRA = RA.length?Math.max(...RA):0;
+  const minRB = RB.length?Math.min(...RB):0, maxRB = RB.length?Math.max(...RB):0;
+  const minR = Math.min(minRA,minRB), maxR = Math.max(maxRA,maxRB);
+  const byR = {a:new Map(), b:new Map()};          // 轮次号 → v 数组下标
+  if (am.a) am.a.k.forEach((k,j)=>byR.a.set(RA[k],j));
+  if (am.b) am.b.k.forEach((k,j)=>byR.b.set(RB[k],j));
+
+  // 状态（hash mm/mr/ms 恢复）
+  const hp = parseHash();
+  let sides = ({a:1,b:1,ab:1})[hp.ms] ? hp.ms : 'ab';
+  let sel = [];
+  if (hp.mm) sel = hp.mm.split(',').map(s=>s.trim()).filter(f=>am.fields.indexOf(f)>=0);
+  if (!sel.length){
+    sel = ['Native Heap','Dalvik Heap'].filter(f=>am.fields.indexOf(f)>=0);
+    if (!sel.length) sel = am.fields.indexOf('TOTAL')>=0 ? ['TOTAL'] : am.fields.slice(0,1);
+  }
+  let ranges = [[minR,maxR]];
+  if (hp.mr){
+    const pr = AM_PARSE(hp.mr);
+    if (!pr.err){
+      const cl = pr.ranges.map(g=>[Math.max(g[0],minR),Math.min(g[1],maxR)])
+                          .filter(g=>g[0]<=g[1]);
+      if (cl.length) ranges = cl;
+    }
+  }
+
+  // 头部疑似泄漏 tag
+  const ltags = [];
+  [['a',am.leak_a],['b',am.leak_b]].forEach(([sd,fl])=>(fl||[]).forEach(f=>{
+    const t = am.heap[sd] && am.heap[sd][f];
+    ltags.push('<span class="tag tag-sig">'+sd.toUpperCase()+' '+esc(f)+' 疑似泄漏'
+      +(t&&t.delta!=null?' '+((t.delta>0?'+':'')+fmt(t.delta,1))+' MB':'')+'</span>');
+  }));
+
+  wrap.innerHTML =
+    '<div class="card">'+cardHd(TITLE, SUB, ltags.join(''))
+    +'<div class="amctl"><span>指标</span><div class="amchips" id="amChips"></div></div>'
+    +'<div class="amctl"><label>轮次 <input type="text" id="amRange" style="width:190px" placeholder="如 1-50, 100, 500-600"></label>'
+    +'<button class="btn ghost" id="amAll">全部</button>'
+    +'<label><input type="number" id="amN" min="1" value="50" style="width:64px"> 轮</label>'
+    +'<button class="btn ghost" id="amFirst" title="两侧同显时取共同首轮 max(首轮A,首轮B)，否则取当前显示侧">前 N 轮</button>'
+    +'<button class="btn ghost" id="amLast" title="两侧同显时取共同末轮 min(最大轮A,最大轮B)，否则取当前显示侧">后 N 轮</button>'
+    +'<span style="flex:1"></span>'
+    +'<span class="muted">显示</span><span class="segtrack" id="amSide"><button class="seg" data-s="a">A</button><button class="seg" data-s="b">B</button><button class="seg" data-s="ab">A+B</button></span>'
+    +'<div class="amerr" id="amErr" style="display:none"></div></div>'
+    +'<canvas id="amRibbon" height="34" aria-hidden="true"></canvas>'
+    +'<div id="amCov"></div>'
+    +'<div id="amChartBox"><div class="chart" id="amChart"></div></div>'
+    +'<div id="amHeap"></div>'
+    +'<div class="muted" style="font-size:12px;margin-top:8px">趋势回归，提示非定论；覆盖率需 ≥ 常驻阈值。</div>'
+    +'</div>';
+
+  const el = id => wrap.querySelector('#'+id);
+  const sidesArr = () => sides==='ab' ? ['a','b'] : [sides];
+  const inRanges = r => ranges.some(g=>r>=g[0]&&r<=g[1]);
+  const validRounds = () => {
+    const s = new Set();
+    if (sides!=='b') RA.forEach(r=>s.add(r));
+    if (sides!=='a') RB.forEach(r=>s.add(r));
+    return [...s].sort((x,y)=>x-y);
+  };
+  const selRounds = () => validRounds().filter(inRanges);
+  const pushHash = () => updHashQuiet({mm:sel.join(','), mr:amRangeStr(ranges), ms:sides});
+  const mergeAdd = (rs,g)=>{
+    const a = rs.concat([g]); a.sort((x,y)=>x[0]-y[0]);
+    const out=[];
+    for (const r of a){
+      if (out.length && r[0]<=out[out.length-1][1]+1)
+        out[out.length-1][1]=Math.max(out[out.length-1][1],r[1]);
+      else out.push(r);
+    }
+    return out;
+  };
+
+  /* ---- 指标 chips ---- */
+  const meanOf = f => {
+    let s=0,c=0;
+    sidesArr().forEach(d=>{ const v = am[d] && am[d].v[f];
+      if (v) v.forEach(x=>{s+=x;c++;}); });
+    return c ? s/c : -1;
+  };
+  const drawChips = () => {
+    const ord = am.fields.slice().sort((x,y)=>{
+      if (x==='TOTAL') return -1;
+      if (y==='TOTAL') return 1;
+      return meanOf(y)-meanOf(x);
+    });
+    const box = el('amChips');
+    box.innerHTML = ord.map(f=>{
+      const on = sel.indexOf(f)>=0, c = amColor(f), m = meanOf(f);
+      return '<button class="amchip" data-f="'+esc(f)+'" aria-pressed="'+on+'"'
+        +(on?' style="border-color:'+c+';background:'+amTint(c,.10)+'"':'')
+        +'><i class="sw" style="background:'+c+'"></i>'+esc(f)
+        +(m>=0?'<span class="mv">'+m.toFixed(1)+'</span>':'')+'</button>';
+    }).join('');
+    box.querySelectorAll('.amchip').forEach(b=>b.onclick=()=>{
+      const f = b.dataset.f, i = sel.indexOf(f), c = amColor(f);
+      if (i>=0){ sel.splice(i,1); b.setAttribute('aria-pressed','false');
+                 b.style.borderColor=''; b.style.background=''; }
+      else { sel.push(f); b.setAttribute('aria-pressed','true');
+             b.style.borderColor=c; b.style.background=amTint(c,.10); }
+      drawChart(); pushHash();
+    });
+  };
+
+  /* ---- 覆盖条带 ---- */
+  const cv = el('amRibbon');
+  const LX = 18;
+  const drawRibbon = hl => {
+    const dpr = window.devicePixelRatio || 1;
+    const w = cv.clientWidth || wrap.clientWidth || 600, h = 34;
+    cv.width = w*dpr; cv.height = h*dpr;
+    const ctx = cv.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,w,h);
+    const x1 = w-2, span = Math.max(1, maxR-minR);
+    const X = r => LX + (r-minR)/span*(x1-LX);
+    const yA=6, yB=20, rh=10;
+    ctx.fillStyle = 'rgba(15,23,42,.08)';
+    const bands = hl ? ranges.concat([hl]) : ranges;
+    bands.forEach((g,bi)=>{
+      const a=Math.max(LX,X(g[0]-0.5)), b=Math.min(x1,X(g[1]+0.5));
+      ctx.fillStyle = hl && bi===bands.length-1 ? 'rgba(15,23,42,.2)' : 'rgba(15,23,42,.08)';
+      ctx.fillRect(a,2,Math.max(1,b-a),h-4);
+      ctx.fillStyle = 'rgba(15,23,42,.5)';
+      ctx.fillRect(a,2,1,h-4); ctx.fillRect(Math.max(a,b-1),2,1,h-4);
+    });
+    ctx.font = '11px '+FONT;
+    ctx.fillStyle = CA; ctx.fillText('A',2,yA+8);
+    ctx.fillStyle = CB; ctx.fillText('B',2,yB+8);
+    const tw = Math.min(12, Math.max(1.5, (x1-LX)/span*0.6));
+    const tick = (r,y,col,hidden)=>{
+      const sel = inRanges(r);
+      ctx.globalAlpha = hidden ? (sel?0.3:0.12) : (sel?1:0.3);
+      ctx.fillStyle=col;
+      ctx.fillRect(X(r)-tw/2, y, tw, rh); ctx.globalAlpha=1;
+    };
+    if (am.a) byR.a.forEach((j,r)=>tick(r,yA,CA,sides==='b'));
+    if (am.b) byR.b.forEach((j,r)=>tick(r,yB,CB,sides==='a'));
+  };
+  const xToR = px => {
+    const x1 = cv.clientWidth-2;
+    const r = minR + (px-LX)/Math.max(1,x1-LX)*(maxR-minR);
+    return Math.round(Math.min(maxR,Math.max(minR,r)));
+  };
+  let drag = null;
+  cv.addEventListener('pointerdown', e=>{
+    const rect = cv.getBoundingClientRect();
+    drag = {r0:xToR(e.clientX-rect.left), shift:e.shiftKey};
+    cv.setPointerCapture(e.pointerId);
+  });
+  cv.addEventListener('pointermove', e=>{
+    if (!drag) return;
+    const rect = cv.getBoundingClientRect();
+    const r1 = xToR(e.clientX-rect.left);
+    drawRibbon([Math.min(drag.r0,r1), Math.max(drag.r0,r1)]);
+  });
+  cv.addEventListener('pointerup', e=>{
+    if (!drag) return;
+    const rect = cv.getBoundingClientRect();
+    const r1 = xToR(e.clientX-rect.left);
+    const g = [Math.min(drag.r0,r1), Math.max(drag.r0,r1)];
+    ranges = drag.shift ? mergeAdd(ranges,g) : [g];
+    drag = null;
+    syncRangeUI();
+  });
+  if (window.ResizeObserver)
+    new ResizeObserver(()=>drawRibbon()).observe(cv);
+
+  /* ---- 轮次输入 / 按钮 ---- */
+  const rIn = el('amRange'), err = el('amErr');
+  const applyRange = () => {
+    const pr = AM_PARSE(rIn.value);
+    if (pr.err!=null){
+      err.style.display='block';
+      err.textContent='「'+pr.err+'」不是轮次或区间';
+      return;
+    }
+    const cl = pr.ranges.map(g=>[Math.max(g[0],minR),Math.min(g[1],maxR)])
+                        .filter(g=>g[0]<=g[1]);
+    if (!cl.length){
+      err.style.display='block';
+      err.textContent='所选区间不在有效轮次范围（'+minR+'-'+maxR+'）内';
+      rIn.value = amRangeStr(ranges);
+      return;
+    }
+    err.style.display='none';
+    ranges = cl;
+    syncRangeUI();
+  };
+  rIn.addEventListener('keydown', e=>{ if(e.key==='Enter'){ applyRange(); rIn.blur(); } });
+  rIn.addEventListener('blur', applyRange);
+  el('amAll').onclick = ()=>{ ranges=[[minR,maxR]]; syncRangeUI(); };
+  const nVal = ()=>Math.max(1, +el('amN').value||50);
+  el('amFirst').onclick = ()=>{
+    const s0 = sides==='ab' ? Math.max(minRA,minRB) : (sides==='a'?minRA:minRB);
+    const st = Math.min(Math.max(s0,minR), maxR);
+    ranges = [[st, Math.min(st+nVal()-1,maxR)]];
+    syncRangeUI();
+  };
+  el('amLast').onclick = ()=>{
+    const e0 = sides==='ab' ? Math.min(maxRA,maxRB) : (sides==='a'?maxRA:maxRB);
+    const en = Math.min(Math.max(e0,minR), maxR);
+    ranges = [[Math.max(en-nVal()+1,minR), en]];
+    syncRangeUI();
+  };
+  const seg = el('amSide');
+  seg.querySelectorAll('.seg').forEach(b=>{
+    b.classList.toggle('active', b.dataset.s===sides);
+    b.onclick = ()=>{
+      sides = b.dataset.s;
+      seg.querySelectorAll('.seg').forEach(x=>x.classList.toggle('active',x===b));
+      drawChips(); drawRibbon(); drawChart(); drawCov(); pushHash();
+    };
+  });
+
+  const syncRangeUI = () => {
+    rIn.value = amRangeStr(ranges);
+    err.style.display='none';
+    drawRibbon(); drawChart(); drawCov(); pushHash();
+  };
+
+  /* ---- 覆盖说明 ---- */
+  const drawCov = () => {
+    const rs = selRounds();
+    const parts = [];
+    if (sides!=='b') parts.push('A 有数据 '+rs.filter(r=>byR.a.has(r)).length+' 轮');
+    if (sides!=='a') parts.push('B 有数据 '+rs.filter(r=>byR.b.has(r)).length+' 轮');
+    el('amCov').textContent = '所选 '+rs.length+' 轮：'+parts.join('，')
+      +'。采集哪些进程由测试平台决定，逐轮可能不同。';
+  };
+
+  /* ---- 走势图 ---- */
+  const drawChart = () => {
+    const box = el('amChartBox');
+    const rs = selRounds();
+    const cats = []; let prev=null;
+    rs.forEach(r=>{ if(prev!=null && r>prev+1) cats.push('…'); cats.push(r); prev=r; });
+    const sd = sidesArr();
+    const fSel = am.fields.filter(f=>sel.indexOf(f)>=0);
+    let anyData = false;
+    const series = fSel.map(f=>{
+      const c = amColor(f);
+      return sd.map(d=>{
+        const s = am[d];
+        const data = cats.map(cat=>{
+          if (cat==='…' || !s) return null;
+          const j = byR[d].get(cat);
+          if (j==null) return null;
+          const v = s.v[f];
+          if (v==null || v[j]==null) return null;
+          anyData = true;
+          return v[j];
+        });
+        return {name:f+' '+(d==='a'?'A':'B'), type:'line', data,
+          itemStyle:{color:c},
+          lineStyle:{color:c,width:f==='TOTAL'?2.5:2,type:d==='b'?'dashed':'solid'},
+          showSymbol:cats.length<=60, symbolSize:5, connectNulls:false};
+      });
+    }).flat();
+    const chartEl = el('amChart');
+    const old = chartEl && echarts.getInstanceByDom(chartEl);
+    if (!rs.length || !anyData){
+      if (old){ old.dispose(); LIVE_CHARTS.delete(old); }
+      box.innerHTML = '<div class="empty">所选轮次中没有该进程的明细数据，可在上方条带查看哪些轮次有数据。</div>';
+      return;
+    }
+    if (!old) box.innerHTML = '<div class="chart" id="amChart"></div>';
+    const ch = old || makeChart(el('amChart'));
+    ch.setOption({
+      tooltip:{trigger:'axis', formatter: ps=>{
+        const cat = ps.length && ps[0].axisValue;
+        if (cat==='…' || cat==null) return '';
+        const r = +cat;
+        let h = '第 '+r+' 轮';
+        sd.forEach(d=>{
+          const i = d==='a'?0:1, rr = i?RB:RA;
+          const kk = rr.indexOf(r);
+          if (kk<0) return;
+          h += '<br><b>'+(d==='a'?'A':'B')+' '+esc(DS[i].label)+'</b>'
+            +' <span class="muted">'+(DS[i].start_times[kk]||'')
+            +(DS[i].hours[kk]!=null?' t+'+(+DS[i].hours[kk]).toFixed(2)+'h':'')+'</span>';
+          const s = am[d], j = s ? byR[d].get(r) : null;
+          if (j==null){ h += ' <span class="muted">无明细</span>'; return; }
+          fSel.forEach(f=>{
+            const v = s.v[f];
+            h += '<br><span style="display:inline-block;width:10px;height:3px;background:'+amColor(f)+';margin-right:5px"></span>'
+              +esc(f)+' <b>'+fmt(v?v[j]:null)+'</b>';
+          });
+        });
+        return h;
+      }},
+      grid:{top:14,left:66,right:20,bottom:cats.length>60?58:30},
+      xAxis:{type:'category',data:cats.map(String)},
+      yAxis:{type:'value',name:'MB',scale:true},
+      dataZoom:[{type:'inside'}].concat(cats.length>60?[{type:'slider',height:18,bottom:8}]:[]),
+      series}, {notMerge:true});
+  };
+
+  /* ---- 堆趋势表 ---- */
+  const drawHeap = () => {
+    const resident = DATA.meta.resident;
+    let rows='';
+    ['Native Heap','Dalvik Heap'].forEach(f=>{
+      if (am.fields.indexOf(f)<0) return;
+      const nz = (am.a&&am.a.v[f]||[]).concat(am.b&&am.b.v[f]||[]).some(v=>v>0);
+      if (!nz) return;   // 两侧全零（如 native 的 Dalvik）
+      ['a','b'].forEach(d=>{
+        const i = d==='a'?0:1, cov = am['cov_'+d], n = DS[i].n;
+        const t = am.heap[d][f];
+        let verdict;
+        if (!cov) verdict = '<span class="muted">—</span>';
+        else if (!t) verdict = '<span class="muted">点数不足</span>';
+        else if ((am['leak_'+d]||[]).indexOf(f)>=0)
+          verdict = '<span class="tag tag-sig">疑似泄漏</span>';
+        else if (n && cov/n < resident)
+          verdict = '<span class="muted">覆盖不足</span>';
+        else verdict = '<span class="muted">—</span>';
+        rows += '<tr><td>'+esc(f)+'</td><td><span class="sc sc-'+d+'">'+d.toUpperCase()+'</span></td>'
+          +'<td class="num">'+cov+'/'+n+'</td>'
+          +'<td class="num">'+fmt(t&&t.head)+'</td><td class="num">'+fmt(t&&t.tail)+'</td>'
+          +'<td class="num">'+(t?(t.delta>0?'+':'')+fmt(t.delta):'—')+'</td>'
+          +'<td class="num">'+(t?(t.slope>0?'+':'')+fmt(t.slope):'—')+'</td>'
+          +'<td class="num">'+fmt(t&&t.r2)+'</td><td>'+verdict+'</td></tr>';
+      });
+    });
+    el('amHeap').innerHTML = rows
+      ? '<div class="sec-h" style="margin-top:14px">堆趋势</div>'
+        +'<div class="tbl-wrap no-max"><table><thead><tr><th>指标</th><th>侧</th><th class="num">覆盖</th><th class="num">head</th><th class="num">tail</th><th class="num">delta</th><th class="num">斜率/h</th><th class="num">R²</th><th>判定</th></tr></thead><tbody>'
+        +rows+'</tbody></table></div>' : '';
+  };
+
+  rIn.value = amRangeStr(ranges);
+  drawChips(); drawRibbon(); drawCov(); drawChart(); drawHeap();
 }
 
 route();

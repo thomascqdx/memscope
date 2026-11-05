@@ -23,25 +23,28 @@ def parse_dumpsys(text: str) -> dict:
         if m:
             uptime_ms = int(m.group(1))
             break
+    pss, pids = _parse_pss_oom(lines)
     return {
         'uptime_ms': uptime_ms,
-        'pss': _parse_pss_oom(lines),
+        'pss': pss,
+        'pids': pids,
         'tail': _parse_tail(lines),
     }
 
 
-def _parse_pss_oom(lines: list) -> dict:
-    """返回 {level: {'total': mb, 'procs': {name: mb}}}。
+def _parse_pss_oom(lines: list):
+    """返回 ({level: {'total': mb, 'procs': {name: mb}}}, {pid: name})。
 
     level 行缩进 < 8；进程行缩进 >= 8，名称后接 `(pid N)`、`(pid N / activities)`，
-    且 `(in swap)` 括注可能紧贴 `)`。同名多 pid 相加。
+    且 `(in swap)` 括注可能紧贴 `)`。同名多 pid 相加；pids 记录 pid→进程名。
     """
     title = 'Total PSS by OOM adjustment:'
     try:
         s = lines.index(title)
     except ValueError:
-        return {}
+        return {}, {}
     out = {}
+    pids = {}
     cur = None
     for l in lines[s + 1:]:
         if not l.strip():
@@ -57,9 +60,10 @@ def _parse_pss_oom(lines: list) -> dict:
         elif cur is not None:
             pm = _PID.match(name)
             if pm:
-                cur['procs'][pm.group(1).strip()] = (
-                    cur['procs'].get(pm.group(1).strip(), 0.0) + _num(v))
-    return out
+                nm = pm.group(1).strip()
+                pids[int(pm.group(2))] = nm
+                cur['procs'][nm] = cur['procs'].get(nm, 0.0) + _num(v)
+    return out, pids
 
 
 def _parse_tail(lines: list) -> dict:

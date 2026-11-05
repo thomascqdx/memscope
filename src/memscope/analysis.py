@@ -292,6 +292,88 @@ def _leak_flag(t, resident_ok: bool, delta_thr: float, opts: Options) -> bool:
             and t['delta'] >= max(delta_thr, t['head'] * opts.leak_pct / 100.0))
 
 
+# ---------- 进程 meminfo 明细（dumpsys_meminfo_<proc>） ----------
+_HEAP_FIELDS = ('Native Heap', 'Dalvik Heap')
+# 全局字段排序：TOTAL 第一，其余按 AOSP dumpsys 打印序，未知名称字母序追加
+_APPMEM_FIELD_ORDER = [
+    'TOTAL', 'Native Heap', 'Dalvik Heap', 'Dalvik Other', 'Stack', 'Ashmem',
+    'Gfx dev', 'Other dev', '.so mmap', '.jar mmap', '.apk mmap', '.ttf mmap',
+    '.dex mmap', '.oat mmap', '.art mmap', 'Other mmap', 'EGL mtrack',
+    'GL mtrack', 'Other mtrack', 'Memfd', 'Unknown']
+
+
+def build_appmem(dsa: Dataset, dsb: Dataset, opts: Options, ha, hb):
+    """rd.appmem → {'fields', 'procs', 'leaks'}（结果 dict 的 'appmem' 键）。
+
+    行缺失按 0 计入（dumpsys 省略全零行）；k = ds.rounds 下标（0-based），
+    与 datasets[i].rounds/start_times/hours 同索引。
+    """
+    field_set = set()
+    names = set()
+    for ds in (dsa, dsb):
+        for rd in ds.rounds:
+            names.update(rd.appmem)
+            for rows in rd.appmem.values():
+                field_set.update(rows)
+    fields = [f for f in _APPMEM_FIELD_ORDER if f in field_set]
+    fields += sorted(f for f in field_set if f not in _APPMEM_FIELD_ORDER)
+
+    procs = {}
+    leaks = []
+    for name in sorted(names):
+        kss, seen = {}, set()
+        for sd, ds in (('a', dsa), ('b', dsb)):
+            kss[sd] = [i for i, rd in enumerate(ds.rounds)
+                       if name in rd.appmem]
+            for i in kss[sd]:
+                seen.update(ds.rounds[i].appmem[name])
+        pfields = [f for f in fields if f in seen]
+        sides, heap, cov = {}, {}, {}
+        for sd, ds, hours in (('a', dsa, ha), ('b', dsb, hb)):
+            n = ds.n
+            ks = kss[sd]
+            cov[sd] = len(ks)
+            heap[sd] = {f: None for f in _HEAP_FIELDS}
+            if not ks:
+                sides[sd] = None
+                continue
+            kset = set(ks)
+            sides[sd] = {
+                'k': ks,
+                'v': {f: [round(ds.rounds[i].appmem[name].get(f, 0.0), 2)
+                          for i in ks]
+                      for f in pfields}}
+            for f in _HEAP_FIELDS:
+                if f not in seen:
+                    continue
+                full = [ds.rounds[i].appmem[name].get(f, 0.0)
+                        if i in kset else None for i in range(n)]
+                if not any(v for v in full):   # 全零（如 native 的 Dalvik）
+                    continue
+                heap[sd][f] = trend(hours, full, opts.trend_min)
+        leak_a, leak_b = [], []
+        if not _is_test_tool(name):
+            for sd, ds, flagged in (('a', dsa, leak_a), ('b', dsb, leak_b)):
+                resident_ok = cov[sd] / ds.n >= opts.resident if ds.n else False
+                for f in _HEAP_FIELDS:
+                    t = heap[sd][f]
+                    if _leak_flag(t, resident_ok, opts.leak_delta, opts):
+                        flagged.append(f)
+                        leaks.append({'ds': sd.upper(), 'kind': 'heap',
+                                      'metric': f, 'name': name,
+                                      'slope': t['slope'], 'r2': t['r2'],
+                                      'head': t['head'], 'tail': t['tail'],
+                                      'delta': t['delta']})
+        procs[name] = {
+            'fields': pfields,
+            'a': sides['a'], 'b': sides['b'],
+            'cov_a': cov['a'], 'cov_b': cov['b'],
+            'heap': heap,
+            'leak_a': leak_a, 'leak_b': leak_b,
+        }
+    return {'fields': fields, 'procs': procs, 'leaks': leaks}
+
+
 def build_metric(dsa: Dataset, dsb: Dataset, kind: str, opts: Options,
                  ha, hb):
     na, nb = dsa.n, dsb.n
@@ -987,16 +1069,24 @@ def _findings(dsa, dsb, mp, system, std_a, std_b, ea, eb, pressure, opts,
     for lk in leaks:
         groups.setdefault((lk['kind'], lk['name']), {'A': [], 'B': []})[
             lk['ds']].append(lk)
-    kind_cn = {'proc': '进程', 'level': '层级', 'sys': '整机'}
+    kind_cn = {'proc': '进程', 'level': '层级', 'sys': '整机',
+               'heap': '进程堆'}
     for (kind, name), g in groups.items():
         nm = name
-        link = (f'#proc={nm}&metric={g["A"][0]["metric"] if g["A"] else g["B"][0]["metric"]}' if kind == 'proc'
-                else '#tab=levels' if kind == 'level' else '#tab=system')
+        if kind == 'proc':
+            link = (f'#proc={nm}&metric='
+                    f'{g["A"][0]["metric"] if g["A"] else g["B"][0]["metric"]}')
+        elif kind == 'heap':
+            link = f'#proc={nm}&mm=Native Heap,Dalvik Heap'
+        else:
+            link = '#tab=levels' if kind == 'level' else '#tab=system'
         parts = []
         for dsk in ('A', 'B'):
             for lk in g[dsk]:
+                mtxt = (lk['metric'] if lk['kind'] == 'heap'
+                        else lk['metric'].upper())
                 parts.append(
-                    f"{dsk}/{lk['metric'].upper() or '整机'} "
+                    f"{dsk}/{mtxt or '整机'} "
                     f"delta {lk['delta']:+.1f} MB"
                     f"（{lk['head']:.1f}→{lk['tail']:.1f}），"
                     f"slope {lk['slope']:+.2f} MB/h，R²={lk['r2']:.2f}")
@@ -1223,6 +1313,8 @@ def analyze(dsa: Dataset, dsb: Dataset, opts: Options) -> dict:
                               'name': r['name'], 'slope': t['slope'],
                               'r2': t['r2'], 'head': t['head'],
                               'tail': t['tail'], 'delta': t['delta']})
+    appmem = build_appmem(dsa, dsb, opts, ha, hb)
+    leaks += appmem.pop('leaks')
 
     mp = mrss if opts.primary_metric == 'rss' else mpss
     findings = _findings(dsa, dsb, mp, system, std_a, std_b, ea, eb,
@@ -1259,6 +1351,7 @@ def analyze(dsa: Dataset, dsb: Dataset, opts: Options) -> dict:
         'inhouse': ih,
         'google': {'prefixes': list(opts.google_prefixes),
                    'prefixes_src': opts.google_prefixes_src},
+        'appmem': appmem,
         'leaks': leaks,
         'findings': findings,
     }

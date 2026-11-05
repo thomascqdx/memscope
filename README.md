@@ -62,6 +62,7 @@ memscope dynamic compare <基线A.(zip|rar)> <对比B.(zip|rar)> [-o 输出目�
 - 自研进程判定：`--whitelist` 优先（白名单），其次 `--prefixes`（默认 `config/inhouse_prefixes.txt`）前缀匹配。
 - Google 进程判定：`--google-prefixes`（默认 `config/google_prefixes.txt` 或内置）前缀匹配；与自研同时命中时自研优先。
 - 测试包事件数 >5000 时 HTML 不内嵌明细（明细在 data.xlsx 的「启动事件」sheet）。
+- 进程 meminfo 明细：测试平台若逐进程采集 `dumpsys_meminfo_<proc>.txt`，HTML 进程详情页提供「meminfo 明细走势」卡（指标/轮次可筛选、覆盖条带、堆趋势疑似泄漏提示），明细另见 data.xlsx「进程meminfo明细」「进程堆趋势」。
 
 ## 打包单文件 exe
 
@@ -80,7 +81,7 @@ memscope.exe static compare A.zip B.zip -o outdir
 - **PSS** 数据：dumpsys meminfo OOM 层（含 swap，层为总值）→ 默认静态主口径；**RSS** 数据：procStatus 的 VmRSS+VmSwap，OomScore 映射层级（用于标准对照，默认动态主口径）。
 - 轮均 = 非空轮合计 ÷ 总轮数（缺席按 0）；值均 = 仅出现轮均值；出现率 = 出现轮数 ÷ 总轮数。
 - GAP = B − A（轮均）；显著差异：|GAP| ≥ gap-abs 且（新增/消失或 |GAP|/A ≥ gap-pct）视为显著变化。
-- 报告共 12 节（口径说明见末节）：测试信息 / 结论摘要 / 健康标准对照 / 整机内存 / 层级内存（RSS+PSS）/ 进程 GAP Top20 / 独有进程与层级变化 / 自研与 Google / 疑似泄漏 / 进程事件 / 内存压力 / 口径说明。
+- 报告共 13 节（口径说明见末节）：测试信息 / 结论摘要 / 健康标准对照 / 整机内存 / 层级内存（RSS+PSS）/ 进程 GAP Top20 / 独有进程与层级变化 / 自研与 Google / 疑似泄漏 / 进程 meminfo 明细 / 进程事件 / 内存压力 / 口径说明。
 
 ## 开发
 

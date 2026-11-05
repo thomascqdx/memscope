@@ -68,7 +68,7 @@ def test_round_files_regex(tmp_path):
              'round_1/procStatus_sortedByLevel.txt',
              'round_1/proc_meminfo.txt',
              'round_1/tran_mem_debug/proc_vmstat.txt',
-             'round_1/dumpsys_meminfo_init.txt',       # 非目标
+             'round_1/dumpsys_meminfo_init.txt',       # 进程明细（目标）
              'round_1/tran_mem_debug/dumpsys_activity_a.txt',
              'x/round_2/procStatus_sortedByLevel.txt'}
 
@@ -79,7 +79,8 @@ def test_round_files_regex(tmp_path):
 
     r = _round_files(_Src(), names, tmp_path, [])
     assert sorted(r) == [1, 2]
-    assert sorted(r[1]) == ['dumpsys_meminfo.txt', 'procStatus_sortedByLevel.txt',
+    assert sorted(r[1]) == ['dumpsys_meminfo.txt', 'dumpsys_meminfo_init.txt',
+                            'procStatus_sortedByLevel.txt',
                             'proc_meminfo.txt', 'proc_vmstat.txt']
     assert sorted(r[2]) == ['procStatus_sortedByLevel.txt']
 

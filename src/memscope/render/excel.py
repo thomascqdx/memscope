@@ -229,6 +229,53 @@ def render(R: dict, out_path) -> Path:
                    _f(lk['head']), _f(lk['tail']), _f(lk['delta']),
                    _f(lk['slope']), _f(lk['r2'])])
 
+    # 进程堆趋势（dumpsys meminfo 明细 Native/Dalvik Heap 回归）
+    am = R.get('appmem') or {}
+    ws = _sheet(wb, '进程堆趋势',
+                ['版本', '进程', '指标', '覆盖轮/有效轮', 'head', 'tail',
+                 'delta', '斜率/h', 'R²', '判定'])
+    for name, p in am.get('procs', {}).items():
+        for side, lab, ds, leak in (('a', 'A', dsA, p['leak_a']),
+                                    ('b', 'B', dsB, p['leak_b'])):
+            cov = p['cov_' + side]
+            for f in ('Native Heap', 'Dalvik Heap'):
+                if f not in p['fields']:
+                    continue
+                # 两侧全零的字段整行跳过
+                if not any(v for sd in ('a', 'b')
+                           for v in ((p[sd] or {}).get('v') or {})
+                           .get(f, [])):
+                    continue
+                t = p['heap'][side][f]
+                if t is None:
+                    verdict = '点数不足' if cov else '—'
+                elif f in leak:
+                    verdict = '疑似泄漏'
+                elif ds['n'] and cov / ds['n'] < meta['resident']:
+                    verdict = '覆盖不足'
+                else:
+                    verdict = '—'
+                ws.append([lab, name, f, f"{cov}/{ds['n']}",
+                           _f(t['head'] if t else None),
+                           _f(t['tail'] if t else None),
+                           _f(t['delta'] if t else None),
+                           _f(t['slope'] if t else None),
+                           _f(t['r2'] if t else None), verdict])
+
+    # 进程meminfo明细（proc×轮 × 字段，MB）
+    ws = _sheet(wb, '进程meminfo明细',
+                ['版本', '进程', '轮次', '采集时间'] + am.get('fields', []))
+    for side, lab, ds in (('a', 'A', dsA), ('b', 'B', dsB)):
+        for name, p in am.get('procs', {}).items():
+            s = p[side]
+            if not s:
+                continue
+            for j, k in enumerate(s['k']):
+                ws.append([lab, name, ds['rounds'][k],
+                           ds['start_times'][k]]
+                          + [s['v'][f][j] if f in s['v'] else ''
+                             for f in am['fields']])
+
     # LMK查杀（全量明细）
     ws = _sheet(wb, 'LMK查杀',
                 ['数据集', '时间', '进程', 'adj', '层级', 'rss_mb', 'code',

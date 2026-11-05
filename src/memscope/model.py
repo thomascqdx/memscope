@@ -37,6 +37,8 @@ class RoundData:
     tail: dict = field(default_factory=dict)     # dumpsys 尾部汇总, MB
     meminfo: dict = field(default_factory=dict)  # /proc/meminfo, MB
     vmstat: dict = field(default_factory=dict)   # /proc/vmstat 累计计数器（存在才解析）
+    # appmem[proc_name][row] = dumpsys meminfo 明细表 Pss Total, MB（存在才解析）
+    appmem: dict = field(default_factory=dict)
 
 
 @dataclass
