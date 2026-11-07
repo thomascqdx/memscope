@@ -19,7 +19,8 @@ from .parsers.events import dedupe_lines, parse_events
 
 _STATIC_TAGS = ('am_proc_start', 'am_kill', 'am_proc_died', 'boot_progress_start')
 _DYNAMIC_TAGS = ('killinfo', 'am_anr', 'am_crash', 'am_low_memory')
-TAGS = _STATIC_TAGS + _DYNAMIC_TAGS
+_LAUNCH_TAGS = ('sysui_multi_action',)
+TAGS = _STATIC_TAGS + _DYNAMIC_TAGS + _LAUNCH_TAGS
 _BTAGS = tuple(t.encode() for t in TAGS)
 
 
@@ -36,7 +37,7 @@ def load_events(src, ds, names, tmp_path, opened, year):
     """填充 ds.events / ds.boot_time / ds.event_source（失败只记 warning）。"""
     kind, lines, nfiles, ystats = _read_lines(src, ds, names, tmp_path, opened)
     ds.event_source = {'kind': kind, 'files': nfiles, 'lines': len(lines),
-                       'events': 0, 'first': None, 'last': None,
+                       'events': 0, 'launches': 0, 'first': None, 'last': None,
                        'ylog': ystats}
     if kind is None:
         ds.warnings.append(
@@ -71,8 +72,12 @@ def load_events(src, ds, names, tmp_path, opened, year):
     except Exception as e:  # noqa: BLE001
         ds.warnings.append(f'{kind} 事件解析失败: {e}')
         return
+    # launch（sysui_multi_action APP_TRANSITION）单列，不计入 events/first/last
+    ds.launches = [e for e in ds.events if e.kind == 'launch']
+    ds.events = [e for e in ds.events if e.kind != 'launch']
     ds.event_source['lines'] = len(uniq)
     ds.event_source['events'] = len(ds.events)
+    ds.event_source['launches'] = len(ds.launches)
     test_ts = [e.t for e in ds.events if e.phase == 'test']
     if test_ts:
         ds.event_source['first'] = min(test_ts).isoformat(sep=' ')

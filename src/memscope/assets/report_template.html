@@ -6,57 +6,90 @@
 <title>__TITLE__</title>
 <style>
 :root{
-  --c-a:#3b82f6; --c-b:#f59e0b;
-  --bg:#f5f7fb; --card:#fff; --line:#e6eaf2; --line-soft:#eef2f7;
-  --txt:#0f172a; --sub:#64748b; --brand:#0f172a; --brand-soft:#f1f5f9;
-  --red:#e11d48; --red-soft:#fff1f2; --green:#059669; --green-soft:#ecfdf5;
-  --font:"Segoe UI Variable","Segoe UI","Microsoft YaHei UI","Microsoft YaHei","PingFang SC",system-ui,sans-serif;
+  --paper:#F4F6F3; --sheet:#FFFFFF; --ink:#17202A; --graphite:#5A6570;
+  --rule:#D6DCD4; --rule-soft:#E7EBE5;
+  --a:#2F5DA8; --a-ink:#2A539A; --a-soft:#E6EDF8;
+  --b:#C26A12; --b-ink:#9A520B; --b-soft:#F8EBDD;
+  --flag:#C4182F; --flag-soft:#FBE9EB; --ok:#2B7A4B; --ok-soft:#E5F2EA;
+  --hover:#EEF1EC;
+  --f-body:"Microsoft YaHei UI","Microsoft YaHei","PingFang SC","Segoe UI",system-ui,sans-serif;
+  --f-num:Bahnschrift,"DIN Alternate","Segoe UI","Microsoft YaHei UI",sans-serif;
+  --f-num-narrow:"Bahnschrift SemiCondensed",Bahnschrift,"DIN Alternate","Segoe UI",sans-serif;
+  /* 旧变量别名（减少改动面） */
+  --c-a:var(--a); --c-b:var(--b); --bg:var(--paper); --card:var(--sheet);
+  --line:var(--rule); --line-soft:var(--rule-soft); --txt:var(--ink);
+  --sub:var(--graphite); --brand:var(--ink); --brand-soft:var(--hover);
+  --red:var(--flag); --red-soft:var(--flag-soft);
+  --green:var(--ok); --green-soft:var(--ok-soft);
+  --font:var(--f-body);
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
-body{font-family:var(--font);background:var(--bg);color:var(--txt);font-size:14px;line-height:1.5}
+body{font-family:var(--font);background:var(--bg);color:var(--txt);font-size:14px;line-height:1.55}
 a{color:var(--txt);text-decoration:underline;text-decoration-color:#cbd5e1;text-underline-offset:3px}
 a:hover{text-decoration-color:var(--txt)}
 a[href^="#proc="]{font-weight:500}
 
-/* ---------- 顶栏 ---------- */
-#topbar{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
-.bar-row{max-width:1400px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-.brand{display:flex;align-items:center;gap:10px}
-.logo{width:30px;height:30px;border-radius:8px;background:#0f172a;color:#fff;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center}
-.bar-row h1{font-size:16px;margin:0;white-space:nowrap;font-weight:600}
-.bar-row h1 .sub{font-size:12px;color:var(--sub);font-weight:400;margin-left:6px}
-.chips{display:flex;gap:8px;flex-wrap:wrap}
-.chip{display:inline-flex;align-items:center;gap:7px;padding:4px 12px;border-radius:4px;font-size:12px;border:1px solid var(--line);background:#fff;color:var(--sub)}
-.chip .dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
-.chip-a .dot{background:var(--c-a)}
-.chip-b .dot{background:var(--c-b)}
-.chip b{font-weight:600;color:var(--txt)}
+/* ---------- 布局：左侧导航 + 内容列 ---------- */
+#layout{display:block}
+#sidebar{position:fixed;left:0;top:0;bottom:0;width:208px;z-index:60;
+  background:var(--paper);border-right:1px solid var(--rule);
+  display:flex;flex-direction:column;min-width:0;overflow-y:auto}
+.brand{padding:18px 16px 8px}
+.brand .brand-t{font-size:16px;font-weight:600;color:var(--ink)}
+.brand .brand-s{font-size:12px;color:var(--graphite);margin-top:2px;font-family:var(--f-num)}
+#tabnav{flex:1;overflow-y:auto;padding:8px 0 12px}
+.nav-g{font-size:12px;color:var(--graphite);padding:14px 16px 4px}
+#tabnav button{display:block;width:100%;text-align:left;border:none;background:none;
+  padding:7px 12px 7px 19px;font-size:14px;color:var(--graphite);cursor:pointer;
+  white-space:nowrap;font-family:var(--font);border-left:3px solid transparent}
+#tabnav button:hover{color:var(--ink);background:var(--hover)}
+#tabnav button.active{color:var(--ink);font-weight:600;border-left-color:var(--ink);background:var(--sheet)}
+#sidebar .foot{margin-top:auto;padding:12px 16px;font-size:12px;color:var(--graphite);line-height:1.6}
+
+/* ---------- 顶栏（仅内容列内 sticky） ---------- */
+#topbar{margin-left:208px;position:sticky;top:0;z-index:50;
+  background:rgba(244,246,243,.88);backdrop-filter:blur(8px);border-bottom:1px solid var(--rule)}
+.bar-row{padding:10px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.chips{display:flex;gap:14px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--graphite)}
+.chip .sw{width:10px;height:10px;border-radius:2px;display:inline-block;flex:none}
+.chip-a .sw{background:var(--a)}
+.chip-b .sw{background:var(--b)}
+.chip b{font-weight:600;color:var(--ink)}
+.chip .cm{color:var(--graphite);font-size:12px}
 .toggles{margin-left:auto;display:flex;align-items:center;gap:14px;font-size:13px;color:var(--sub)}
-.segtrack{display:flex;background:#f1f5f9;border-radius:999px;padding:3px}
-.seg{border:none;background:transparent;padding:4px 16px;border-radius:999px;cursor:pointer;font-size:13px;color:var(--sub);font-family:var(--font)}
-.seg.active{background:#fff;color:var(--txt);box-shadow:0 1px 3px rgba(16,24,40,.14);font-weight:500}
+.segtrack{display:flex;background:#E9EDE7;border-radius:999px;padding:3px}
+.seg{border:none;background:transparent;padding:4px 16px;border-radius:999px;cursor:pointer;font-size:13px;color:var(--graphite);font-family:var(--font)}
+.seg.active{background:var(--sheet);color:var(--ink);box-shadow:0 1px 3px rgba(23,32,42,.14);font-weight:500}
 .switch{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--sub);user-select:none}
 .switch input{position:absolute;opacity:0;width:0;height:0}
-.switch .sl{width:36px;height:20px;border-radius:999px;background:#cbd5e1;position:relative;transition:background .15s;flex:none}
+.switch .sl{width:36px;height:20px;border-radius:999px;background:#c3cbc0;position:relative;transition:background .15s;flex:none}
 .switch .sl::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
-.switch input:checked+.sl{background:var(--brand)}
+.switch input:checked+.sl{background:var(--ink)}
 .switch input:checked+.sl::after{transform:translateX(16px)}
-#tabnav{max-width:1400px;margin:0 auto;padding:0 20px;display:flex;gap:4px;overflow-x:auto}
-#tabnav button{border:none;background:none;padding:10px 14px;font-size:14px;color:var(--sub);cursor:pointer;white-space:nowrap;position:relative;font-family:var(--font)}
-#tabnav button:hover{color:var(--txt);background:#f6f8fc}
-#tabnav button::after{content:'';position:absolute;left:12px;right:12px;bottom:0;height:2px;border-radius:2px;background:transparent}
-#tabnav button.active{color:var(--brand);font-weight:600}
-#tabnav button.active::after{background:var(--brand)}
+.setwrap{position:relative}
+#setBtn{position:relative}
+.set-dot{position:absolute;top:-3px;right:-3px;width:6px;height:6px;border-radius:50%;background:var(--ink)}
+#setPanel{position:absolute;right:0;top:calc(100% + 8px);width:300px;background:var(--sheet);
+  border:1px solid var(--rule);border-radius:6px;box-shadow:0 8px 24px rgba(23,32,42,.14);
+  padding:14px;z-index:80}
+#setPanel .switch{display:flex;color:var(--ink);font-weight:500;margin-bottom:2px}
+.set-note{font-size:12px;color:var(--graphite);line-height:1.6;margin:0 0 12px;padding-left:44px}
+.set-ro{font-size:12.5px;color:var(--graphite);border-top:1px dashed var(--rule);
+  padding-top:10px;font-family:var(--f-num)}
 
-/* ---------- 布局 / 卡片 ---------- */
-main{max-width:1400px;margin:0 auto;padding:20px 20px 48px}
+/* ---------- 主区 / 卡片 ---------- */
+#content{margin-left:208px;min-width:0}
+main{max-width:1320px;padding:20px 24px 48px}
 .tab-page{display:none}
 .tab-page.active{display:block}
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:18px 20px;margin-bottom:16px}
 .card-hd{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
-.card-hd h3{margin:0;font-size:15px;font-weight:600}
-.card-hd .sub{font-size:12px;color:var(--sub);font-weight:400;margin-top:3px}
+.card-hd h3{margin:0;font-size:16px;font-weight:600}
+.card-hd .sub{font-size:12.5px;color:var(--graphite);font-weight:400;margin-top:3px}
+.card-hd .sub span{margin-right:14px}
+.card-hd .sub span:last-child{margin-right:0}
 .card-hd-r{display:flex;gap:8px;align-items:center;flex:none}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .grid2>*{min-width:0}
@@ -65,71 +98,73 @@ main{max-width:1400px;margin:0 auto;padding:20px 20px 48px}
 .row-2col .card{margin-bottom:0}
 @media(max-width:1000px){.row-2col{grid-template-columns:1fr}}
 @media(max-width:1100px){.grid2{grid-template-columns:1fr}}
-.grid-kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+/* 指标板：面板内网格，单元间 1px --rule 分隔 */
+.grid-kpi{display:grid;grid-template-columns:repeat(4,1fr);background:var(--sheet);
+  border:1px solid var(--rule);border-radius:6px;overflow:hidden}
 @media(min-width:1200px){.grid-kpi:not(.auto){grid-template-columns:repeat(5,1fr)}}
 @media(max-width:999px){.grid-kpi{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:560px){.grid-kpi{grid-template-columns:1fr}}
 .grid-kpi.auto{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
-.kpi{background:#fff;border:1px solid var(--line);border-radius:8px;padding:14px 16px}
+.kpi{background:var(--sheet);padding:14px 16px;min-width:0;box-shadow:inset -1px -1px 0 var(--rule)}
 .kpi-hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .kpi-name{font-size:13px;font-weight:600}
-.kpi-src{font-size:11px;color:var(--sub)}
-.kpi-v{font-size:26px;font-weight:600;margin-top:6px;font-variant-numeric:tabular-nums;line-height:1.2}
-.kpi-v .u{font-size:12px;color:var(--sub);font-weight:400;margin-left:4px}
-.kpi-ab{font-size:12.5px;margin-top:2px;font-variant-numeric:tabular-nums}
-.kpi-ab .arr{color:var(--sub);margin:0 5px}
+.kpi-src{font-size:11px;color:var(--graphite)}
+.kpi-v{font-family:var(--f-num);font-size:28px;font-weight:600;margin-top:6px;font-variant-numeric:tabular-nums;line-height:1.2}
+.kpi-v .u{font-size:12px;color:var(--graphite);font-weight:400;margin-left:4px}
+.kpi-ab{font-family:var(--f-num);font-size:12.5px;margin-top:2px;font-variant-numeric:tabular-nums}
+.kpi-ab .arr{color:var(--graphite);margin:0 5px}
 .kpi-delta{margin-top:7px}
 .spark{display:block;width:100%;height:36px;margin-top:8px}
 
 /* ---------- delta 徽标 / 标签 / 状态 ---------- */
-.delta{display:inline-flex;align-items:center;gap:2px;padding:2px 9px;border-radius:4px;font-size:12px;font-weight:600;background:#f1f5f9;color:#475569;font-variant-numeric:tabular-nums;white-space:nowrap}
-.delta.bad{background:var(--red-soft);color:var(--red)}
-.delta.good{background:var(--green-soft);color:var(--green)}
+.delta{display:inline-flex;align-items:center;gap:2px;padding:2px 9px;border-radius:3px;font-size:12px;font-weight:600;background:var(--rule-soft);color:var(--graphite);font-variant-numeric:tabular-nums;white-space:nowrap}
+.delta.bad{background:var(--flag-soft);color:var(--flag)}
+.delta.good{background:var(--ok-soft);color:var(--ok)}
 .tag{display:inline-block;padding:1px 8px;border-radius:4px;font-size:11px;margin:0 4px 2px 0;font-weight:500}
-.tag-a{background:#eff6ff;color:#1d4ed8}
-.tag-b{background:#fffbeb;color:#b45309}
+.tag-a{background:var(--a-soft);color:var(--a-ink)}
+.tag-b{background:var(--b-soft);color:var(--b-ink)}
 .tag-lv{background:#f5f3ff;color:#6d28d9}
-.tag-ih{background:var(--green-soft);color:#047857}
-.tag-sig{background:var(--red-soft);color:#be123c}
-.tag-cached{background:#f1f5f9;color:#64748b}
-.tag-gg{background:#e8f0fe;color:#1a73e8}
-.tag-m{background:none;color:#64748b;padding:0;margin-right:10px;font-weight:400}
-.tag-mm{background:#e2e8f0;color:#334155}
+.tag-ih{background:var(--ok-soft);color:var(--ok)}
+.tag-sig{background:var(--flag-soft);color:var(--flag)}
+.tag-cached{background:var(--rule-soft);color:var(--graphite)}
+.tag-gg{background:var(--a-soft);color:var(--a-ink)}
+.tag-m{background:none;color:var(--graphite);padding:0;margin-right:10px;font-weight:400}
+.tag-mm{background:var(--rule-soft);color:var(--ink)}
 .st{display:inline-block;padding:1px 10px;border-radius:4px;font-size:12px;font-weight:500}
-.st-ok{background:var(--green-soft);color:var(--green)}
-.st-bad{background:var(--red-soft);color:var(--red)}
-.sc{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:1px 9px;border-radius:4px;background:#f1f5f9;color:#475569;margin-right:6px;vertical-align:1px}
-.sc::before{content:'';width:6px;height:6px;border-radius:50%}
-.sc-a::before{background:var(--c-a)}
-.sc-b::before{background:var(--c-b)}
-.cnt{display:inline-block;min-width:20px;text-align:center;background:#f1f5f9;color:#0f172a;border-radius:4px;font-size:11px;font-weight:600;padding:1px 7px;margin-left:6px}
+.st-ok{background:var(--ok-soft);color:var(--ok)}
+.st-bad{background:var(--flag-soft);color:var(--flag)}
+.sc{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:1px 9px;border-radius:4px;background:var(--rule-soft);color:var(--graphite);margin-right:6px;vertical-align:1px}
+.sc::before{content:'';width:6px;height:6px;border-radius:2px}
+.sc-a::before{background:var(--a)}
+.sc-b::before{background:var(--b)}
+.cnt{display:inline-block;min-width:20px;text-align:center;background:var(--rule-soft);color:var(--ink);border-radius:4px;font-size:11px;font-weight:600;padding:1px 7px;margin-left:6px}
 .gap-pos{color:var(--red);font-weight:600}
 .gap-neg{color:var(--green);font-weight:600}
 .muted{color:var(--sub)}
 .sec-h{font-size:13px;font-weight:600;margin-bottom:8px}
 
 /* ---------- 表格 ---------- */
-.tbl-wrap{overflow:auto;max-height:560px;border:1px solid var(--line);border-radius:8px}
+.tbl-wrap{overflow:auto;max-height:560px;border:1px solid var(--line);border-radius:6px}
 .tbl-wrap.no-max{max-height:none}
 .tbl-wrap.h320{max-height:320px}
 table{border-collapse:collapse;width:100%;font-size:13px}
-th,td{padding:9px 12px;border-bottom:1px solid var(--line-soft);white-space:nowrap;text-align:left;height:40px}
-th{position:sticky;top:0;background:#f8fafc;color:var(--sub);font-size:12px;font-weight:600;z-index:2;height:auto}
-td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+th,td{padding:8px 12px;border-bottom:1px solid var(--rule-soft);white-space:nowrap;text-align:left;height:36px}
+th{position:sticky;top:0;background:var(--paper);color:var(--graphite);font-size:12px;font-weight:600;z-index:2;height:auto}
+td.num,th.num{text-align:right;font-family:var(--f-num);font-variant-numeric:tabular-nums}
 td.name{white-space:normal;word-break:break-all;min-width:220px;max-width:420px}
 td.bv{font-weight:600}
-tbody tr:hover td{background:#f8faff}
-tr.lvl-row td{cursor:pointer;background:#f6f8fe;font-weight:600}
+tbody tr:hover td{background:var(--hover)}
+tr.lvl-row td{cursor:pointer;background:#f4f6f2;font-weight:600}
 tr.lvl-row td:first-child{position:relative;padding-left:30px}
 tr.lvl-row td:first-child::before{content:'›';position:absolute;left:13px;top:50%;margin-top:-10px;font-size:15px;color:var(--sub);display:inline-block;transform:rotate(0);transition:transform .15s}
 tr.lvl-row.open td:first-child::before{transform:rotate(90deg)}
 tr.proc-row td{font-weight:400}
 tr.proc-row td:first-child{padding-left:30px}
-tr.diff td{background:#f8fafc}
-tr.diff td:first-child{box-shadow:inset 3px 0 0 #475569}
-tr.viol td{background:var(--red-soft)}
-tr.viol td:first-child{box-shadow:inset 3px 0 0 var(--red)}
-tr.phaseboot td{color:var(--sub);background:#fafbfc}
+tr.diff td{background:#f7f8f6}
+tr.diff td:first-child{box-shadow:inset 3px 0 0 var(--graphite)}
+tr.viol td{background:var(--flag-soft)}
+tr.viol td:first-child{box-shadow:inset 3px 0 0 var(--flag)}
+tr.phaseboot td{color:var(--sub);background:#fafbfa}
 
 /* ---------- 控件 ---------- */
 .controls{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:12px;font-size:13px;color:var(--sub)}
@@ -165,7 +200,14 @@ input[type=checkbox]{accent-color:var(--brand);width:15px;height:15px}
 /* ---------- 图表 / 其它 ---------- */
 .chart{width:100%;height:340px}
 .chart-tall{height:460px}
-.mono{font-family:Consolas,"Courier New",monospace;font-size:12px}
+.zoom-sel{position:absolute;background:rgba(23,32,42,.06);border:1px solid rgba(23,32,42,.25);pointer-events:none;z-index:5}
+.zoom-reset{position:absolute;top:8px;right:8px;height:26px;padding:0 10px;font-size:12px;
+  background:var(--sheet);border:1px solid var(--rule);border-radius:4px;color:var(--graphite);
+  cursor:pointer;font-family:var(--font);z-index:6;display:none}
+.zoom-reset:hover{color:var(--ink);border-color:var(--graphite)}
+.zoom-reset:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+.zoom-hint{font-size:12px;color:var(--graphite);margin-top:6px;font-family:var(--f-num)}
+.mono{font-family:var(--f-num);font-variant-numeric:tabular-nums;font-size:12.5px}
 .strip{display:flex;gap:2px;align-items:center;margin:3px 0;flex-wrap:wrap}
 .strip .cell{width:18px;height:14px;border-radius:4px;display:inline-block}
 .strip .cell.empty{background:#f1f5f9;border:1px dashed #cbd5e1}
@@ -173,7 +215,7 @@ input[type=checkbox]{accent-color:var(--brand);width:15px;height:15px}
 .legend .lg{display:flex;align-items:center;gap:5px}
 .legend .sw{width:12px;height:12px;border-radius:4px;display:inline-block}
 .pkg-cols{display:grid;gap:14px}
-.mono-list{list-style:none;margin:8px 0 0;padding:0;font-family:Consolas,"Courier New",monospace;font-size:12px;max-height:200px;overflow:auto}
+.mono-list{list-style:none;margin:8px 0 0;padding:0;font-family:var(--f-num);font-variant-numeric:tabular-nums;font-size:12.5px;max-height:200px;overflow:auto}
 .mono-list li{padding:3px 0;border-bottom:1px dashed var(--line-soft);word-break:break-all}
 ul.findings{list-style:none;margin:0;padding:0}
 ul.findings li{position:relative;padding-left:16px;margin:10px 0;line-height:1.6;overflow-wrap:anywhere}
@@ -185,9 +227,9 @@ details.info summary::before{content:'ⓘ';color:var(--sub);margin-right:7px}
 details.info summary::after{content:'▸';margin-left:auto;color:#94a3b8;transition:transform .15s}
 details.info[open] summary::after{transform:rotate(90deg)}
 details.info .info-body{padding:10px 14px;border-top:1px dashed var(--line);line-height:1.6}
-details.info .info-body code{background:#eef2f7;padding:1px 5px;border-radius:4px;font-family:Consolas,monospace}
-.warn{position:relative;background:var(--red-soft);border:1px solid #fecdd3;color:#9f1239;border-radius:8px;padding:10px 14px 10px 34px;font-size:13px;margin-bottom:16px;line-height:1.6}
-.warn::before{content:'⚠';position:absolute;left:13px;top:10px}
+details.info .info-body code{background:var(--rule-soft);padding:1px 5px;border-radius:4px;font-family:Consolas,monospace}
+.warn{position:relative;background:var(--flag-soft);box-shadow:inset 3px 0 0 var(--flag);color:#8f1526;padding:10px 14px 10px 34px;font-size:13px;margin-bottom:16px;line-height:1.6}
+.warn::before{content:'⚠';position:absolute;left:12px;top:10px}
 .wake{display:grid;grid-template-columns:1fr auto auto auto 1fr;gap:10px;align-items:center;margin-top:10px}
 .wake .mid{display:flex;align-items:center;background:#f1f5f9;color:#0f172a;border-radius:4px;padding:8px 18px;font-weight:600;font-size:13px;white-space:nowrap}
 .wake .warr{color:#94a3b8;font-size:15px}
@@ -228,13 +270,13 @@ tr.lv-off td{color:var(--sub)}
 .mdview li{margin:4px 0}
 .mdview .tbl-wrap{margin:10px 0}
 .mdview code{background:#f1f5f9;padding:1px 5px;border-radius:4px;font-family:Consolas,monospace;font-size:12.5px}
-.foot{color:var(--sub);font-size:12px;text-align:center;padding:10px 0 0}
+.foot{color:var(--sub);font-size:12px;padding:10px 0 0}
 
 .sev{display:inline-block;padding:1px 9px;border-radius:4px;font-size:11px;font-weight:600;margin-right:6px}
-.sev-high{background:#e11d48;color:#fff}
-.sev-mid{background:#fff1f2;color:#be123c}
-.sev-low{background:#f1f5f9;color:#475569}
-.sev-info{background:transparent;color:#64748b;border:1px solid #e2e8f0}
+.sev-high{background:var(--flag);color:#fff}
+.sev-mid{background:var(--flag-soft);color:var(--flag)}
+.sev-low{background:var(--rule-soft);color:var(--graphite)}
+.sev-info{background:transparent;color:var(--graphite);border:1px solid var(--rule)}
 th.sort:hover{background:#f1f5f9}
 .pname{max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pname a{display:block;overflow:hidden;text-overflow:ellipsis}
@@ -252,64 +294,103 @@ th.sort:hover{background:#f1f5f9}
 #amRibbon{width:100%;display:block;cursor:crosshair;touch-action:none}
 #amCov{font-size:12px;color:var(--sub);margin:2px 0 8px}
 
-/* ---------- 判定块（概览顶部） ---------- */
-.verdict{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:22px 24px;margin-bottom:16px}
-.verdict h2{font-size:22px;font-weight:600;margin:0 0 12px;display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+/* ---------- 判定单（概览顶部，化验单） ---------- */
+.verdict{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:22px 24px;margin-bottom:16px}
+.verdict h2{font-size:21px;font-weight:600;margin:0 0 14px;display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
 .verdict h2 .go{font-size:13px;font-weight:400}
-.vrow{display:flex;gap:10px;align-items:baseline;margin:6px 0;font-size:14px}
-.vrow .vdot{width:9px;height:9px;border-radius:50%;flex:none;transform:translateY(-1px)}
-.vrow .vsub{font-size:13px;color:var(--sub);margin-left:19px;max-width:80ch}
-.vdiv{border-top:1px solid var(--line-soft);margin:14px 0 10px}
+.vduo{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px}
+@media(max-width:760px){.vduo{grid-template-columns:1fr}}
+.vcol{border:1px solid var(--rule-soft);border-radius:6px;padding:12px 16px;min-width:0}
+.vchip{display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:10px;min-width:0}
+.vchip .sw{width:10px;height:10px;border-radius:2px;flex:none}
+.vchip b{font-weight:600}
+.vchip span{color:var(--graphite);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stamps{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.stamp{display:inline-block;padding:3px 12px;border-radius:4px;font-family:var(--f-num);
+  font-size:14px;font-weight:700;border:1.5px solid var(--graphite);color:var(--graphite);
+  box-shadow:inset 0 0 0 2px var(--sheet),inset 0 0 0 3.5px var(--graphite)}
+.stamp.ok{border-color:var(--ok);color:var(--ok);
+  box-shadow:inset 0 0 0 2px var(--sheet),inset 0 0 0 3.5px var(--ok)}
+.stamp.fail{border-color:var(--flag);color:var(--flag);
+  box-shadow:inset 0 0 0 2px var(--sheet),inset 0 0 0 3.5px var(--flag)}
+.vfacts{font-size:13px;color:var(--graphite);margin:2px 0 8px}
+.vsub{font-size:13px;color:var(--sub);margin:4px 0;max-width:80ch}
+table.lab td.res{font-family:var(--f-num);font-size:15px}
+table.lab td.res.fl{color:var(--flag);font-weight:600}
+table.lab td.mark{color:var(--flag);font-weight:700;font-size:16px;font-family:var(--f-num)}
+.vdiv{border-top:1px solid var(--rule-soft);margin:14px 0 10px}
 .vfind{display:block;text-decoration:none;color:var(--txt);margin:4px 0}
 .vfind:hover{text-decoration:none}
 .vfind .ft{font-size:14px;font-weight:600}
 .vfind .fd{font-size:13px;color:var(--sub);margin-left:52px;margin-top:2px}
-.tag-a-t{color:#1d4ed8}.tag-b-t{color:#b45309}
+.tag-a-t{color:var(--a-ink)}.tag-b-t{color:var(--b-ink)}
 .sm-grid{display:grid;grid-template-columns:1fr;gap:12px}
 @media(min-width:1100px){.sm-grid{grid-template-columns:repeat(2,1fr)}}
 .sm-grid>*:only-child{grid-column:1/-1}
 .sm-chart{height:240px}
 .sm-hd{font-size:13px;font-weight:600;margin:0 0 4px}
 .sm-hd .muted{font-weight:400}
-@media(max-width:700px){
-  .bar-row,.chip{padding:12px}
-  main{padding:12px 12px 40px}
-  .chip{display:flex;width:100%}
-  .chip b{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:960px){
+  #layout{display:flex;flex-direction:column}
+  #topbar{order:1;margin-left:0}
+  #sidebar{order:2;position:static;width:auto;height:auto;overflow:visible;border-right:0;border-bottom:1px solid var(--rule);flex-direction:row}
+  #content{order:3;margin-left:0}
+  #sidebar .brand,#sidebar .foot{display:none}
+  #tabnav{display:flex;overflow-x:auto;padding:0 8px;flex:1}
+  .nav-g{display:none}
+  #tabnav button{width:auto;border-left:0;border-bottom:2px solid transparent;padding:9px 14px}
+  #tabnav button.active{border-bottom-color:var(--ink);background:none}
+  .tbl-wrap{overflow-x:auto}
 }
+@media(max-width:700px){.bar-row{padding:10px 12px}main{padding:12px 12px 40px}}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
-<header id="topbar">
-  <div class="bar-row">
-    <div class="brand"><span class="logo">M</span><h1><span id="pageTitle"></span><span class="sub">memscope</span></h1></div>
-    <div class="chips">
-      <span class="chip chip-a"><i class="dot"></i>基线 A：<b id="chipA"></b></span>
-      <span class="chip chip-b"><i class="dot"></i>对比 B：<b id="chipB"></b></span>
+<div id="layout">
+  <aside id="sidebar">
+    <div class="brand"><div class="brand-t" id="pageTitle"></div><div class="brand-s">memscope</div></div>
+    <nav id="tabnav"></nav>
+    <div class="foot" id="foot"></div>
+  </aside>
+  <header id="topbar">
+    <div class="bar-row">
+      <div class="chips">
+        <span class="chip chip-a"><i class="sw"></i><b id="chipA"></b><span class="cm" id="chipAm"></span><span class="cm" id="chipAc"></span></span>
+        <span class="chip chip-b"><i class="sw"></i><b id="chipB"></b><span class="cm" id="chipBm"></span><span class="cm" id="chipBc"></span></span>
+      </div>
+      <div class="toggles">
+        <span class="segtrack"><button class="seg" data-m="pss">PSS</button><button class="seg" data-m="rss">RSS</button></span>
+        <div class="setwrap">
+          <button class="btn" id="setBtn" aria-haspopup="true" aria-expanded="false">⚙ 设置<i class="set-dot" id="setDot" style="display:none"></i></button>
+          <div id="setPanel" style="display:none">
+            <label class="switch"><input type="checkbox" id="slowOnly"><span class="sl"></span><span>仅显示慢启动数据</span></label>
+            <div class="set-note">应用启动页与进程详情页只列出慢启动记录</div>
+            <label class="switch"><input type="checkbox" id="incCached"><span class="sl"></span><span>包含 Cached</span></label>
+            <div class="set-note">Cached 是后台缓存进程所在的 OOM 层级，内存紧张时可被系统随时回收，数值受测试时机和 LMK 影响波动大，默认不参与差异排行。打开后纳入：概览与风险页「自动结论」中 Cached 层级 / 仅 Cached 进程相关条目、进程分析 Top20 与全量进程表、层级轮均柱状图。始终显示：关键指标（含 cached pss）、整机、层级表、自研 / Google 明细。</div>
+            <div class="set-ro" id="setThr"></div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="toggles">
-      <span class="segtrack"><button class="seg" data-m="pss">PSS</button><button class="seg" data-m="rss">RSS</button></span>
-      <label class="switch"><input type="checkbox" id="incCached"><span class="sl"></span><span>包含 Cached</span></label>
-      <span class="hint" tabindex="0">ⓘ<span class="hint-pop"><p>Cached 是后台缓存进程所在的 OOM 层级，内存紧张时可被系统随时回收，数值受测试时机和 LMK 影响波动大，默认不参与差异排行。</p><p>打开后纳入：概览与风险页「自动结论」中 Cached 层级 / 仅 Cached 进程相关条目、进程分析 Top20 与全量进程表、层级轮均柱状图。</p><p>始终显示：关键指标（含 cached pss）、整机、层级表、自研 / Google 明细。</p></span></span>
-    </div>
+  </header>
+  <div id="content">
+    <div id="crossBanner" style="display:none"></div>
+    <main id="main">
+      <section class="tab-page" id="page-overview"></section>
+      <section class="tab-page" id="page-system"></section>
+      <section class="tab-page" id="page-levels"></section>
+      <section class="tab-page" id="page-procs"></section>
+      <section class="tab-page" id="page-inhouse"></section>
+      <section class="tab-page" id="page-google"></section>
+      <section class="tab-page" id="page-events"></section>
+      <section class="tab-page" id="page-launch"></section>
+      <section class="tab-page" id="page-pressure"></section>
+      <section class="tab-page" id="page-risk"></section>
+      <section class="tab-page" id="page-report"></section>
+    </main>
   </div>
-  <div id="crossBanner" style="display:none"></div>
-  <nav id="tabnav"></nav>
-</header>
-<main id="main">
-  <section class="tab-page" id="page-overview"></section>
-  <section class="tab-page" id="page-system"></section>
-  <section class="tab-page" id="page-levels"></section>
-  <section class="tab-page" id="page-procs"></section>
-  <section class="tab-page" id="page-inhouse"></section>
-  <section class="tab-page" id="page-google"></section>
-  <section class="tab-page" id="page-events"></section>
-  <section class="tab-page" id="page-pressure"></section>
-  <section class="tab-page" id="page-risk"></section>
-  <section class="tab-page" id="page-report"></section>
-  <div class="foot" id="foot"></div>
-</main>
+</div>
 <div id="procOverlay"><div class="inner" id="procInner"></div></div>
 
 <script>//__ECHARTS_INLINE//</script>
@@ -325,17 +406,19 @@ let metric = DATA.meta.primary_metric || 'rss';
 let includeCached = false;
 const MV = () => DATA.metrics[metric];
 const N = i => DS[i].n;
-const FONT = '"Segoe UI Variable","Segoe UI","Microsoft YaHei UI","Microsoft YaHei","PingFang SC",system-ui,sans-serif';
+const FONT = '"Microsoft YaHei UI","Microsoft YaHei","PingFang SC","Segoe UI",system-ui,sans-serif';
+const FNUM = 'Bahnschrift,"DIN Alternate","Segoe UI","Microsoft YaHei UI",sans-serif';
 const LEVEL_COLORS = {'Native':'#475569','System':'#0f766e','Persistent':'#7c3aed','Persistent Service':'#a78bfa','Foreground':'#15803d','Visible':'#84cc16','Perceptible':'#c026d3','Perceptible Medium':'#e879f9','Perceptible Low':'#f0abfc','Backup':'#a8a29e','Heavy Weight':'#57534e','A Services':'#db2777','Home':'#2dd4bf','Previous':'#78716c','B Services':'#f9a8d4','Cached':'#cbd5e1'};
-const PROC_PALETTE = ['#0f766e','#7c3aed','#db2777','#15803d','#475569','#c026d3','#65a30d','#78716c','#6b21a8','#2dd4bf'];
-const SEL_PALETTE = ['#7c3aed','#db2777','#0f766e','#c026d3','#4d7c0f','#334155','#9333ea','#be185d'];
+const PROC_PALETTE = ['#1F6F6B','#7A3E8E','#6B7A1F','#475569','#B03A5B','#7A5230','#1C7C9C','#5B4DB1'];
+const SEL_PALETTE = ['#7A3E8E','#B03A5B','#1F6F6B','#6B7A1F','#475569','#7A5230','#1C7C9C','#5B4DB1'];
 const RM = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-const CA = '#3b82f6', CB = '#f59e0b';
+const CA = '#2F5DA8', CB = '#C26A12';
+const CFLAG = '#C4182F', COK = '#2B7A4B';
 const lvColor = l => LEVEL_COLORS[l] || '#475569';
 const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const fmt = (v,d) => v==null ? '—' : (+v).toFixed(d==null?2:d);
 const fmt0 = v => v==null ? '—' : Math.round(v).toLocaleString();
-const cardHd = (t,s,r)=>'<div class="card-hd"><div><h3>'+t+'</h3>'+(s?'<div class="sub">'+s+'</div>':'')+'</div>'+(r?'<div class="card-hd-r">'+r+'</div>':'')+'</div>';
+const cardHd = (t,s,r)=>'<div class="card-hd"><div><h3>'+t+'</h3>'+(s?'<div class="sub">'+(Array.isArray(s)?s.map(x=>'<span>'+x+'</span>').join(''):s)+'</div>':'')+'</div>'+(r?'<div class="card-hd-r">'+r+'</div>':'')+'</div>';
 function gapCls(gap, reversed){
   if (gap==null || gap===0) return '';
   const worse = reversed ? gap<0 : gap>0;
@@ -448,15 +531,21 @@ document.addEventListener('mousedown', e=>{
 echarts.registerTheme('ms', {
   color: [CA,CB].concat(PROC_PALETTE),
   textStyle: {fontFamily: FONT},
-  legend: {itemWidth:14, itemHeight:8, textStyle:{color:'#475569'}},
-  tooltip: {backgroundColor:'#fff', borderWidth:0, padding:[10,12], textStyle:{color:'#0f172a',fontSize:12},
-            extraCssText:'box-shadow:0 6px 20px rgba(15,23,42,.14);border-radius:8px;'},
-  categoryAxis: {axisLine:{lineStyle:{color:'#e5e7eb'}}, axisTick:{lineStyle:{color:'#e5e7eb'}},
-                 axisLabel:{color:'#64748b'}, splitLine:{show:false}, splitArea:{show:false}},
-  valueAxis: {axisLine:{show:false}, axisTick:{show:false}, axisLabel:{color:'#64748b'},
-              splitLine:{lineStyle:{color:'#eef2f7',type:'dashed'}}, splitArea:{show:false}},
-  bar: {itemStyle:{borderRadius:[4,4,0,0]}, barMaxWidth:28},
-  line: {symbol:'circle', symbolSize:5, lineStyle:{width:2}}
+  legend: {itemWidth:14, itemHeight:8, textStyle:{color:'#5A6570'}},
+  tooltip: {backgroundColor:'#fff', borderWidth:1, borderColor:'#D6DCD4', padding:[10,12],
+            textStyle:{color:'#17202A',fontSize:12},
+            extraCssText:'box-shadow:0 4px 14px rgba(23,32,42,.12);border-radius:6px;'},
+  categoryAxis: {axisLine:{lineStyle:{color:'#D6DCD4'}}, axisTick:{lineStyle:{color:'#D6DCD4'}},
+                 axisLabel:{color:'#5A6570',fontFamily:FNUM,fontSize:12}, splitLine:{show:false}, splitArea:{show:false}},
+  valueAxis: {axisLine:{show:false}, axisTick:{show:false}, axisLabel:{color:'#5A6570',fontFamily:FNUM,fontSize:12},
+              splitLine:{lineStyle:{color:'#E7EBE5',type:'dashed'}}, splitArea:{show:false}},
+  bar: {itemStyle:{borderRadius:[3,3,0,0]}, barMaxWidth:26},
+  line: {symbol:'circle', symbolSize:5, lineStyle:{width:1.5}},
+  dataZoom: {fillerColor:'rgba(23,32,42,.08)', borderColor:'#D6DCD4',
+    handleStyle:{color:'#5A6570'}, moveHandleStyle:{color:'#5A6570'},
+    dataBackground:{lineStyle:{color:'rgba(90,101,112,.45)'},areaStyle:{color:'rgba(90,101,112,.12)'}},
+    selectedDataBackground:{lineStyle:{color:'rgba(23,32,42,.6)'},areaStyle:{color:'rgba(23,32,42,.15)'}},
+    textStyle:{color:'#5A6570'}}
 });
 const LIVE_CHARTS = new Set();
 function makeChart(el){
@@ -469,6 +558,138 @@ function makeChart(el){
   return ch;
 }
 window.addEventListener('resize', ()=>LIVE_CHARTS.forEach(c=>c.resize()));
+
+/* ---- 统一缩放：滚轮缩放 / Shift+滚轮平移 / 左键框选放大 / 还原 ---- */
+const ZOOM_GROUPS = {};   // group名 -> [chart]
+function zoomable(ch, opt){
+  opt = opt || {};
+  const cats = opt.cats||0, pts = opt.points||0;
+  if (!(opt.force || AXIS==='hour' || cats>24 || pts>60)) return;
+  ch.__zoomOpt = opt;
+  const el = ch.getDom();
+  const ax = opt.axis||'x';
+  // dataZoom：inside 滚轮缩放 + shift 平移 + slider（x→底部 / 仅 y→右侧）
+  const dz = [];
+  if (ax!=='y') dz.push({type:'inside',xAxisIndex:0,zoomOnMouseWheel:true,
+                         moveOnMouseWheel:'shift',moveOnMouseMove:false});
+  if (ax!=='x') dz.push({type:'inside',yAxisIndex:0,zoomOnMouseWheel:true,
+                         moveOnMouseWheel:'shift',moveOnMouseMove:false});
+  if (opt.slider!==false && ax!=='y')
+    dz.push({type:'slider',xAxisIndex:0,height:18,bottom:8});
+  if (opt.slider!==false && ax==='y')
+    dz.push({type:'slider',yAxisIndex:0,width:14,right:8});
+  const set = {dataZoom:dz};
+  if (opt.initial){
+    Object.assign(dz[0], opt.initial);
+    if (dz[1] && dz[1].type==='slider') Object.assign(dz[1], opt.initial);
+  }
+  const g0 = ch.getOption().grid && ch.getOption().grid[0];
+  if (opt.slider!==false && ax!=='y' && g0 && (g0.bottom||0)<56)
+    set.grid = {bottom:56};
+  ch.setOption(set);
+  if (getComputedStyle(el).position==='static') el.style.position='relative';
+  if (!el.parentElement.querySelector('.zoom-hint')){
+    const hd = document.createElement('div');
+    hd.className = 'zoom-hint'; hd.textContent = '滚轮缩放，拖动框选放大';
+    el.insertAdjacentElement('afterend', hd);
+  }
+  // connected 组：只保留未销毁实例
+  if (opt.group){
+    const g = ZOOM_GROUPS[opt.group] =
+      (ZOOM_GROUPS[opt.group]||[]).filter(c=>!c.isDisposed());
+    if (!g.includes(ch)) g.push(ch);
+  }
+  if (ch.__zoomBound) { ch.__zoomSync && ch.__zoomSync(); return; }
+  ch.__zoomBound = true;
+  // 左键框选放大（自绘选区；普通单击不拦截 → click 事件照常）
+  const zr = ch.getZr();
+  let drag = null, sel = null;
+  const hideSel = ()=>{ if(sel){sel.remove();sel=null;} };
+  zr.on('mousedown', e=>{
+    if (drag) return;
+    if ((e.event.which!==undefined && e.event.which!==1) || e.event.button) return;
+    if (!ch.containPixel('grid',[e.offsetX,e.offsetY])) return;
+    drag = {x:e.offsetX,y:e.offsetY};
+    // 图外松开 / 窗口失焦：清理 drag 与选区（bubble 阶段，图内松开已由 zr mouseup 处理）
+    const finish = ()=>{
+      document.removeEventListener('mouseup', finish);
+      window.removeEventListener('blur', finish, true);
+      if (!drag) return;
+      drag = null; hideSel();
+    };
+    document.addEventListener('mouseup', finish);
+    window.addEventListener('blur', finish, true);
+  });
+  zr.on('mousemove', e=>{
+    if (!drag) return;
+    if (!sel){ sel = document.createElement('div'); sel.className='zoom-sel'; el.appendChild(sel); }
+    sel.style.left = Math.min(drag.x,e.offsetX)+'px';
+    sel.style.top = Math.min(drag.y,e.offsetY)+'px';
+    sel.style.width = Math.abs(e.offsetX-drag.x)+'px';
+    sel.style.height = Math.abs(e.offsetY-drag.y)+'px';
+  });
+  zr.on('mouseup', e=>{
+    if (!drag) return;
+    const d = drag; drag = null; hideSel();
+    if (!ch.containPixel('grid',[e.offsetX,e.offsetY])) return;   // 网格区外松开：取消
+    const ax2 = ch.__zoomOpt.axis||'x';
+    const dx = e.offsetX-d.x, dy = e.offsetY-d.y;
+    const ux = ax2!=='y' && Math.abs(dx)>6, uy = ax2!=='x' && Math.abs(dy)>6;
+    if (!ux && !uy) return;   // 普通单击
+    if (ux){
+      const v = [d.x,e.offsetX].map(px=>ch.convertFromPixel({xAxisIndex:0},px)).sort((a,b)=>a-b);
+      ch.dispatchAction({type:'dataZoom',xAxisIndex:0,startValue:v[0],endValue:v[1]});
+    }
+    if (uy){
+      const v = [d.y,e.offsetY].map(px=>ch.convertFromPixel({yAxisIndex:0},px)).sort((a,b)=>a-b);
+      ch.dispatchAction({type:'dataZoom',yAxisIndex:0,startValue:v[0],endValue:v[1]});
+    }
+  });
+  // 还原按钮（任一 inside dataZoom 偏离初始范围才显示；connected 组一起还原）
+  let rst = null;
+  const atInit = z=>{
+    const axC = ch.__zoomOpt.axis||'x';
+    const iv = ch.__zoomOpt.initial||{start:0,end:100};
+    const isY = z.yAxisIndex!=null && z.xAxisIndex==null;
+    const ivv = (isY && axC==='xy') ? {start:0,end:100} : iv;
+    if (ivv.startValue!=null||ivv.endValue!=null)
+      return (ivv.startValue==null||Math.abs((z.startValue??NaN)-ivv.startValue)<1e-6)
+          && (ivv.endValue==null||Math.abs((z.endValue??NaN)-ivv.endValue)<1e-6);
+    const s = ivv.start==null?0:ivv.start, e2 = ivv.end==null?100:ivv.end;
+    return (z.start==null||z.start<=s+0.5) && (z.end==null||z.end>=e2-0.5);
+  };
+  const inRange = ()=>
+    (ch.getOption().dataZoom||[]).filter(z=>z.type==='inside').every(atInit);
+  const sync = ()=>{
+    if (ch.isDisposed()) return;
+    if (inRange()){ if(rst) rst.style.display='none'; return; }
+    if (!rst){
+      rst = document.createElement('button');
+      rst.className='zoom-reset'; rst.textContent='还原'; rst.type='button';
+      rst.onclick = doReset;
+      el.appendChild(rst);
+    }
+    rst.style.display='block';
+  };
+  const doReset = ()=>{
+    const grp = ch.__zoomOpt.group;
+    const targets = (grp ? (ZOOM_GROUPS[grp]||[]) : [ch])
+      .filter(c=>!c.isDisposed());
+    targets.forEach(c=>{
+      const iv0 = c.__zoomOpt ? c.__zoomOpt.initial : null;
+      (c.getOption().dataZoom||[]).forEach((z,i)=>{
+        if (z.type!=='inside' && z.type!=='slider') return;
+        const isY = z.yAxisIndex!=null && z.xAxisIndex==null;
+        const axC = c.__zoomOpt ? (c.__zoomOpt.axis||'x') : 'x';
+        c.dispatchAction({type:'dataZoom',dataZoomIndex:i,
+          ...((isY&&axC==='xy')?{start:0,end:100}:(iv0||{start:0,end:100}))});
+      });
+    });
+  };
+  ch.__zoomSync = sync;
+  ch.on('datazoom', sync);
+  zr.on('dblclick', ()=>{ if(!inRange()) doReset(); });
+}
 
 /* ---- 时间轴序列：axis='round' → 第N轮类目轴；'hour' → 距测试开始小时数 ---- */
 function tsData(dsIdx, series){
@@ -526,7 +747,6 @@ function tsOption(series, extra){
     o.xAxis = {type:'category', data:roundCats(NMAX)};
   } else {
     o.xAxis = {type:'value',min:0,max:v=>Math.ceil(v.max),axisLabel:{formatter:v=>(+v).toFixed(0)+'h'}};
-    o.dataZoom = [{type:'inside'},{type:'slider',height:18,bottom:8}];
   }
   if (extra) Object.assign(o, extra);
   return o;
@@ -539,18 +759,24 @@ function thrMarkLine(vals){
 
 /* ============ 路由 ============ */
 const PAGES = {overview:'概览', system:'整机内存', levels:'层级内存', procs:'进程分析',
-               inhouse:'自研应用', google:'Google 应用', events:'进程事件', pressure:'内存压力',
-               risk:'标准与风险', report:'Markdown 报告'};
+               inhouse:'自研应用', google:'Google 应用', events:'进程事件', launch:'应用启动',
+               pressure:'内存压力', risk:'标准与风险', report:'Markdown 报告'};
+const NAV = [['结论', ['overview','risk']],
+             ['内存', ['system','levels','procs','inhouse','google']],
+             ['行为', ['events','launch','pressure']],
+             ['报告', ['report']]];
 const RENDER = {};
 const state = {tab:'overview', sysSel:null, lvSel:null, prSel:null, psSel:null,
                pkKw:'', pkLevel:'', pkCat:'', pkSigOnly:false, pkResident:false, pkLeak:false,
                pkGapMin:DATA.meta.gap_abs, pkSort:'gap', pkDir:-1,
-               devAll:false, mdRaw:false, lvInit:false, evQ:'',
+               devAll:false, mdRaw:false, lvInit:false, evQ:'', slowOnly:false,
+               lkKw:'', lkType:'', lkSide:'', lkSort:'t', lkShown:500,
+               lkAppKw:'', lkSortK:'chg', lkSortD:-1, pdLkShown:200,
                expanded:new Set(), lvGapMin:DATA.meta.gap_abs, trSel:null};
 function parseHash(){
   const q = new URLSearchParams(location.hash.replace(/^#/,''));
   return {tab:q.get('tab'), proc:q.get('proc'), q:q.get('q'), metric:q.get('metric'), cached:q.get('cached'),
-          mm:q.get('mm'), mr:q.get('mr'), ms:q.get('ms')};
+          slow:q.get('slow'), mm:q.get('mm'), mr:q.get('mr'), ms:q.get('ms')};
 }
 function setHash(patch){
   const q = new URLSearchParams(location.hash.replace(/^#/,''));
@@ -568,11 +794,18 @@ function applyMetric(m){
   metric = m;
   document.querySelectorAll('.toggles .seg').forEach(x=>x.classList.toggle('active', x.dataset.m===m));
 }
+function syncSetDot(){
+  document.getElementById('setDot').style.display =
+    (includeCached||state.slowOnly) ? 'block' : 'none';
+}
 function route(){
   const p = parseHash();
   if (p.metric) applyMetric(p.metric);
   includeCached = p.cached==='1';
+  state.slowOnly = p.slow==='1';
   document.getElementById('incCached').checked = includeCached;
+  document.getElementById('slowOnly').checked = state.slowOnly;
+  syncSetDot();
   if (p.proc){ openProc(p.proc); return; }
   document.getElementById('procOverlay').classList.remove('open');
   const tab = (p.tab && PAGES[p.tab]) ? p.tab : 'overview';
@@ -585,17 +818,27 @@ function route(){
 }
 window.addEventListener('hashchange', route);
 const nav = document.getElementById('tabnav');
-for (const id in PAGES){
-  const b = document.createElement('button');
-  b.textContent = PAGES[id]; b.dataset.tab = id;
-  b.onclick = ()=>{ setHash({tab:id, proc:null}); };
-  nav.appendChild(b);
-}
+NAV.forEach(([g, ids])=>{
+  const gh = document.createElement('div');
+  gh.className = 'nav-g'; gh.textContent = g; nav.appendChild(gh);
+  ids.forEach(id=>{
+    const b = document.createElement('button');
+    b.textContent = PAGES[id]; b.dataset.tab = id;
+    b.onclick = ()=>{ setHash({tab:id, proc:null}); };
+    nav.appendChild(b);
+  });
+});
 document.getElementById('pageTitle').textContent = (DATA.kind==='static'?'静态':'动态')+'内存对比分析';
 const _ddRow = f => { const r = DATA.device_diff.find(x=>x.field===f); return r||{a:'',b:''}; };
-document.getElementById('chipA').textContent = LA+' · '+_ddRow('体验模型').a+' · '+_ddRow('芯片平台').a;
-document.getElementById('chipB').textContent = LB+' · '+_ddRow('体验模型').b+' · '+_ddRow('芯片平台').b;
-document.getElementById('foot').textContent = '由 '+DATA.meta.tool+' 生成 · A '+LA+' vs B '+LB;
+document.getElementById('chipA').textContent = LA;
+document.getElementById('chipAm').textContent = _ddRow('体验模型').a;
+document.getElementById('chipAc').textContent = _ddRow('芯片平台').a;
+document.getElementById('chipB').textContent = LB;
+document.getElementById('chipBm').textContent = _ddRow('体验模型').b;
+document.getElementById('chipBc').textContent = _ddRow('芯片平台').b;
+const _ft = document.getElementById('foot');
+_ft.textContent = DATA.meta.tool;
+_ft.title = '由 '+DATA.meta.tool+' 生成，A '+LA+' vs B '+LB;
 const _CHIP_CN = {mtk:'MTK',unisoc:'展锐',qcom:'高通'};
 const _cn = [];
 if (DATA.meta.cross_model) _cn.push('注意：两侧体验模型不同（A '+DS[0].model+' / B '+DS[1].model+'），标准阈值、层级口径与采集方式不同，对比结论仅供参考。');
@@ -604,6 +847,28 @@ if (_cn.length){ const b=document.getElementById('crossBanner'); b.className='wa
 document.querySelectorAll('.toggles .seg').forEach(b=>{
   b.onclick = ()=>{ if(b.dataset.m!==metric) setHash({metric:b.dataset.m}); };
 });
+// 设置面板
+const setBtn = document.getElementById('setBtn'), setPanel = document.getElementById('setPanel');
+setBtn.onclick = e=>{
+  e.stopPropagation();
+  const open = setPanel.style.display !== 'none';
+  setPanel.style.display = open ? 'none' : 'block';
+  setBtn.setAttribute('aria-expanded', String(!open));
+  if (!open) setPanel.querySelector('input').focus();
+};
+document.addEventListener('mousedown', e=>{
+  if (setPanel.style.display !== 'none' && !setPanel.contains(e.target) && e.target !== setBtn){
+    setPanel.style.display = 'none'; setBtn.setAttribute('aria-expanded','false');
+  }
+});
+setPanel.addEventListener('keydown', e=>{
+  if (e.key === 'Escape'){ setPanel.style.display='none'; setBtn.setAttribute('aria-expanded','false'); setBtn.focus(); }
+});
+document.getElementById('setThr').innerHTML =
+  '慢启动门限：冷/温启动 &gt; '+DATA.launch.thr.cold+' ms，热启动 &gt; '+DATA.launch.thr.hot+' ms';
+document.getElementById('slowOnly').onchange = e=>{
+  setHash({slow: e.target.checked ? 1 : null});
+};
 document.getElementById('incCached').onchange = e=>{
   setHash({cached: e.target.checked ? 1 : null});
 };
@@ -652,14 +917,28 @@ RENDER.overview = function(){
   let vh = '<div class="verdict"><h2>B 相比 A：'
     + (cnts.length? cnts.map(x=>x[1]+' 条'+sevN[x[0]]).join('，') : '无自动结论')
     + '<a class="go" href="#tab=risk">全部结论</a></h2>';
+  // 两栏判定章（A 左 B 右）
+  const vstd = {a:DATA.standards.a, b:DATA.standards.b};
+  const lvRowV = (st,nm)=> st ? (nm==='Free RAM' ? st.free_ram : (st.levels||[]).find(r=>r.name===nm)) : null;
+  const thrCellV = (ta,tb,fr)=>{
+    if (ta==null && tb==null) return '—';
+    const one = ta!=null&&ta===tb ? fmt(ta) : ta==null ? 'B '+fmt(tb) : tb==null ? 'A '+fmt(ta) : 'A '+fmt(ta)+' / B '+fmt(tb);
+    return (fr?'≥ ':'≤ ')+one;
+  };
+  const chgV = (ra,rb)=>{
+    const va = ra&&ra.viol, vb = rb&&rb.viol;
+    if (vb && !va) return '<b style="color:var(--flag)">新超标</b>';
+    if (va && vb) return '<span style="color:var(--flag)">持续超标</span>';
+    if (va && rb && !rb.viol) return '<span style="color:var(--ok)">已解除</span>';
+    return '—';
+  };
+  vh += '<div class="vduo">';
   ['a','b'].forEach((sd,i)=>{
     const st = DATA.standards[sd], d = DS[i], lab = String.fromCharCode(65+i);
     const plat = d.platform.result || '—';
-    const platHtml = plat==='Fail' ? '<b style="color:var(--red)">Fail</b>'
-                   : plat==='Pass' ? '<b style="color:var(--green)">Pass</b>' : esc(plat);
+    const pCls = plat==='Fail' ? 'fail' : plat==='Pass' ? 'ok' : '';
     const ver = st ? st.verdict : null;
-    const verHtml = ver==='Fail' ? '<b style="color:var(--red)">Fail</b>'
-                  : ver==='Pass' ? '<b style="color:var(--green)">Pass</b>' : '无阈值';
+    const vCls = ver==='Fail' ? 'fail' : ver==='Pass' ? 'ok' : '';
     const facts = '有效 '+d.n+' 轮，无效 '+d.failed_rounds.length+' 轮，'
       +fmt(d.hours_total,1)+' h（有效 '+fmt(d.valid_hours,1)+' h），重启 '+d.reboots.length+' 次';
     const basis = (d.platform.basis && d.platform.basis.length)
@@ -667,12 +946,42 @@ RENDER.overview = function(){
     const k = st ? st.procs.filter(r=>r.viol).length : 0;
     const mb = st ? ('层级 + Free RAM 计入判定（超标：'+(st.fail_items.length?st.fail_items.join('、'):'无')+'）；进程超标 '+k+' 项不计入判定（见标准与风险）')
                   : '无阈值';
-    vh += '<div class="vrow"><span class="vdot" style="background:'+(i?CB:CA)+'"></span>'
-      +'<span><b>'+lab+'</b>&nbsp; '+esc(d.label)+'&nbsp;&nbsp;平台 '+platHtml+'&nbsp;&nbsp;memscope '+verHtml
-      +'&nbsp;&nbsp;<span class="muted" style="font-size:13px">'+esc(facts)+'</span></span></div>'
+    vh += '<div class="vcol">'
+      +'<div class="vchip"><i class="sw" style="background:'+(i?CB:CA)+'"></i><b>'+lab+'</b><span>'+esc(d.label)+'</span></div>'
+      +'<div class="stamps"><span class="stamp '+pCls+'">平台 '+esc(plat)+'</span>'
+      +'<span class="stamp '+vCls+'">memscope '+(ver||'无阈值')+'</span></div>'
+      +'<div class="vfacts">'+esc(facts)+'</div>'
       +'<div class="vsub">平台依据：'+esc(basis)+'</div>'
-      +'<div class="vsub">memscope 依据：'+esc(mb)+'</div>';
+      +'<div class="vsub">memscope 依据：'+esc(mb)+'</div></div>';
   });
+  vh += '</div>';
+  // 判定单表（与标准与风险表 1 同行集：Free RAM 在前，其后按层级序）
+  const lvKeys = [];
+  [vstd.a,vstd.b].forEach(st=>{
+    if (!st) return;
+    if (st.free_ram && !lvKeys.includes('Free RAM')) lvKeys.push('Free RAM');
+    (st.levels||[]).forEach(r=>{ if (!lvKeys.includes(r.name)) lvKeys.push(r.name); });
+  });
+  const lvOrdV = ['Free RAM'].concat(Object.keys(LEVEL_COLORS));
+  lvKeys.sort((x,y)=>((lvOrdV.indexOf(x)<0?99:lvOrdV.indexOf(x))-(lvOrdV.indexOf(y)<0?99:lvOrdV.indexOf(y))));
+  if (!lvKeys.length){
+    vh += '<div class="muted" style="margin:8px 0 12px">无阈值数据，无法出具判定单</div>';
+  } else {
+    vh += '<div class="tbl-wrap no-max"><table class="lab"><thead><tr>'
+      +'<th>检验项目</th><th>参考阈值</th><th class="num">A 结果</th><th class="num">B 结果</th>'
+      +'<th>变化</th><th>标记</th></tr></thead><tbody>';
+    lvKeys.forEach(nm=>{
+      const ra = lvRowV(vstd.a,nm), rb = lvRowV(vstd.b,nm);
+      const fr = nm==='Free RAM', violB = rb && rb.viol;
+      vh += '<tr'+(violB?' class="viol"':'')+'><td>'+esc(nm)+'</td>'
+        +'<td>'+thrCellV(ra&&ra.thr, rb&&rb.thr, fr)+'</td>'
+        +'<td class="num res'+(ra&&ra.viol?' fl':'')+'">'+fmt(ra&&ra.mean)+'</td>'
+        +'<td class="num res'+(violB?' fl':'')+'">'+fmt(rb&&rb.mean)+'</td>'
+        +'<td>'+chgV(ra,rb)+'</td>'
+        +'<td class="mark">'+(violB?(fr?'↓':'↑'):'')+'</td></tr>';
+    });
+    vh += '</tbody></table></div>';
+  }
   vh += '<div class="vdiv"></div>';
   vh += fsv.slice(0,3).map(f=>'<a class="vfind" href="'+esc(f.link)+'"><span class="ft">'+sevBadge(f.sev)+esc(f.title)+'</span><div class="fd">'+esc(f.detail)+'</div></a>').join('')
      || '<div class="muted">无自动结论</div>';
@@ -680,18 +989,18 @@ RENDER.overview = function(){
   h += vh;
   // 关键指标（含迷你走势）
   const ev = DATA.events;
-  h += '<div class="card">'+cardHd('关键指标',metric.toUpperCase()+' 轮均口径 · MB；LMK=次/小时')+'<div class="grid-kpi auto">';
+  h += '<div class="card">'+cardHd('关键指标',metric.toUpperCase()+' 轮均口径，MB；LMK=次/小时')+'<div class="grid-kpi auto">';
   const lvNames = ['Native','System','Persistent','Visible'];
   lvNames.forEach(lv=>{
     const r = lvRow(lv); if(!r) return;
     h += kpiCard(lv+' '+metric.toUpperCase(), '层级轮均', r.da.mi, r.db.mi, 'MB', false, 2, sparkSvg(r.a, r.b));
   });
   const fr = sysRow('Free RAM'), ma = sysRow('MemAvailable'), ur = sysRow('Used RAM'), cp = sysRow('cached pss');
-  if (fr) h += kpiCard('Free RAM 值均', 'dumpsys tail · 高好', fr.da.mean, fr.db.mean, 'MB', true, 2, sparkSvg(fr.a, fr.b));
+  if (fr) h += kpiCard('Free RAM 值均', 'dumpsys tail，高好', fr.da.mean, fr.db.mean, 'MB', true, 2, sparkSvg(fr.a, fr.b));
   const stA = DATA.standards.a, stB = DATA.standards.b;
   h += kpiCard('Free RAM P10', '下限阈值 '+(stB&&stB.free_ram?fmt(stB.free_ram.thr,0):'—'),
                stA&&stA.free_ram?stA.free_ram.p10:null, stB&&stB.free_ram?stB.free_ram.p10:null, 'MB', true);
-  if (ma) h += kpiCard('MemAvailable', '/proc/meminfo · 高好', ma.da.mean, ma.db.mean, 'MB', true, 2, sparkSvg(ma.a, ma.b));
+  if (ma) h += kpiCard('MemAvailable', '/proc/meminfo，高好', ma.da.mean, ma.db.mean, 'MB', true, 2, sparkSvg(ma.a, ma.b));
   if (ur) h += kpiCard('Used RAM 值均', 'dumpsys tail', ur.da.mean, ur.db.mean, 'MB', false, 2, sparkSvg(ur.a, ur.b));
   if (cp) h += kpiCard('cached pss', 'dumpsys tail', cp.da.mean, cp.db.mean, 'MB', false, 2, sparkSvg(cp.a, cp.b));
   h += kpiCard('LMK 次/小时', 'killinfo', ev.a.lmk.per_hour, ev.b.lmk.per_hour, '/h', false, 2,
@@ -699,10 +1008,14 @@ RENDER.overview = function(){
   h += kpiCard('ANR + crash', 'events_log', ev.a.anr.length+ev.a.crash.length,
                ev.b.anr.length+ev.b.crash.length, '次', false, 0);
   h += kpiCard('重启次数', 'uptime 回退', DS[0].reboots.length, DS[1].reboots.length, '次', false, 0);
+  { const lk = DL();
+    if (lk.a.available || lk.b.available)
+      h += kpiCard('慢启动次数', 'APP_TRANSITION', lk.a.slow, lk.b.slow, '次', false, 0,
+                   sparkSvg(lk.a.buckets.slow, lk.b.buckets.slow)); }
   h += '</div></div>';
   // 自动结论 #4–#8（Top3 已在 .verdict；Cached 条目按开关过滤）
   const hidden = DATA.findings.length - fsv.length;
-  h += '<div class="card">'+cardHd('自动结论','共 '+DATA.findings.length+' 条 · Top 3 见上方 · 全部见「标准与风险」页'+(hidden?' · 已隐藏 '+hidden+' 条 Cached 相关':''),
+  h += '<div class="card">'+cardHd('自动结论','共 '+DATA.findings.length+' 条，Top 3 见上方，全部见「标准与风险」页'+(hidden?'，已隐藏 '+hidden+' 条 Cached 相关':''),
       '<a href="#tab=risk">全部结论</a>')
     + (fsv.slice(3,8).map(f=>'<a class="vfind" href="'+esc(f.link)+'"><span class="ft">'+sevBadge(f.sev)+esc(f.title)+'</span><div class="fd">'+esc(f.detail)+'</div></a>').join('')
       || '<div class="muted">无更多自动结论</div>')
@@ -737,7 +1050,7 @@ RENDER.system = function(){
   if (!defs.length){ el.innerHTML = '<div class="card"><div class="empty">本测试包无整机内存数据</div></div>'; return; }
   if (!state.sysSel) state.sysSel = ['Free RAM','MemAvailable','Used RAM','in swap'].filter(n=>defs.some(d=>d.name===n));
   state.sysSel = state.sysSel.filter(n=>defs.some(d=>d.name===n));
-  let h = '<div class="card">'+cardHd('整机内存指标','值均 = 出现轮均值 / MB · 斜率 MB/h')+'<div class="tbl-wrap"><table><thead><tr>'
+  let h = '<div class="card">'+cardHd('整机内存指标','值均 = 出现轮均值 / MB，斜率 MB/h')+'<div class="tbl-wrap"><table><thead><tr>'
     +'<th>指标</th><th>来源</th><th class="num">A 值均</th><th class="num">B 值均</th><th class="num">GAP</th><th class="num">GAP%</th>'
     +'<th class="num">A P90</th><th class="num">B P90</th><th class="num">A 最大</th><th class="num">B 最大</th>'
     +'<th class="num">斜率A (MB/h)</th><th class="num">斜率B (MB/h)</th><th>泄漏</th></tr></thead><tbody>';
@@ -750,7 +1063,7 @@ RENDER.system = function(){
       + '<td>'+(d.leak_a?'<span class="tag tag-sig">A</span>':'')+(d.leak_b?'<span class="tag tag-sig">B</span>':'')+'</td></tr>';
   });
   h += '</tbody></table></div></div>';
-  h += '<div class="card">'+cardHd('逐轮走势',(AXIS==='round'?'x=轮次':'x=测试小时')+' · 实线=A 虚线=B · 缩放联动')
+  h += '<div class="card">'+cardHd('逐轮走势',(AXIS==='round'?'x=轮次':'x=测试小时')+'，实线=A 虚线=B，缩放联动')
     +'<div id="sysPick"></div><div class="sm-grid" id="sysCharts"></div></div>';
   el.innerHTML = h;
   const draw = ()=>{
@@ -767,11 +1080,10 @@ RENDER.system = function(){
       const o = tsOption([abLine(0, d.a), abLine(1, d.b)]);
       o.legend = {show:false};
       o.grid.bottom = 30;
-      if (i===last) o.dataZoom = [{type:'inside'},{type:'slider',height:18,bottom:8}];
-      else o.dataZoom = [{type:'inside'}];
       const ch = makeChart(c);
       ch.group = grp;
       ch.setOption(o);
+      zoomable(ch, {axis:'x', cats:NMAX, group:grp, slider:i===last});
     });
     echarts.connect(grp);
   };
@@ -799,7 +1111,7 @@ RENDER.levels = function(){
   if (!state.lvSel.length) state.lvSel = ['Native'];
   if (!m.level_rows.some(r=>r.level===state.lvDist)) state.lvDist = 'Native';
   // 层级→进程明细表（点击层级行展开）
-  let h = '<div class="card">'+cardHd('层级内存对比',metric.toUpperCase()+' · 轮均 MB · 点击层级行展开进程；点击进程进详情')
+  let h = '<div class="card">'+cardHd('层级内存对比',metric.toUpperCase()+'，轮均 MB，点击层级行展开进程；点击进程进详情')
     +'<div class="controls"><label>GAP 阈值(MB) <input type="number" id="lvGapMin" min="0" step="1" value="'+state.lvGapMin+'"></label></div>'
     +'<div class="tbl-wrap"><table><thead><tr>'
     +'<th>层级 / 进程</th><th class="num">出现A</th><th class="num">出现B</th><th class="num">A 轮均</th><th class="num">B 轮均</th><th class="num">GAP</th><th class="num">GAP%</th>'
@@ -808,8 +1120,8 @@ RENDER.levels = function(){
     +'<th class="num">阈值A</th><th class="num">阈值B</th><th>泄漏/显著</th></tr></thead><tbody id="lvBody"></tbody></table></div></div>';
   const chartRows = m.level_rows.filter(r=>includeCached||r.level!=='Cached');
   h += '<div class="card">'+cardHd('层级轮均对比',metric.toUpperCase()+(includeCached?'':'（不含 Cached，可在右上角开关纳入）'))+'<div id="lvBar" class="chart"></div></div>';
-  h += '<div class="card">'+cardHd('层级时序',(AXIS==='round'?'x=轮次':'x=测试小时')+' · markLine=各侧阈值（RSS）')+'<div id="lvPick"></div><div id="lvChart" class="chart chart-tall"></div></div>';
-  h += '<div class="card">'+cardHd('分布对比','P50/P90/P95/Max/Mean · <select id="lvDistSel" style="height:28px">'+m.level_rows.map(r=>'<option'+(r.level===state.lvDist?' selected':'')+'>'+esc(r.level)+'</option>').join('')+'</select>')
+  h += '<div class="card">'+cardHd('层级时序',(AXIS==='round'?'x=轮次':'x=测试小时')+'，markLine=各侧阈值（RSS）')+'<div id="lvPick"></div><div id="lvChart" class="chart chart-tall"></div></div>';
+  h += '<div class="card">'+cardHd('分布对比','P50/P90/P95/Max/Mean，<select id="lvDistSel" style="height:28px">'+m.level_rows.map(r=>'<option'+(r.level===state.lvDist?' selected':'')+'>'+esc(r.level)+'</option>').join('')+'</select>')
     +'<div id="lvDist" class="chart"></div></div>';
   el.innerHTML = h;
   const body = document.getElementById('lvBody');
@@ -885,7 +1197,9 @@ RENDER.levels = function(){
       const ml = (metric==='rss') ? thrMarkLine([{y:tA,n:lv+' A阈',c:CA},{y:tB,n:lv+' B阈',c:CB}]) : null;
       if (ml) series[series.length-2].markLine = ml;
     });
-    makeChart(document.getElementById('lvChart')).setOption(tsOption(series));
+    { const ch = makeChart(document.getElementById('lvChart'));
+    ch.setOption(tsOption(series));
+    zoomable(ch, {axis:'x', cats:NMAX}); }
   };
   multiPicker({el:document.getElementById('lvPick'), options:m.level_rows.map(r=>r.level), selected:state.lvSel,
     colorOf:(n)=>lvColor(n), onChange:sel=>{state.lvSel=sel;draw();}, placeholder:'搜索添加层级…'});
@@ -956,7 +1270,7 @@ RENDER.procs = function(){
       +'</tbody></table></div></div>';
   }
   // 全量进程表
-  h += '<div class="card">'+cardHd('全量进程表（'+list.length+'）',metric.toUpperCase()+' · 点击列头排序 · 点击进程进详情')
+  h += '<div class="card">'+cardHd('全量进程表（'+list.length+'）',metric.toUpperCase()+'，点击列头排序，点击进程进详情')
     +'<div class="controls"><input type="text" id="pkKw" placeholder="关键词，多个用逗号分隔" value="'+esc(state.pkKw)+'" style="width:240px">'
     +'<select id="pkLevel"><option value="">全部层级</option>'+m.levels.map(L=>'<option'+(state.pkLevel===L?' selected':'')+'>'+esc(L)+'</option>').join('')+'</select>'
     +'<select id="pkCat"><option value="">全部归类</option><option value="inhouse"'+(state.pkCat==='inhouse'?' selected':'')+'>自研</option><option value="google"'+(state.pkCat==='google'?' selected':'')+'>Google</option><option value="other"'+(state.pkCat==='other'?' selected':'')+'>其他</option></select>'
@@ -972,7 +1286,7 @@ RENDER.procs = function(){
     +'<th class="num sort" data-k="max">最大A/B</th>'
     +'<th class="num sort" data-k="gap">GAP</th><th class="num">GAP%</th><th>标签</th></tr></thead><tbody id="pkBody"></tbody></table></div></div>';
   // 走势对比
-  h += '<div class="card">'+cardHd('走势对比','默认 |GAP| Top5 · '+(AXIS==='round'?'x=轮次':'x=测试小时')+' · 实线=A 虚线=B')
+  h += '<div class="card">'+cardHd('走势对比','默认 |GAP| Top5，'+(AXIS==='round'?'x=轮次':'x=测试小时')+'，实线=A 虚线=B')
     +'<div id="trPick"></div><div id="trChart" class="chart chart-tall"></div></div>';
   el.innerHTML = h;
   // Top20 bar
@@ -982,7 +1296,7 @@ RENDER.procs = function(){
     grid:{top:10,left:10,right:60,bottom:20,containLabel:true},
     xAxis:{type:'value',name:'MB'},
     yAxis:{type:'category',data:t20.map(p=>p.name),axisLabel:{fontSize:11,width:170,overflow:'truncate'}},
-    series:[{type:'bar',data:t20.map(p=>({value:+p.gap.toFixed(2),itemStyle:{color:p.gap>0?'#f43f5e':'#10b981',borderRadius:p.gap>0?[0,4,4,0]:[4,0,0,4]}})),label:{show:true,position:'right',formatter:d=>fmt(d.value)}}]
+    series:[{type:'bar',data:t20.map(p=>({value:+p.gap.toFixed(2),itemStyle:{color:p.gap>0?CFLAG:COK,borderRadius:p.gap>0?[0,4,4,0]:[4,0,0,4]}})),label:{show:true,position:'right',formatter:d=>fmt(d.value)}}]
   });
   const pkBody = document.getElementById('pkBody');
   const fillPk = ()=>{
@@ -1038,7 +1352,9 @@ RENDER.procs = function(){
       series.push(lineSeries(name+'·A', 0, p.a, col, false));
       series.push(lineSeries(name+'·B', 1, p.b, col, true));
     });
-    makeChart(document.getElementById('trChart')).setOption(tsOption(series));
+    { const ch = makeChart(document.getElementById('trChart'));
+    ch.setOption(tsOption(series));
+    zoomable(ch, {axis:'x', cats:NMAX}); }
   };
   multiPicker({el:document.getElementById('trPick'), options:list.map(p=>p.name), selected:state.trSel,
     colorOf:(n,idx)=>PROC_PALETTE[idx%PROC_PALETTE.length],
@@ -1106,7 +1422,7 @@ RENDER.events = function(){
     + kpiCard('ANR', '', ea.anr.length, eb.anr.length, '次', false, 0)
     + kpiCard('crash', '', ea.crash.length, eb.crash.length, '次', false, 0)
     +'</div>';
-  h += '<div class="card">'+cardHd('LMK 每小时分布','killinfo · test 阶段',
+  h += '<div class="card">'+cardHd('LMK 每小时分布','killinfo，test 阶段',
       '<span class="segtrack" id="lmkSeg"><button class="seg active" data-v="cum">累计</button><button class="seg" data-v="hour">每小时</button></span>')
     +'<div id="lmkChart" class="chart"></div></div>';
   const lvSet = new Set([...Object.keys(ea.lmk.by_level), ...Object.keys(eb.lmk.by_level)]);
@@ -1182,8 +1498,9 @@ RENDER.events = function(){
   const nh = Math.max(ea.lmk.hourly.length, eb.lmk.hourly.length);
   const cum = arr => { let s=0; return (arr||[]).map(v=>{s+=v;return s;}); };
   const drawLmk = cumMode => {
+    const ch = makeChart(document.getElementById('lmkChart'));
     if (cumMode){
-      makeChart(document.getElementById('lmkChart')).setOption({
+      ch.setOption({
         tooltip:{trigger:'axis'}, legend:{top:0},
         grid:{top:36,left:50,right:20,bottom:30},
         xAxis:{type:'category',data:Array.from({length:nh},(_,i)=>i+'h'),name:'测试小时'},
@@ -1193,7 +1510,7 @@ RENDER.events = function(){
           {name:'B '+LB,type:'line',data:cum(eb.lmk.hourly),itemStyle:{color:CB},lineStyle:{type:'dashed'}}]
       }, true);
     } else {
-      makeChart(document.getElementById('lmkChart')).setOption({
+      ch.setOption({
         tooltip:{trigger:'axis',axisPointer:{type:'shadow'}}, legend:{top:0},
         grid:{top:36,left:50,right:20,bottom:30},
         xAxis:{type:'category',data:Array.from({length:nh},(_,i)=>i+'h'),name:'测试小时'},
@@ -1203,6 +1520,7 @@ RENDER.events = function(){
           {name:'B '+LB,type:'bar',data:eb.lmk.hourly,itemStyle:{color:CB}}]
       }, true);
     }
+    zoomable(ch, {axis:'x', cats:nh});
   };
   drawLmk(true);
   document.getElementById('lmkSeg').querySelectorAll('.seg').forEach(b=>{
@@ -1243,8 +1561,8 @@ RENDER.events = function(){
         const pulls = DS[i].events.filter(e=>e.kind==='start' && e.caller===target && e.proc!==target);
         const tag = e => e.phase==='boot' ? '（启动期）' : '';
         const chip = '<span class="sc sc-'+(i?'b':'a')+'">'+(i?'B':'A')+'</span>';
-        const li1 = pulledBy.map(e=>'<li><b>'+esc(e.caller||'(未知)')+'</b> · '+esc(e.reason||'')+' · '+esc(e.t.slice(5))+tag(e)+'</li>').join('')||'<li class="muted">无</li>';
-        const li2 = pulls.map(e=>'<li><b>'+esc(e.proc)+'</b> · '+esc(e.reason||'')+' · '+esc(e.t.slice(5))+tag(e)+'</li>').join('')||'<li class="muted">无</li>';
+        const li1 = pulledBy.map(e=>'<li><b>'+esc(e.caller||'(未知)')+'</b>，'+esc(e.reason||'')+'，'+esc(e.t.slice(5))+tag(e)+'</li>').join('')||'<li class="muted">无</li>';
+        const li2 = pulls.map(e=>'<li><b>'+esc(e.proc)+'</b>，'+esc(e.reason||'')+'，'+esc(e.t.slice(5))+tag(e)+'</li>').join('')||'<li class="muted">无</li>';
         return '<div class="box"><h5>'+chip+'被谁拉起</h5><ul>'+li1+'</ul></div>'
           +'<span class="warr">→</span>'
           +'<div class="mid">'+chip+esc(target)+'</div>'
@@ -1268,7 +1586,7 @@ RENDER.pressure = function(){
   if (!state.psSel) state.psSel = cs.length? [cs[0].name] : [];
   state.psSel = state.psSel.filter(n=>cs.some(c=>c.name===n));
   const pf = v => v==null ? '—' : (Math.abs(v)>=1000 ? fmt0(v) : fmt(v));
-  let h = '<div class="card">'+cardHd('内存压力计数器','proc_vmstat 每轮增量汇总 · /小时 = 总量/覆盖小时')
+  let h = '<div class="card">'+cardHd('内存压力计数器','proc_vmstat 每轮增量汇总，/小时 = 总量/覆盖小时')
     +'<div class="tbl-wrap"><table><thead><tr><th>计数器</th><th>单位</th>'
     +'<th class="num">A 总量</th><th class="num">A /小时</th><th class="num">A P90/轮</th>'
     +'<th class="num">B 总量</th><th class="num">B /小时</th><th class="num">B P90/轮</th>'
@@ -1302,10 +1620,10 @@ RENDER.pressure = function(){
       const o = tsOption(s, {yAxis:{type:'value',name:cumMode?'累计':'增量/轮'}});
       o.legend = {show:false};
       o.grid.bottom = 30;
-      o.dataZoom = (i===last) ? [{type:'inside'},{type:'slider',height:18,bottom:8}] : [{type:'inside'}];
       const ch = makeChart(cd);
       ch.group = 'psGrp';
       ch.setOption(o);
+      zoomable(ch, {axis:'x', cats:NMAX, group:'psGrp', slider:i===last});
     });
     echarts.connect('psGrp');
   };
@@ -1327,8 +1645,8 @@ RENDER.risk = function(){
   const sa = DATA.standards.a, sb = DATA.standards.b;
   const fails = st => (st && st.fail_items && st.fail_items.length) ? '（'+st.fail_items.join('、')+'）' : '';
   let h = '<div class="card">'+cardHd('健康标准对照（A / B）',
-    'RSS 口径；阈值取各侧自己的标准 · A 判定 <b>'+(sa?sa.verdict:'无阈值')+'</b>'+fails(sa)
-    +' · B 判定 <b>'+(sb?sb.verdict:'无阈值')+'</b>'+fails(sb));
+    'RSS 口径；阈值取各侧自己的标准，A 判定 <b>'+(sa?sa.verdict:'无阈值')+'</b>'+fails(sa)
+    +'，B 判定 <b>'+(sb?sb.verdict:'无阈值')+'</b>'+fails(sb));
   const thrCell = (ta,tb)=>{
     if (ta==null && tb==null) return '—';
     if (ta==null) return fmt(tb);
@@ -1412,9 +1730,9 @@ RENDER.risk = function(){
     h += '<div class="muted">无阈值数据（缺少或无法解析 all_memory_data.xls）</div>';
   h += '</div>';
   const meta = DATA.meta;
-  h += '<div class="card">'+cardHd('疑似泄漏','趋势回归，提示非定论 · 常驻≥'+meta.resident
-    +' · delta≥max('+meta.leak_delta+' MB, head×'+meta.leak_pct+'%) · R²≥'+meta.leak_r2
-    +' · 层级/整机 delta≥'+meta.sys_leak_delta+' MB');
+  h += '<div class="card">'+cardHd('疑似泄漏','趋势回归，提示非定论，常驻≥'+meta.resident
+    +'，delta≥max('+meta.leak_delta+' MB, head×'+meta.leak_pct+'%)，R²≥'+meta.leak_r2
+    +'，层级/整机 delta≥'+meta.sys_leak_delta+' MB');
   if (DATA.leaks.length){
     h += '<div class="tbl-wrap"><table><thead><tr><th>数据集</th><th>类型</th><th>口径</th><th>对象</th><th class="num">head</th><th class="num">tail</th><th class="num">delta</th><th class="num">斜率/h</th><th class="num">R²</th></tr></thead><tbody>'
       + DATA.leaks.map(lk=>'<tr><td>'+lk.ds+'</td><td>'+esc(lk.kind)+'</td><td>'+esc((lk.kind==='heap'?lk.metric:lk.metric.toUpperCase())||'—')+'</td><td class="name">'+(lk.kind==='proc'?procLink(lk.name):esc(lk.name))+'</td><td class="num">'+fmt(lk.head)+'</td><td class="num">'+fmt(lk.tail)+'</td><td class="num">'+(lk.delta>0?'+':'')+fmt(lk.delta)+'</td><td class="num">'+(lk.slope>0?'+':'')+fmt(lk.slope)+'</td><td class="num">'+fmt(lk.r2)+'</td></tr>').join('')
@@ -1423,7 +1741,7 @@ RENDER.risk = function(){
   h += '</div>';
   const fs = DATA.findings.filter(f=>includeCached||!f.cached);
   const hidden = DATA.findings.length - fs.length;
-  h += '<div class="card">'+cardHd('自动结论（'+fs.length+'）','按严重度排序'+(hidden?' · 已隐藏 '+hidden+' 条 Cached 相关':''))
+  h += '<div class="card">'+cardHd('自动结论（'+fs.length+'）','按严重度排序'+(hidden?'，已隐藏 '+hidden+' 条 Cached 相关':''))
     +'<div class="tbl-wrap"><table><thead><tr><th>级别</th><th>类别</th><th>标题</th><th>详情</th></tr></thead><tbody>'
     + (fs.map(f=>'<tr><td>'+sevBadge(f.sev)+'</td><td>'+esc(f.cat)+'</td><td class="name"><a href="'+esc(f.link)+'">'+esc(f.title)+'</a></td><td class="name">'+esc(f.detail)+'</td></tr>').join('')
       || '<tr><td colspan="4" class="muted">无自动结论</td></tr>')
@@ -1507,7 +1825,7 @@ function openProc(name){
     +'<div class="stat"><div class="t">GAP</div><div class="v">'+(p.gap==null?'<span class="muted">—</span>':deltaBadge((p.gap>0?'+':'')+fmt(p.gap)+' MB', dc, p.gap))+'</div></div>'
     +'<div class="stat"><div class="t">GAP%</div><div class="v">'+(p.gapp==null&&p.gapt==null?'<span class="muted">—</span>':deltaBadge(p.gapt||(p.gapp>0?'+':'')+(p.gapp==null?'—':p.gapp.toFixed(1))+'%', dc, p.gap))+'</div></div>'
     +'</div>'
-    +'<div class="card">'+cardHd('逐轮走势','x=轮次 · 实线=A '+LA+'，虚线=B '+LB+' · '+metric.toUpperCase()+' (MB) · 点击数据点可多选')+'<div id="pdChart" class="chart"></div></div>'
+    +'<div class="card">'+cardHd('逐轮走势','x=轮次，实线=A '+LA+'，虚线=B '+LB+'，'+metric.toUpperCase()+' (MB)，点击数据点可多选')+'<div id="pdChart" class="chart"></div></div>'
     +'<div class="card">'+cardHd('已选数据点','','<button class="btn ghost" id="pdSelClear">清空选择</button>')
     +'<div id="pdSelBody"></div></div>'
     +'<div id="amWrap"></div>'
@@ -1515,7 +1833,7 @@ function openProc(name){
     +'<div class="card">'+cardHd('分布统计','出现轮口径')+'<div class="tbl-wrap no-max"><table><thead><tr><th></th><th class="num">出现</th><th class="num">出现率</th><th class="num">轮均</th><th class="num">值均</th><th class="num">最小</th><th class="num">P50</th><th class="num">P90</th><th class="num">P95</th><th class="num">最大</th></tr></thead><tbody>'
     +'<tr><td><b>A</b></td>'+distRow(p.da)+'</tr><tr><td><b>B</b></td>'+distRow(p.db)+'</tr>'
     +'</tbody></table></div></div>'
-    +'<div class="card">'+cardHd('趋势','线性回归 · head/tail=前/后10%中位')+'<div class="tbl-wrap no-max"><table><thead><tr><th></th><th class="num">head</th><th class="num">tail</th><th class="num">delta</th><th class="num">斜率/h</th><th class="num">R²</th></tr></thead><tbody>'
+    +'<div class="card">'+cardHd('趋势','线性回归，head/tail=前/后10%中位')+'<div class="tbl-wrap no-max"><table><thead><tr><th></th><th class="num">head</th><th class="num">tail</th><th class="num">delta</th><th class="num">斜率/h</th><th class="num">R²</th></tr></thead><tbody>'
     +'<tr><td><b>A</b></td>'+trendRow(p.ta)+'</tr><tr><td><b>B</b></td>'+trendRow(p.tb)+'</tr>'
     +'</tbody></table></div></div></div>'
     +'<div class="card">'+cardHd('层级出现分布','进程在各层级出现的轮数')+'<div class="tbl-wrap no-max"><table><thead><tr><th>层级</th><th class="num">A 轮数</th><th class="num">B 轮数</th></tr></thead><tbody>'
@@ -1534,6 +1852,7 @@ function openProc(name){
     }
     h += '</tbody></table></div></div>';
   }
+  h += pdLaunchCard(name);
   // 相关事件（仅当事件明细内嵌时）
   if (hasEv){
     h += '<div class="card">'+cardHd('相关事件','含该进程启动/消亡，及作为调用方拉起其他进程')
@@ -1547,6 +1866,11 @@ function openProc(name){
     h += (any?'':'<tr><td colspan="8" class="muted">无相关事件</td></tr>')+'</tbody></table></div></div>';
   }
   inner.innerHTML = h;
+  if (document.getElementById('pdLkBody')){
+    state.pdLkShown = 200;
+    fillPdLk(name);
+    document.getElementById('pdLkMore').onclick = ()=>{ state.pdLkShown += 200; fillPdLk(name); };
+  }
   document.getElementById('procBack').onclick = ()=>setHash({proc:null, tab:state.tab});
   const pdm = document.getElementById('pdMetric');
   if (pdm) pdm.querySelectorAll('.seg').forEach(b=>b.onclick=()=>setHash({metric:b.dataset.m}));
@@ -1610,8 +1934,8 @@ function openProc(name){
     grid:{top:40,left:66,right:20,bottom:span>30?58:30},
     xAxis:{type:'value',minInterval:1,min:minR,max:maxR,interval:span<=30?1:null},
     yAxis:{type:'value',name:'MB',scale:true},
-    dataZoom:[{type:'inside'}].concat(span>30?[{type:'slider',height:18,bottom:8}]:[]),
     series:buildSeries()});
+  zoomable(chart, {axis:'x', cats:span+1});
   const drawSelBody = ()=>{
     const body = document.getElementById('pdSelBody');
     if (!pdSel.items.length){
@@ -1691,7 +2015,7 @@ function openProc(name){
 const AM = DATA.appmem || {fields:[], procs:{}};
 const AM_FIXED = {'TOTAL':'#0f172a','Native Heap':'#0d9488','Dalvik Heap':'#7c3aed'};
 const AM_CYCLE = ['#db2777','#65a30d','#0891b2','#a21caf','#475569','#15803d',
-                  '#e11d48','#4d7c0f','#0e7490','#86198f'];
+                  CFLAG,'#4d7c0f','#0e7490','#86198f'];
 const amLookup = name => {   // appmem 键是 PSS-by-OOM 名；RSS 进程名可带路径前缀
   if (AM.procs[name]) return {key:name, data:AM.procs[name]};
   const base = name.split('/').pop();
@@ -1725,7 +2049,7 @@ const amRangeStr = rs => rs.map(r=>r[0]===r[1]?''+r[0]:r[0]+'-'+r[1]).join(',');
 function initAppmem(name, wrap){
   const am = (amLookup(name)||{}).data;
   const TITLE = 'meminfo 明细走势';
-  const SUB = 'dumpsys meminfo 明细表 Pss Total（MB） · 实线=A '+esc(LA)+'，虚线=B '+esc(LB);
+  const SUB = 'dumpsys meminfo 明细表 Pss Total（MB），实线=A '+esc(LA)+'，虚线=B '+esc(LB);
   if (!am){
     wrap.innerHTML = '<div class="card">'+cardHd(TITLE, SUB)
       +'<div class="empty">测试平台没有采集该进程的 dumpsys meminfo 明细。</div></div>';
@@ -2027,8 +2351,8 @@ function initAppmem(name, wrap){
       grid:{top:14,left:66,right:20,bottom:cats.length>60?58:30},
       xAxis:{type:'category',data:cats.map(String)},
       yAxis:{type:'value',name:'MB',scale:true},
-      dataZoom:[{type:'inside'}].concat(cats.length>60?[{type:'slider',height:18,bottom:8}]:[]),
       series}, {notMerge:true});
+    zoomable(ch, {axis:'x', cats:cats.length});
   };
 
   /* ---- 堆趋势表 ---- */
@@ -2067,6 +2391,301 @@ function initAppmem(name, wrap){
   rIn.value = amRangeStr(ranges);
   drawChips(); drawRibbon(); drawCov(); drawChart(); drawHeap();
 }
+
+/* ============ 7b. 应用启动 ============ */
+const LT_CN = {cold:'冷启动', warm:'温启动', hot:'热启动'};
+const LR_CN = {1:'启动窗口', 2:'窗口绘制', 3:'超时', 4:'快照', 5:'返回桌面动画'};
+const LT_SYM = {cold:'circle', warm:'rect', hot:'triangle'};
+const DL = () => DATA.launch || {thr:{cold:3000,warm:3000,hot:1000},
+  a:{available:false,excluded:{recents:0,no_delay:0},by_type:{},buckets:{total:[],slow:[]},apps:[],list:null},
+  b:{available:false,excluded:{recents:0,no_delay:0},by_type:{},buckets:{total:[],slow:[]},apps:[],list:null}};
+function lkRows(sd){
+  const s = DL()[sd], l = s.list; const out = [];
+  if (!l) return out;
+  l.t.forEach((tm,i)=>{
+    if (state.slowOnly && !l.slow[i]) return;
+    out.push({sd, t:tm, ri:l.ri[i], pkg:l.pkgs[l.pkg[i]], act:l.acts[l.act[i]],
+      type:l.type[i], ms:l.ms[i], delay:l.delay[i], reason:l.reason[i],
+      caller:l.caller[i]||'', slow:l.slow[i], h:l.h[i]});
+  });
+  return out;
+}
+function lkTr(r, withPkg){
+  return '<tr><td><span class="sc sc-'+r.sd+'">'+r.sd.toUpperCase()+'</span>'
+    +(r.slow?'<span class="tag tag-sig" style="margin-left:2px">慢</span>':'')+'</td>'
+    +'<td>'+esc(r.t.slice(5))+'</td><td class="num">'+(r.ri!=null?r.ri+1:'—')+'</td>'
+    +(withPkg?'<td class="name">'+esc(r.pkg)+'</td>':'')
+    +'<td title="'+esc(r.act)+'" style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
+    +esc(r.pkg&&r.act.indexOf(r.pkg)===0?'.'+r.act.slice(r.pkg.length):r.act)+'</td><td>'+LT_CN[r.type]+'</td>'
+    +'<td class="num"'+(r.slow?' style="color:var(--flag);font-weight:600"':'')+'>'+fmt0(r.ms)+'</td>'
+    +'<td class="num">'+fmt0(r.delay)+'</td><td>'+(LR_CN[r.reason]||esc(r.reason))+'</td>'
+    +'<td>'+esc(r.caller||'—')+'</td></tr>';
+}
+/* 进程详情页「应用启动记录」卡片 */
+function pdLaunchCard(name){
+  const L = DL();
+  const inA = L.a.list && L.a.list.pkgs.indexOf(name)>=0;
+  const inB = L.b.list && L.b.list.pkgs.indexOf(name)>=0;
+  if (!inA && !inB) return '';
+  const stat = s=>{
+    const app = (s.apps||[]).find(x=>x.pkg===name);
+    return app ? '次数 '+app.n+'，慢启动 '+app.slow+'，冷/温/热 '
+      +app.cold+'/'+app.warm+'/'+app.hot+'，P90 '+fmt(app.p90,0)+' ms' : '无记录';
+  };
+  return '<div class="card">'+cardHd('应用启动记录',
+      ['跨应用启动（APP_TRANSITION）','<span class="sc sc-a">A</span> '+esc(stat(L.a)),
+       '<span class="sc sc-b">B</span> '+esc(stat(L.b))])
+    +'<div class="tbl-wrap no-max"><table><thead><tr><th>侧</th><th>时间</th><th>轮次</th><th>Activity</th>'
+    +'<th>类型</th><th class="num">时延 ms</th><th class="num">转场 ms</th><th>结束原因</th><th>调用方</th></tr></thead>'
+    +'<tbody id="pdLkBody"></tbody></table></div>'
+    +'<button class="btn ghost" id="pdLkMore" style="margin-top:10px;display:none"></button></div>';
+}
+function fillPdLk(name){
+  const rows = lkRows('a').concat(lkRows('b'))
+    .filter(r=>r.pkg===name).sort((x,y)=>x.t<y.t?-1:1);
+  const vis = rows.slice(0, state.pdLkShown);
+  document.getElementById('pdLkBody').innerHTML =
+    vis.map(r=>lkTr(r,false)).join('') || '<tr><td colspan="9" class="empty">无匹配记录</td></tr>';
+  const more = document.getElementById('pdLkMore');
+  const rest = rows.length - vis.length;
+  more.style.display = rest>0 ? '' : 'none';
+  if (rest>0) more.textContent = '再显示 200 行（剩余 '+rest+'）';
+}
+RENDER.launch = function(){
+  const el = document.getElementById('page-launch');
+  const L = DL(), a = L.a, b = L.b, thr = L.thr;
+  if (!a.available && !b.available){
+    el.innerHTML = '<div class="card"><div class="empty">两侧 events 日志中都没有跨应用启动记录（APP_TRANSITION），无法统计慢启动。</div></div>';
+    return;
+  }
+  let h = '';
+  if (!a.available || !b.available)
+    h += '<div class="warn">'+(a.available?'B':'A')+' 侧 events 日志中没有跨应用启动记录，下面只有另一侧的数据。</div>';
+  // 1. 口径说明
+  h += '<div class="card" style="padding:12px 20px"><div style="font-size:13px;color:var(--graphite);line-height:1.7">'
+    +'统计跨应用启动（APP_TRANSITION），时延取 windowsDrawnDelayMs。'
+    +'慢启动：冷/温启动 &gt; '+thr.cold+' ms，热启动 &gt; '+thr.hot+' ms。'
+    +'已排除返回桌面动画 A '+a.excluded.recents+' / B '+b.excluded.recents+' 条、'
+    +'无绘制时延 A '+a.excluded.no_delay+' / B '+b.excluded.no_delay+' 条。'
+    +(a.outside||b.outside?'测试窗口外 A '+a.outside+' / B '+b.outside+' 条未计入。':'')
+    +'</div>'
+    +(state.slowOnly?'<div style="margin-top:8px"><span class="tag tag-a">仅显示慢启动</span>'
+      +'<a href="#" id="lkShowAll" style="font-size:12px;margin-left:8px">显示全部</a></div>':'')
+    +'</div>';
+  // 2. 指标板
+  const bt = (sd,ty)=>(sd.by_type||{})[ty]||{};
+  h += '<div class="card">'+cardHd('关键指标',['跨应用启动','时延 = windowsDrawnDelayMs'])+'<div class="grid-kpi auto">';
+  h += kpiCard('启动次数','APP_TRANSITION',a.total,b.total,'次',false,0);
+  h += kpiCard('慢启动次数','> '+thr.cold+' / '+thr.hot+' ms',a.slow,b.slow,'次',false,0,
+               sparkSvg(a.buckets.slow,b.buckets.slow));
+  h += kpiCard('慢启动率','慢/有效',a.slow_rate==null?null:a.slow_rate*100,
+               b.slow_rate==null?null:b.slow_rate*100,'%',false,1);
+  h += kpiCard('冷启动慢启动','cold',bt(a,'cold').slow,bt(b,'cold').slow,'次',false,0);
+  h += kpiCard('温启动慢启动','warm',bt(a,'warm').slow,bt(b,'warm').slow,'次',false,0);
+  h += kpiCard('热启动慢启动','hot',bt(a,'hot').slow,bt(b,'hot').slow,'次',false,0);
+  h += kpiCard('冷启动 P90','cold',bt(a,'cold').p90,bt(b,'cold').p90,'ms',false,0);
+  h += kpiCard('热启动 P90','hot',bt(a,'hot').p90,bt(b,'hot').p90,'ms',false,0);
+  h += '</div></div>';
+  // 3. 散点
+  h += '<div class="card">'+cardHd('启动时延分布',
+      ['x='+(AXIS==='round'?'轮次':'测试小时')+'，y = windowsDrawnDelayMs ms','点击点 → 明细筛选'])
+    +'<div id="lkSc" class="chart chart-tall"></div>'
+    +'<div class="legend" style="margin-top:8px"><span class="muted">○ 冷启动&nbsp;&nbsp;□ 温启动&nbsp;&nbsp;△ 热启动&nbsp;&nbsp;实心 = 慢启动</span></div></div>';
+  // 4. 慢启动次数 bar
+  const segHtml = state.slowOnly ? ''
+    : '<span class="segtrack" id="lkSeg"><button class="seg active" data-v="slow">慢启动</button><button class="seg" data-v="all">全部启动</button></span>';
+  h += '<div class="card">'+cardHd('慢启动次数',
+      a.buckets.unit==='round'?'x=轮次':'x=测试小时', segHtml)
+    +'<div id="lkBar" class="chart"></div></div>';
+  // 5. Top 应用
+  h += '<div class="card">'+cardHd('慢启动最多的应用',
+      'A+B 慢启动数降序，最多 100 个，点击条 → 明细筛选')
+    +'<div id="lkTop" class="chart"></div></div>';
+  // 6. 按应用汇总
+  h += '<div class="card">'+cardHd('按应用汇总','',
+      '<label style="font-size:12px;color:var(--graphite)">应用 <input type="text" id="lkAppKw" style="width:180px" value="'+esc(state.lkAppKw)+'" placeholder="包名关键词"></label>')
+    +'<div class="tbl-wrap"><table><thead><tr><th>应用</th>'
+    +'<th class="num sort" data-k="na">A 次数</th><th class="num sort" data-k="sa">A 慢启动</th><th class="num">A 冷/温/热</th><th class="num sort" data-k="pa">A P90</th>'
+    +'<th class="num sort" data-k="nb">B 次数</th><th class="num sort" data-k="sb">B 慢启动</th><th class="num">B 冷/温/热</th><th class="num sort" data-k="pb">B P90</th>'
+    +'<th class="num sort" data-k="chg">慢启动变化</th><th></th></tr></thead><tbody id="lkAppBody"></tbody></table></div></div>';
+  // 7. 启动明细
+  h += '<div class="card" id="lkDetailCard">'+cardHd('启动明细','共 <span id="lkCnt">0</span> 条')
+    +'<div class="controls">'
+    +'<label>应用 <input type="text" id="lkKw" style="width:220px" value="'+esc(state.lkKw)+'" placeholder="包名 / Activity 关键词"></label>'
+    +'<label>类型 <select id="lkType"><option value="">全部</option><option value="cold">冷启动</option><option value="warm">温启动</option><option value="hot">热启动</option></select></label>'
+    +'<label>侧 <select id="lkSide"><option value="">全部</option><option value="a">A</option><option value="b">B</option></select></label>'
+    +'<label>排序 <select id="lkSort"><option value="t">时间</option><option value="ms">时延降序</option></select></label>'
+    +'</div>'
+    +'<div class="tbl-wrap no-max"><table><thead><tr><th>侧</th><th>时间</th><th>轮次</th><th>应用</th><th>Activity</th>'
+    +'<th>类型</th><th class="num">时延 ms</th><th class="num">转场 ms</th><th>结束原因</th><th>调用方</th></tr></thead>'
+    +'<tbody id="lkBody"></tbody></table></div>'
+    +'<button class="btn ghost" id="lkMore" style="margin-top:10px;display:none"></button>'
+    +'</div>';
+  el.innerHTML = h;
+  const sa0 = document.getElementById('lkShowAll');
+  if (sa0) sa0.onclick = e=>{ e.preventDefault(); setHash({slow:null}); };
+  const setLkKw = pkg=>{
+    state.lkKw = pkg; state.lkShown = 500;
+    const inp = document.getElementById('lkKw');
+    if (inp) inp.value = pkg;
+    drawDetail();
+    document.getElementById('lkDetailCard').scrollIntoView({behavior:RM?'auto':'smooth',block:'start'});
+  };
+  // ---- 散点 ----
+  const mkSc = (sdIdx, s)=>{
+    const l = s.list; if (!l) return [];
+    const byType = {};
+    l.t.forEach((tm,i)=>{
+      if (state.slowOnly && !l.slow[i]) return;
+      const x = AXIS==='round' ? (l.ri[i]==null?null:l.ri[i]+1) : l.h[i];
+      if (x==null) return;
+      (byType[l.type[i]] = byType[l.type[i]]||[]).push({
+        value:[x, l.ms[i]], itemStyle:{opacity: l.slow[i] ? 1 : .35},
+        m:{t:tm, ri:l.ri[i], pkg:l.pkgs[l.pkg[i]], act:l.acts[l.act[i]],
+           ms:l.ms[i], delay:l.delay[i], reason:l.reason[i], caller:l.caller[i]||''}});
+    });
+    return Object.keys(byType).map(ty=>({
+      name: sdIdx?'B '+LB:'A '+LA, type:'scatter', symbol:LT_SYM[ty]||'circle', symbolSize:6,
+      itemStyle:{color: sdIdx?CB:CA}, data: byType[ty]}));
+  };
+  const scSeries = mkSc(0,a).concat(mkSc(1,b));
+  const ml = thrMarkLine([
+    {y:thr.hot, n:'热启动门限 '+thr.hot+' ms', c:'#5A6570'},
+    {y:thr.cold, n:'冷/温启动门限 '+thr.cold+' ms', c:'#5A6570'}]);
+  if (scSeries.length && ml) scSeries[0].markLine = ml;
+  const scCh = makeChart(document.getElementById('lkSc'));
+  scCh.setOption({
+    tooltip:{trigger:'item', formatter:p=>{
+      const m = p.data.m||{};
+      return '<b>'+esc(p.seriesName)+'</b><br>'+esc(m.t||'')+(m.ri!=null?' 第'+(m.ri+1)+'轮':'')
+        +'<br>'+esc(m.pkg||'')+'<br><span class="muted">'+esc(m.act||'')+'</span>'
+        +'<br>时延 <b>'+fmt0(m.ms)+'</b> ms，转场 '+fmt0(m.delay)+' ms'
+        +'<br>'+esc(LR_CN[m.reason]||m.reason||'')+(m.caller?'，'+esc(m.caller):'');}},
+    legend:{top:0,data:['A '+LA,'B '+LB]},
+    grid:{top:40,left:66,right:20,bottom:60},
+    xAxis: AXIS==='round'
+      ? {type:'value',min:1,minInterval:1,axisLabel:{formatter:v=>'第'+v+'轮'}}
+      : {type:'value',axisLabel:{formatter:v=>v+'h'}},
+    yAxis:{type:'value',name:'ms',scale:true},
+    series:scSeries});
+  zoomable(scCh, {axis:'xy', force:true});
+  scCh.on('click', p=>{ const m = p.data && p.data.m; if (m && m.pkg) setLkKw(m.pkg); });
+  // ---- 慢启动次数 bar ----
+  const drawLkBar = slowMode=>{
+    const n = Math.max(a.buckets.total.length, b.buckets.total.length);
+    const cats = a.buckets.unit==='round'
+      ? Array.from({length:n},(_,i)=>'第'+(i+1)+'轮')
+      : Array.from({length:n},(_,i)=>i+'h');
+    const key = slowMode ? 'slow' : 'total';
+    const ch = makeChart(document.getElementById('lkBar'));
+    ch.setOption({
+      tooltip:{trigger:'axis',axisPointer:{type:'shadow'}}, legend:{top:0},
+      grid:{top:36,left:50,right:20,bottom:30},
+      xAxis:{type:'category',data:cats}, yAxis:{type:'value',name:'次'},
+      series:[{name:'A '+LA,type:'bar',data:a.buckets[key],itemStyle:{color:CA}},
+              {name:'B '+LB,type:'bar',data:b.buckets[key],itemStyle:{color:CB}}]}, true);
+    zoomable(ch, {axis:'x', cats:n});
+  };
+  drawLkBar(true);
+  const lkSeg = document.getElementById('lkSeg');
+  if (lkSeg) lkSeg.querySelectorAll('.seg').forEach(x=>{
+    x.onclick = ()=>{
+      lkSeg.querySelectorAll('.seg').forEach(y=>y.classList.toggle('active',y===x));
+      drawLkBar(x.dataset.v==='slow');
+    };
+  });
+  // ---- Top 应用 ----
+  const am = {};
+  (a.apps||[]).forEach(x=>{ am[x.pkg]=am[x.pkg]||{a:0,b:0}; am[x.pkg].a=x.slow; });
+  (b.apps||[]).forEach(x=>{ am[x.pkg]=am[x.pkg]||{a:0,b:0}; am[x.pkg].b=x.slow; });
+  const tops = Object.keys(am).filter(k=>am[k].a+am[k].b>0)
+    .sort((x,y)=>(am[y].a+am[y].b)-(am[x].a+am[x].b)||x.localeCompare(y)).slice(0,100);
+  if (!tops.length){
+    document.getElementById('lkTop').innerHTML = '<div class="empty">两侧均无慢启动</div>';
+  } else {
+    const topEl = document.getElementById('lkTop');
+    topEl.style.height = (Math.min(tops.length,20)*28+90)+'px';
+    const ch = makeChart(topEl);
+    ch.setOption({
+      tooltip:{trigger:'axis',axisPointer:{type:'shadow'}}, legend:{top:0},
+      grid:{top:36,left:10,right:36,bottom:30,containLabel:true},
+      xAxis:{type:'value',name:'慢启动次'},
+      yAxis:{type:'category',data:tops,inverse:true,axisLabel:{width:190,overflow:'truncate',interval:0}},
+      series:[{name:'A '+LA,type:'bar',data:tops.map(k=>am[k].a),itemStyle:{color:CA}},
+              {name:'B '+LB,type:'bar',data:tops.map(k=>am[k].b),itemStyle:{color:CB}}]});
+    if (tops.length>20)
+      zoomable(ch, {axis:'y', force:true, initial:{startValue:0,endValue:19}});
+    else zoomable(ch, {axis:'y', cats:tops.length});
+    ch.on('click', p=>{ if (p.name) setLkKw(p.name); });
+  }
+  // ---- 按应用汇总 ----
+  const appMap = {};
+  (a.apps||[]).forEach(x=>{ appMap[x.pkg]={pkg:x.pkg,a:x,b:null}; });
+  (b.apps||[]).forEach(x=>{ const r=appMap[x.pkg]=appMap[x.pkg]||{pkg:x.pkg,a:null}; r.b=x; });
+  let appRows = Object.values(appMap);
+  if (state.slowOnly) appRows = appRows.filter(r=>(r.a&&r.a.slow>0)||(r.b&&r.b.slow>0));
+  const drawApps = ()=>{
+    const kw = (state.lkAppKw||'').toLowerCase();
+    const rows2 = appRows.filter(r=>!kw||r.pkg.toLowerCase().includes(kw));
+    const k = state.lkSortK, d = state.lkSortD;
+    const gv = r=>({na:r.a?r.a.n:null, sa:r.a?r.a.slow:null, pa:r.a?r.a.p90:null,
+                    nb:r.b?r.b.n:null, sb:r.b?r.b.slow:null, pb:r.b?r.b.p90:null,
+                    chg:(r.b?r.b.slow:0)-(r.a?r.a.slow:0)})[k];
+    rows2.sort((x,y)=>{
+      const vx=gv(x), vy=gv(y);
+      return ((vx==null?1:vy==null?-1:(vx-vy)*d))||x.pkg.localeCompare(y.pkg);});
+    const cwh = sd=>sd ? sd.cold+'/'+sd.warm+'/'+sd.hot : '—';
+    document.getElementById('lkAppBody').innerHTML = rows2.map(r=>{
+      const chg = (r.b?r.b.slow:0)-(r.a?r.a.slow:0);
+      return '<tr><td class="name">'+(MV().procs[r.pkg]?procLink(r.pkg):esc(r.pkg))+'</td>'
+        +'<td class="num">'+fmt0(r.a&&r.a.n)+'</td><td class="num">'+fmt0(r.a&&r.a.slow)+'</td>'
+        +'<td>'+cwh(r.a)+'</td><td class="num">'+fmt0(r.a&&r.a.p90)+'</td>'
+        +'<td class="num">'+fmt0(r.b&&r.b.n)+'</td><td class="num">'+fmt0(r.b&&r.b.slow)+'</td>'
+        +'<td>'+cwh(r.b)+'</td><td class="num">'+fmt0(r.b&&r.b.p90)+'</td>'
+        +'<td class="num">'+deltaBadge((chg>0?'+':'')+chg, deltaCls(chg,false,null), chg)+'</td>'
+        +'<td><button class="btn ghost lkDetail" data-pkg="'+esc(r.pkg)+'" style="height:26px;padding:0 10px;font-size:12px">看明细</button></td></tr>';
+    }).join('') || '<tr><td colspan="11" class="empty">无匹配应用</td></tr>';
+    document.getElementById('lkAppBody').querySelectorAll('.lkDetail')
+      .forEach(x=>x.onclick=()=>setLkKw(x.dataset.pkg));
+  };
+  document.getElementById('lkAppKw').oninput = e=>{ state.lkAppKw = e.target.value; drawApps(); };
+  el.querySelectorAll('th.sort').forEach(th=>{
+    th.style.cursor = 'pointer';
+    th.onclick = ()=>{
+      const k = th.dataset.k;
+      if (state.lkSortK===k) state.lkSortD = -state.lkSortD;
+      else { state.lkSortK = k; state.lkSortD = -1; }
+      drawApps();
+    };
+  });
+  drawApps();
+  // ---- 启动明细 ----
+  const drawDetail = ()=>{
+    const kw = (state.lkKw||'').toLowerCase(), ty = state.lkType||'', sd = state.lkSide||'';
+    let rr = lkRows('a').concat(lkRows('b'))
+      .filter(r=>(!kw||r.pkg.toLowerCase().includes(kw)||r.act.toLowerCase().includes(kw))
+        && (!ty||r.type===ty) && (!sd||r.sd===sd));
+    rr = state.lkSort==='ms' ? rr.sort((x,y)=>y.ms-x.ms)
+                           : rr.sort((x,y)=>x.t<y.t?-1:x.t>y.t?1:0);
+    document.getElementById('lkCnt').textContent = rr.length;
+    const vis = rr.slice(0, state.lkShown);
+    document.getElementById('lkBody').innerHTML =
+      vis.map(r=>lkTr(r,true)).join('') || '<tr><td colspan="10" class="empty">无匹配记录</td></tr>';
+    const more = document.getElementById('lkMore');
+    const rest = rr.length - vis.length;
+    more.style.display = rest>0 ? '' : 'none';
+    if (rest>0) more.textContent = '再显示 500 行（剩余 '+rest+'）';
+  };
+  document.getElementById('lkType').value = state.lkType;
+  document.getElementById('lkSide').value = state.lkSide;
+  document.getElementById('lkSort').value = state.lkSort;
+  document.getElementById('lkKw').oninput = e=>{ state.lkKw = e.target.value; state.lkShown=500; drawDetail(); };
+  document.getElementById('lkType').onchange = e=>{ state.lkType = e.target.value; state.lkShown=500; drawDetail(); };
+  document.getElementById('lkSide').onchange = e=>{ state.lkSide = e.target.value; state.lkShown=500; drawDetail(); };
+  document.getElementById('lkSort').onchange = e=>{ state.lkSort = e.target.value; drawDetail(); };
+  document.getElementById('lkMore').onclick = ()=>{ state.lkShown += 500; drawDetail(); };
+  drawDetail();
+};
 
 route();
 </script>

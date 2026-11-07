@@ -3,7 +3,7 @@
 Android 内存健康测试包（静态/动态）A/B 对比工具：读取两个平台测试包（zip/rar/解压目录），产出三份结果：
 
 - `report.md` — Markdown 对比报告
-- `report.html` — 单文件离线交互报告（内嵌 ECharts，支持 PSS/RSS 切换、Tab/链接路由）
+- `report.html` — 单文件离线交互报告（内嵌 ECharts，支持 PSS/RSS 切换、左侧分组导航 + Tab/链接路由、设置面板、图表统一缩放：滚轮缩放、左键拖动框选放大、「还原」按钮/双击恢复）
 - `data.xlsx` — 全量明细数据
 
 ## 安装
@@ -28,7 +28,7 @@ memscope dynamic compare <基线A.(zip|rar)> <对比B.(zip|rar)> [-o 输出目�
 ```
 --whitelist 白名单.txt --prefixes 前缀.txt --google-prefixes 前缀.txt
 --gap-abs 5 --gap-pct 10 --resident <出现率> --leak-delta 10 --leak-pct <%>
---leak-r2 <R²> --sys-leak-delta <MB> --rate-pct 20 --tmpdir 临时目录
+--leak-r2 <R²> --sys-leak-delta <MB> --rate-pct 20 --slow-launch <冷/温 ms> <热 ms> --tmpdir 临时目录
 --model <auto|2.0|3.0> --platform <auto|mtk|unisoc|qcom>
 ```
 
@@ -63,6 +63,7 @@ memscope dynamic compare <基线A.(zip|rar)> <对比B.(zip|rar)> [-o 输出目�
 - Google 进程判定：`--google-prefixes`（默认 `config/google_prefixes.txt` 或内置）前缀匹配；与自研同时命中时自研优先。
 - 测试包事件数 >5000 时 HTML 不内嵌明细（明细在 data.xlsx 的「启动事件」sheet）。
 - 进程 meminfo 明细：测试平台若逐进程采集 `dumpsys_meminfo_<proc>.txt`，HTML 进程详情页提供「meminfo 明细走势」卡（指标/轮次可筛选、覆盖条带、堆趋势疑似泄漏提示），明细另见 data.xlsx「进程meminfo明细」「进程堆趋势」。
+- 应用启动 / 慢启动：events 日志 `sysui_multi_action` 的 APP_TRANSITION（757=761，仅跨应用启动）记录，时延取 windowsDrawnDelayMs；慢启动门限 `--slow-launch`（默认冷/温启动 >3000 ms、热启动 >1000 ms）。排除返回桌面动画与无绘制时延记录，只统计第 1 轮开始至最后一轮结束的测试窗口内记录。HTML 新增「应用启动」页（指标板、时延散点、慢启动次数、慢启动最多应用、按应用汇总、启动明细）；顶栏「⚙ 设置」面板提供「仅显示慢启动数据」（`&slow=1`，同时作用于应用启动页与进程详情页的「应用启动记录」卡）与「包含 Cached」开关；概览指标板附「慢启动次数」卡。data.xlsx 新增「应用启动」「启动汇总」两张 sheet；report.md 第 12 节为应用启动对比。
 
 ## 打包单文件 exe
 
@@ -81,7 +82,7 @@ memscope.exe static compare A.zip B.zip -o outdir
 - **PSS** 数据：dumpsys meminfo OOM 层（含 swap，层为总值）→ 默认静态主口径；**RSS** 数据：procStatus 的 VmRSS+VmSwap，OomScore 映射层级（用于标准对照，默认动态主口径）。
 - 轮均 = 非空轮合计 ÷ 总轮数（缺席按 0）；值均 = 仅出现轮均值；出现率 = 出现轮数 ÷ 总轮数。
 - GAP = B − A（轮均）；显著差异：|GAP| ≥ gap-abs 且（新增/消失或 |GAP|/A ≥ gap-pct）视为显著变化。
-- 报告共 13 节（口径说明见末节）：测试信息 / 结论摘要 / 健康标准对照 / 整机内存 / 层级内存（RSS+PSS）/ 进程 GAP Top20 / 独有进程与层级变化 / 自研与 Google / 疑似泄漏 / 进程 meminfo 明细 / 进程事件 / 内存压力 / 口径说明。
+- 报告共 14 节（口径说明见末节）：测试信息 / 结论摘要 / 健康标准对照 / 整机内存 / 层级内存（RSS+PSS）/ 进程 GAP Top20 / 独有进程与层级变化 / 自研与 Google / 疑似泄漏 / 进程 meminfo 明细 / 进程事件 / 应用启动 / 内存压力 / 口径说明。
 
 ## 开发
 

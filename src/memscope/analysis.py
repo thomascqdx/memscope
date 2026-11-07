@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import statistics
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from math import ceil
 
 from . import __version__
@@ -57,8 +57,8 @@ PRESSURE_COUNTERS = [
 _SYS_LEAK_FIELDS = (('Used RAM', 'up'), ('Free RAM', 'down'),
                     ('MemAvailable', 'down'))
 _SEV_ORDER = {'high': 0, 'mid': 1, 'low': 2, 'info': 3}
-_CAT_ORDER = {'数据': -1, '标准': 0, 'LMK': 1, '泄漏': 2, '稳定性': 3, '压力': 4,
-              '层级': 5, '整机': 6, '进程': 7, '归类': 8}
+_CAT_ORDER = {'数据': -1, '标准': 0, 'LMK': 1, '泄漏': 2, '稳定性': 3, '启动': 4,
+              '压力': 5, '层级': 6, '整机': 7, '进程': 8, '归类': 9}
 # 只有常驻层级做泄漏判定；其余层级成员随负载变化，趋势不代表泄漏
 LEAK_LEVELS = {'Native', 'System', 'Persistent', 'Persistent Service'}
 # 测试工具进程：不算泄漏、不进进程类 findings（数据仍保留）
@@ -94,6 +94,8 @@ class Options:
     leak_r2: float = 0.6          # 泄漏判定 R2 门限
     sys_leak_delta: float = 50.0  # 层级/整机泄漏 delta 门限 MB
     rate_pct: float = 20.0        # 频率对比阈值 %（LMK/压力）
+    slow_cw: int = 3000           # 慢启动门限 ms：冷/温启动（严格大于）
+    slow_hot: int = 1000          # 慢启动门限 ms：热启动（严格大于）
     primary_metric: str = 'pss'
     trend_min: int = 5            # 趋势回归最少出现轮数
     whitelist: set = None
@@ -106,7 +108,8 @@ class Options:
 
 def default_options(kind: str) -> dict:
     """CLI argparse 默认值（每种测试类型的默认参数）。"""
-    d = {'kind': kind, 'gap_abs': 5.0, 'gap_pct': 10.0, 'rate_pct': 20.0}
+    d = {'kind': kind, 'gap_abs': 5.0, 'gap_pct': 10.0, 'rate_pct': 20.0,
+         'slow_cw': 3000, 'slow_hot': 1000}
     d.update(_KIND_PARAMS[kind])
     return d
 
@@ -705,6 +708,166 @@ def build_events(ds: Dataset, hours_total: float, gaps=None, iv_s=None):
     }
 
 
+# ---------- 应用启动（sysui_multi_action APP_TRANSITION，phase=='test'） ----------
+def build_launch(ds: Dataset, opts: Options, hours_total, iv_min,
+                 ev_hours, axis):
+    """ds.launches → 单侧慢启动统计 dict。
+
+    只统计测试窗口内的 test 阶段记录：rounds[0].start <= t <= win_end；
+    win_end = max(各轮 end)（无则 rounds[-1].start）与
+    rounds[-1].start + 采样间隔中位数(iv_min) 的较大者；
+    窗口外记录数记 outside（不计入任何统计）。
+    有效记录 = ms（windowsDrawnDelayMs）>0；ms 缺失/为 0 记 excluded
+    （reason=5 → recents 返回桌面，其余 → no_delay）。
+    慢启动 = 冷/温 ms > slow_cw、热 ms > slow_hot（严格大于）。
+    """
+    evs = [e for e in ds.launches if e.phase == 'test']
+    if ds.rounds:
+        last_start = ds.rounds[-1].start
+        ends = [r.end for r in ds.rounds if r.end]
+        win_end = max(ends) if ends else last_start
+        if last_start is not None and iv_min:
+            w2 = last_start + timedelta(minutes=iv_min)
+            win_end = max(win_end, w2) if win_end is not None else w2
+        window = {
+            'start': (ds.rounds[0].start.strftime('%Y-%m-%d %H:%M:%S')
+                      if ds.rounds[0].start else None),
+            'end': (win_end.strftime('%Y-%m-%d %H:%M:%S')
+                    if win_end else None)}
+    else:
+        win_end, window = None, None
+    t0 = ds.rounds[0].start if ds.rounds and ds.rounds[0].start else None
+
+    def in_win(t):
+        return ((t0 is None or t >= t0)
+                and (win_end is None or t <= win_end))
+
+    # 归轮：rounds[i].start <= t < rounds[i+1].start；末轮开区间到无穷；
+    # t 早于首轮开始不进桶；start 缺失轮归入上一个有 start 的轮
+    starts = [(i, r.start) for i, r in enumerate(ds.rounds) if r.start]
+
+    def round_idx(t):
+        if not starts or t < starts[0][1]:
+            return None
+        lo, hi = 0, len(starts) - 1
+        while lo < hi:
+            mid = (lo + hi + 1) // 2
+            if starts[mid][1] <= t:
+                lo = mid
+            else:
+                hi = mid - 1
+        return starts[lo][0]
+
+    def hour_idx(t):
+        if t0 is None:
+            return None
+        h = int((t - t0).total_seconds() // 3600)
+        return h if h >= 0 else None
+
+    def is_slow(e):
+        thr = opts.slow_hot if e.ltype == 'hot' else opts.slow_cw
+        return e.ms > thr
+
+    inside, outside = [], 0
+    for e in evs:
+        if in_win(e.t):
+            inside.append(e)
+        else:
+            outside += 1
+    valid, excluded = [], {'recents': 0, 'no_delay': 0}
+    for e in inside:
+        if e.ms is None or e.ms <= 0:
+            excluded['recents' if e.code == 5 else 'no_delay'] += 1
+        else:
+            valid.append(e)
+    valid.sort(key=lambda e: e.t)
+
+    by_type = {}
+    for lt in ('cold', 'warm', 'hot'):
+        mss = sorted(e.ms for e in valid if e.ltype == lt)
+        sl = sum(1 for e in valid
+                 if e.ltype == lt and is_slow(e))
+        by_type[lt] = {
+            'n': len(mss), 'slow': sl,
+            'slow_rate': (sl / len(mss)) if mss else None,
+            'p50': pct(mss, 50), 'p90': pct(mss, 90),
+            'max': mss[-1] if mss else None,
+            'mean': (sum(mss) / len(mss)) if mss else None}
+
+    if axis == 'round':
+        unit, nb = 'round', ds.n
+    else:
+        unit = 'hour'
+        nb = max(1, int(ceil(hours_total))) if hours_total else 0
+    bk_total, bk_slow = [0] * nb, [0] * nb
+    for e in valid:
+        i = round_idx(e.t) if unit == 'round' else hour_idx(e.t)
+        if i is None or i >= nb:
+            continue
+        bk_total[i] += 1
+        if is_slow(e):
+            bk_slow[i] += 1
+
+    agg = {}
+    for e in valid:
+        a = agg.setdefault(e.proc, {'n': 0, 'slow': 0, 'cold': 0, 'warm': 0,
+                                    'hot': 0, 'slow_cold': 0, 'slow_warm': 0,
+                                    'slow_hot': 0, 'ms': []})
+        a['n'] += 1
+        a[e.ltype] += 1
+        a['ms'].append(e.ms)
+        if is_slow(e):
+            a['slow'] += 1
+            a['slow_' + e.ltype] += 1
+    apps = []
+    for pkg, a in agg.items():
+        mss = sorted(a['ms'])
+        apps.append({'pkg': pkg, 'n': a['n'], 'slow': a['slow'],
+                     'cold': a['cold'], 'warm': a['warm'], 'hot': a['hot'],
+                     'slow_cold': a['slow_cold'], 'slow_warm': a['slow_warm'],
+                     'slow_hot': a['slow_hot'],
+                     'p50': pct(mss, 50), 'p90': pct(mss, 90),
+                     'max': mss[-1]})
+    apps.sort(key=lambda x: (-x['slow'], -x['n'], x['pkg']))
+
+    lst = {'pkgs': [], 'acts': [], 't': [], 'h': [], 'ri': [], 'pkg': [],
+           'act': [], 'type': [], 'ms': [], 'delay': [], 'reason': [],
+           'caller': [], 'slow': []}
+    pk_i, ac_i = {}, {}
+    for e in valid:
+        for tbl, idx, s in ((lst['pkgs'], pk_i, e.proc),
+                            (lst['acts'], ac_i, e.comp)):
+            if s not in idx:
+                idx[s] = len(tbl)
+                tbl.append(s)
+        lst['t'].append(e.t.strftime('%Y-%m-%d %H:%M:%S'))
+        lst['h'].append(round((e.t - t0).total_seconds() / 3600.0, 4)
+                        if t0 else None)
+        lst['ri'].append(round_idx(e.t))
+        lst['pkg'].append(pk_i[e.proc])
+        lst['act'].append(ac_i[e.comp])
+        lst['type'].append(e.ltype)
+        lst['ms'].append(e.ms)
+        lst['delay'].append(e.delay_ms)
+        lst['reason'].append(e.code)
+        lst['caller'].append(e.caller)
+        lst['slow'].append(1 if is_slow(e) else 0)
+
+    total = len(valid)
+    slow = sum(lst['slow'])
+    return {'available': bool(evs),
+            'total': total, 'slow': slow,
+            'slow_rate': (slow / total) if total else None,
+            'per_hour': (slow / ev_hours) if ev_hours else None,
+            'excluded': excluded,
+            'outside': outside,
+            'window': window,
+            'by_type': by_type,
+            'buckets': {'unit': unit, 'total': bk_total, 'slow': bk_slow},
+            'apps': apps,
+            'list': lst}
+
+
 # ---------- 健康标准对照（RSS 口径，用各侧自己的阈值） ----------
 def build_standards(ds: Dataset, mrss, side: str, opts: Options):
     th = ds.thresholds
@@ -978,7 +1141,7 @@ def _failed_ranges_txt(ds):
 
 # ---------- findings ----------
 def _findings(dsa, dsb, mp, system, std_a, std_b, ea, eb, pressure, opts,
-              leaks, da, db):
+              leaks, da, db, launch=None):
     out = []
     pm = opts.primary_metric.upper()
 
@@ -1202,6 +1365,44 @@ def _findings(dsa, dsb, mp, system, std_a, std_b, ea, eb, pressure, opts,
             'B 侧重启点：'
             + '、'.join(f"第{r['round']}轮前" for r in dsb.reboots),
             '#tab=events')
+
+    # 10. 应用启动：慢启动率对比（两侧都有有效记录才比较）
+    launch = launch or {'a': {}, 'b': {}}
+    l_a, l_b = launch.get('a') or {}, launch.get('b') or {}
+    if l_a.get('available') != l_b.get('available'):
+        add('low', '数据',
+            f"{'A' if l_b.get('available') else 'B'} 侧无应用启动记录"
+            '（APP_TRANSITION），慢启动对比不可用', '', '#tab=overview')
+    elif (l_a.get('available') and l_a.get('total')
+          and l_b.get('total')):
+        ra, rb = l_a['slow_rate'], l_b['slow_rate']
+        sa, sb = l_a['slow'], l_b['slow']
+        bt_a, bt_b = l_a['by_type'], l_b['by_type']
+        up = sb >= 3 and (ra == 0 or
+                          (rb > ra and rb - ra
+                           >= ra * opts.rate_pct / 100.0))
+        down = (not up and sa >= 3 and ra > 0
+                and ra - rb >= ra * opts.rate_pct / 100.0)
+        if up or down:
+            side = 'B' if up else 'A'
+            top = [x for x in (l_b if up else l_a)['apps']
+                   if x['slow'] > 0][:3]
+            detail = (
+                f"慢启动 A {sa}/{l_a['total']}（{ra * 100:.1f}%）→ "
+                f"B {sb}/{l_b['total']}（{rb * 100:.1f}%）；"
+                '冷/温/热 慢启动 A '
+                f"{bt_a['cold']['slow']}/{bt_a['warm']['slow']}/"
+                f"{bt_a['hot']['slow']}；B "
+                f"{bt_b['cold']['slow']}/{bt_b['warm']['slow']}/"
+                f"{bt_b['hot']['slow']}"
+                + ('；' + side + ' 侧最多：' + '、'.join(
+                    f"{x['pkg']} {x['slow']} 次" for x in top) if top else ''))
+            if up:
+                add('mid', '启动', 'B 侧慢启动率升高', detail, '#tab=launch',
+                    score=(rb - ra) * 100)
+            else:
+                add('info', '启动', 'B 侧慢启动率下降', detail, '#tab=launch',
+                    score=(ra - rb) * 100)
     return out
 
 
@@ -1216,6 +1417,11 @@ def analyze(dsa: Dataset, dsb: Dataset, opts: Options) -> dict:
     pressure = build_pressure(dsa, dsb, ha, hb)
     ea = build_events(dsa, hta, gaps=ga, iv_s=(iva or 0) * 60)
     eb = build_events(dsb, htb, gaps=gb, iv_s=(ivb or 0) * 60)
+    axis = 'round' if max(dsa.n, dsb.n) <= SMALL_N else 'hour'
+    launch = {'thr': {'cold': opts.slow_cw, 'warm': opts.slow_cw,
+                      'hot': opts.slow_hot},
+              'a': build_launch(dsa, opts, hta, iva, ea['ev_hours'], axis),
+              'b': build_launch(dsb, opts, htb, ivb, eb['ev_hours'], axis)}
     std_a = build_standards(dsa, mrss, 'a', opts)
     std_b = build_standards(dsb, mrss, 'b', opts)
 
@@ -1318,7 +1524,7 @@ def analyze(dsa: Dataset, dsb: Dataset, opts: Options) -> dict:
 
     mp = mrss if opts.primary_metric == 'rss' else mpss
     findings = _findings(dsa, dsb, mp, system, std_a, std_b, ea, eb,
-                         pressure, opts, leaks, dsj[0], dsj[1])
+                         pressure, opts, leaks, dsj[0], dsj[1], launch)
     findings.sort(key=lambda f: (_SEV_ORDER.get(f['sev'], 9),
                                  _CAT_ORDER.get(f['cat'], 9),
                                  -f['score']))
@@ -1336,6 +1542,7 @@ def analyze(dsa: Dataset, dsb: Dataset, opts: Options) -> dict:
             'resident': opts.resident, 'leak_delta': opts.leak_delta,
             'leak_pct': opts.leak_pct, 'leak_r2': opts.leak_r2,
             'sys_leak_delta': opts.sys_leak_delta, 'rate_pct': opts.rate_pct,
+            'slow_cw': opts.slow_cw, 'slow_hot': opts.slow_hot,
             'cross_model': dsa.model != dsb.model,
             'cross_chip': bool(dsa.chip and dsb.chip
                                and dsa.chip != dsb.chip),
@@ -1347,6 +1554,7 @@ def analyze(dsa: Dataset, dsb: Dataset, opts: Options) -> dict:
         'system': system,
         'pressure': pressure,
         'events': {'a': ea, 'b': eb},
+        'launch': launch,
         'standards': {'a': std_a, 'b': std_b},
         'inhouse': ih,
         'google': {'prefixes': list(opts.google_prefixes),

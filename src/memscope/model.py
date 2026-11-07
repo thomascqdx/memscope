@@ -10,7 +10,7 @@ from typing import Optional
 class Event:
     """一条 events_log 事件。t 为补全年份后的时间；phase ∈ boot|test。"""
     t: datetime
-    kind: str  # start | kill | died | lmk | anr | crash | lowmem
+    kind: str  # start | kill | died | lmk | anr | crash | lowmem | launch
     proc: str = ""
     reason: str = ""
     comp: str = ""
@@ -20,6 +20,9 @@ class Event:
     pid: Optional[int] = None
     rss_mb: Optional[float] = None
     code: Optional[int] = None
+    ltype: str = ''                    # launch: cold | warm | hot
+    ms: Optional[int] = None           # launch: windowsDrawnDelayMs
+    delay_ms: Optional[int] = None     # launch: 转场时延
 
 
 @dataclass
@@ -59,6 +62,7 @@ class Dataset:
     packages: list = field(default_factory=list)
     rounds: list = field(default_factory=list)        # list[RoundData]
     events: list = field(default_factory=list)        # list[Event]
+    launches: list = field(default_factory=list)      # list[Event] kind='launch'（APP_TRANSITION）
     boot_time: Optional[datetime] = None
     thresholds: Thresholds = field(default_factory=Thresholds)
     warnings: list = field(default_factory=list)

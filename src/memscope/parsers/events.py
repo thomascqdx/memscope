@@ -1,5 +1,6 @@
 """解析 mobilelog 中的 events_log 行：am_proc_start / am_kill / am_proc_died /
-boot_progress_start，并按启动时间划分阶段（boot / test，上一轮开机事件丢弃）。"""
+boot_progress_start / sysui_multi_action(APP_TRANSITION 应用启动)，并按启动
+时间划分阶段（boot / test，上一轮开机事件丢弃）。"""
 from __future__ import annotations
 
 import re
@@ -13,6 +14,8 @@ _LINE = re.compile(
     r'I\s+(\w+)\s*:\s*(.*)$')
 _CALLER = re.compile(r'caller=([^/,\]]+)')
 _COMP = re.compile(r'\{([^}]*)\}')
+# sysui_multi_action 758：启动类型（AOSP MetricsLogger 常量）
+_LAUNCH_TYPES = {7: 'cold', 8: 'warm', 9: 'hot'}
 
 
 def _parse_line(line: str, year: int):
@@ -97,6 +100,21 @@ def parse_events(lines, year: int, round1_start, round1_uptime_ms,
                              reason=(f[4] + ': ' + msg)[:200]))
         elif extra and tag == 'am_low_memory':
             evs.append(Event(t=t, kind='lowmem'))
+        elif extra and tag == 'sysui_multi_action':
+            # body = [k1,v1,k2,v2,...]；只取 757=761（APP_TRANSITION 跨应用启动）
+            kv = {f[i].strip(): f[i + 1].strip()
+                  for i in range(0, len(f) - 1, 2)}
+            if _int(kv.get('757')) != 761:
+                continue
+            ltype = _LAUNCH_TYPES.get(_int(kv.get('758')))
+            if ltype is None:
+                continue
+            evs.append(Event(t=t, kind='launch',
+                             proc=kv.get('806', ''), comp=kv.get('871', ''),
+                             caller=kv.get('904', ''),
+                             code=_int(kv.get('759')), ltype=ltype,
+                             ms=_int(kv.get('322')),
+                             delay_ms=_int(kv.get('319'))))
 
     boot_time = None
     cands = [t - timedelta(milliseconds=ms)
