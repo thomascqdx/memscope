@@ -12,10 +12,12 @@ devinfo/ + 顶层 log）自动识别，亦可 --model/--platform 显式指定。
 from __future__ import annotations
 
 import io
+import os
 import re
 import shutil
 import subprocess
 import tempfile
+import time
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -315,11 +317,25 @@ def detect_chip(platform) -> str | None:
     return None
 
 
+def _rmtree_retry(path, tries=8, delay=0.25) -> bool:
+    """Windows 下新解出的文件可能被杀毒/索引短暂占用（删除挂起 → WinError 145/5/32），重试删除。"""
+    for i in range(tries):
+        try:
+            shutil.rmtree(path)
+            return True
+        except FileNotFoundError:
+            return True
+        except OSError:
+            if i == tries - 1:
+                break
+            time.sleep(delay * (i + 1))
+    return not os.path.exists(path)
+
+
 def load_dataset(path, label: str, kind: str = 'static', tmpdir=None,
                  model: str = 'auto', chip: str = 'auto') -> Dataset:
     ds = Dataset(label=label, path=str(path))
-    tmp = tempfile.TemporaryDirectory(prefix='memscope_', dir=tmpdir)
-    tmp_path = Path(tmp.name)
+    tmp_path = Path(tempfile.mkdtemp(prefix='memscope_', dir=tmpdir))
     opened = []  # 需在清理临时目录前关闭的 ZipFile
     try:
         src = open_source(path, tmp_path)
@@ -332,7 +348,8 @@ def load_dataset(path, label: str, kind: str = 'static', tmpdir=None,
                 zf.close()
             except Exception:
                 pass
-        tmp.cleanup()
+        if not _rmtree_retry(tmp_path):
+            ds.warnings.append(f'临时目录未能完全删除（文件被占用），可手动删除：{tmp_path}')
     return ds
 
 
