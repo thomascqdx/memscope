@@ -38,13 +38,10 @@ def test_schema_parity_static_dynamic():
     rd = _dynamic_result()
     assert set(rs) == set(rd)
     for key in ('meta', 'device_diff', 'pkg_diff', 'metrics', 'system',
-                'pressure', 'events', 'launch', 'standards', 'inhouse',
-                'google', 'appmem', 'leaks', 'findings'):
+                'pressure', 'events', 'standards', 'inhouse', 'google',
+                'appmem', 'leaks', 'findings'):
         assert key in rs
     assert set(rs['meta']) == set(rd['meta'])
-    assert set(rs['launch']) == set(rd['launch'])
-    for s in ('a', 'b'):
-        assert set(rs['launch'][s]) == set(rd['launch'][s])
     assert set(rs['datasets'][0]) == set(rd['datasets'][0])
     for metric in ('rss', 'pss'):
         assert set(rs['metrics'][metric]) == set(rd['metrics'][metric])
@@ -166,7 +163,7 @@ def test_markdown_headings_identical():
           if l.startswith('## ')]
     assert [l.split('.', 1)[0] for l in hs] == [l.split('.', 1)[0] for l in hd]
     nums = [l.split()[1].rstrip('.') for l in hs]
-    assert nums == [str(i) for i in range(1, 15)]
+    assert nums == [str(i) for i in range(1, 14)]
     md = markdown.render(_static_result())
     assert md.startswith('# 静态内存对比报告')
     assert '# 动态内存对比报告' in markdown.render(_dynamic_result())

@@ -439,86 +439,8 @@ def render(R: dict) -> str:
                      '数量过多未内嵌，明细见 data.xlsx')
     L.append('')
 
-    # ---- 12. 应用启动 ----
-    lau = R.get('launch') or {}
-    l_a, l_b = lau.get('a') or {}, lau.get('b') or {}
-    thr = lau.get('thr') or {}
-    cw = thr.get('cold', meta.get('slow_cw', 3000))
-    hot = thr.get('hot', meta.get('slow_hot', 1000))
-    L.append(f'## 12. 应用启动（慢启动：冷/温 > {cw}ms，热 > {hot}ms）')
-    L.append('')
-    if l_a.get('available') or l_b.get('available'):
-
-        def _lv(s, key):
-            return s.get(key, '—') if s.get('available') else '—'
-
-        def _lrate(s):
-            r = s['slow_rate']
-            return '—' if r is None else f'{r * 100:.1f}%'
-
-        def _ltype(s, lt):
-            b = s['by_type'][lt]
-            if not b['n']:
-                return '0'
-            return f"{b['n']} 次 / 慢 {b['slow']} / P90 {b['p90']:.0f}"
-
-        def _lex(s):
-            e = s['excluded']
-            return f"返回桌面 {e['recents']} / 无绘制时延 {e['no_delay']}"
-
-        L.append('| 指标 | A | B |')
-        L.append('|---|---|---|')
-        L.append(f"| 启动次数 | {_lv(l_a, 'total')} | {_lv(l_b, 'total')} |")
-        L.append(f"| 慢启动次数 | {_lv(l_a, 'slow')} | {_lv(l_b, 'slow')} |")
-        L.append('| 慢启动率 | '
-                 f"{_lrate(l_a) if l_a.get('available') else '—'} | "
-                 f"{_lrate(l_b) if l_b.get('available') else '—'} |")
-        for lt, cn in (('cold', '冷启动'), ('warm', '温启动'),
-                       ('hot', '热启动')):
-            L.append(f"| {cn}（次数/慢/P90 ms） | "
-                     f"{_ltype(l_a, lt) if l_a.get('available') else '—'} | "
-                     f"{_ltype(l_b, lt) if l_b.get('available') else '—'} |")
-        L.append('| 已排除（返回桌面/无绘制时延） | '
-                 f"{_lex(l_a) if l_a.get('available') else '—'} | "
-                 f"{_lex(l_b) if l_b.get('available') else '—'} |")
-        L.append('| 测试窗口外（未计入） | '
-                 f"{_lv(l_a, 'outside')} | {_lv(l_b, 'outside')} |")
-        L.append('')
-        L.append('### 12.1 慢启动应用 Top 20')
-        L.append('')
-        merged = {}
-        for side, s in (('a', l_a), ('b', l_b)):
-            if not s.get('available'):
-                continue
-            for a in s['apps']:
-                merged.setdefault(a['pkg'], {})[side] = a
-        tops = sorted(
-            ((p, m) for p, m in merged.items()
-             if m.get('a', {}).get('slow', 0) + m.get('b', {}).get('slow', 0)
-             > 0),
-            key=lambda kv: (-(kv[1].get('a', {}).get('slow', 0)
-                              + kv[1].get('b', {}).get('slow', 0)),
-                            kv[0]))[:20]
-        if tops:
-            L.append(_table(
-                ['应用', 'A 次数', 'A 慢启动', 'A P90', 'B 次数', 'B 慢启动',
-                 'B P90'],
-                [[p, m.get('a', {}).get('n', '—'),
-                  m.get('a', {}).get('slow', '—'),
-                  _f(m.get('a', {}).get('p90'), 0),
-                  m.get('b', {}).get('n', '—'),
-                  m.get('b', {}).get('slow', '—'),
-                  _f(m.get('b', {}).get('p90'), 0)]
-                 for p, m in tops]))
-        else:
-            L.append('（两侧均无慢启动应用）')
-        L.append('')
-    else:
-        L.append('无应用启动记录（events 日志中无 APP_TRANSITION）。')
-        L.append('')
-
-    # ---- 13. 内存压力 ----
-    L.append('## 13. 内存压力（proc_vmstat 每轮增量）')
+    # ---- 12. 内存压力 ----
+    L.append('## 12. 内存压力（proc_vmstat 每轮增量）')
     L.append('')
     cs = R['pressure'].get('counters', [])
     if cs:
@@ -539,8 +461,8 @@ def render(R: dict) -> str:
         L.append('（本测试包无 proc_vmstat 数据）')
     L.append('')
 
-    # ---- 14. 口径说明 ----
-    L.append('## 14. 口径说明')
+    # ---- 13. 口径说明 ----
+    L.append('## 13. 口径说明')
     L.append('')
     ih = R['inhouse']
     wl = (f"白名单 `{ih['whitelist_src']}`（{ih['whitelist_count']} 项）"
@@ -575,12 +497,6 @@ def render(R: dict) -> str:
         '- LMK 来自 events_log `killinfo`（rss=f4/1024 MB，kill_reason=f5）；'
         'reason 枚举按 AOSP LmkdStatsReporter（0-9），其它记 `厂商扩展(N)`；'
         '进程名按同 pid 最近 start 回填，缺失按 10s 内 died/kill 回退。',
-        '- 应用启动：events_log `sysui_multi_action` APP_TRANSITION（757=761，'
-        '仅跨应用启动，不含应用内页面跳转）；时延 = windowsDrawnDelayMs；'
-        f'慢启动 = 冷/温 > {meta.get("slow_cw", 3000)} ms、'
-        f'热 > {meta.get("slow_hot", 1000)} ms（严格大于）；时延为 0 或缺失'
-        '的记录不计入次数与慢启动率，按原因分为返回桌面 / 无绘制时延；'
-        '仅统计第 1 轮开始至最后一轮结束之间的记录，窗口外不计入。',
         '- 无效轮：dumpsys_meminfo 缺失或 PSS by OOM 为空或 procStatus 缺失'
         '（含平台 failed_rounds.log 记录），不计入轮数，汇总为警告。',
         '- vmstat 压力：累计计数器逐轮差值；中间有重启或差值为负的间隔不计；'

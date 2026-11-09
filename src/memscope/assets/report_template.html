@@ -76,8 +76,6 @@ a[href^="#proc="]{font-weight:500}
   padding:14px;z-index:80}
 #setPanel .switch{display:flex;color:var(--ink);font-weight:500;margin-bottom:2px}
 .set-note{font-size:12px;color:var(--graphite);line-height:1.6;margin:0 0 12px;padding-left:44px}
-.set-ro{font-size:12.5px;color:var(--graphite);border-top:1px dashed var(--rule);
-  padding-top:10px;font-family:var(--f-num)}
 
 /* ---------- 主区 / 卡片 ---------- */
 #content{margin-left:208px;min-width:0}
@@ -364,11 +362,8 @@ table.lab td.mark{color:var(--flag);font-weight:700;font-size:16px;font-family:v
         <div class="setwrap">
           <button class="btn" id="setBtn" aria-haspopup="true" aria-expanded="false">⚙ 设置<i class="set-dot" id="setDot" style="display:none"></i></button>
           <div id="setPanel" style="display:none">
-            <label class="switch"><input type="checkbox" id="slowOnly"><span class="sl"></span><span>仅显示慢启动数据</span></label>
-            <div class="set-note">应用启动页与进程详情页只列出慢启动记录</div>
             <label class="switch"><input type="checkbox" id="incCached"><span class="sl"></span><span>包含 Cached</span></label>
             <div class="set-note">Cached 是后台缓存进程所在的 OOM 层级，内存紧张时可被系统随时回收，数值受测试时机和 LMK 影响波动大，默认不参与差异排行。打开后纳入：概览与风险页「自动结论」中 Cached 层级 / 仅 Cached 进程相关条目、进程分析 Top20 与全量进程表、层级轮均柱状图。始终显示：关键指标（含 cached pss）、整机、层级表、自研 / Google 明细。</div>
-            <div class="set-ro" id="setThr"></div>
           </div>
         </div>
       </div>
@@ -384,7 +379,6 @@ table.lab td.mark{color:var(--flag);font-weight:700;font-size:16px;font-family:v
       <section class="tab-page" id="page-inhouse"></section>
       <section class="tab-page" id="page-google"></section>
       <section class="tab-page" id="page-events"></section>
-      <section class="tab-page" id="page-launch"></section>
       <section class="tab-page" id="page-pressure"></section>
       <section class="tab-page" id="page-risk"></section>
       <section class="tab-page" id="page-report"></section>
@@ -759,24 +753,22 @@ function thrMarkLine(vals){
 
 /* ============ 路由 ============ */
 const PAGES = {overview:'概览', system:'整机内存', levels:'层级内存', procs:'进程分析',
-               inhouse:'自研应用', google:'Google 应用', events:'进程事件', launch:'应用启动',
+               inhouse:'自研应用', google:'Google 应用', events:'进程事件',
                pressure:'内存压力', risk:'标准与风险', report:'Markdown 报告'};
 const NAV = [['结论', ['overview','risk']],
              ['内存', ['system','levels','procs','inhouse','google']],
-             ['行为', ['events','launch','pressure']],
+             ['行为', ['events','pressure']],
              ['报告', ['report']]];
 const RENDER = {};
 const state = {tab:'overview', sysSel:null, lvSel:null, prSel:null, psSel:null,
                pkKw:'', pkLevel:'', pkCat:'', pkSigOnly:false, pkResident:false, pkLeak:false,
                pkGapMin:DATA.meta.gap_abs, pkSort:'gap', pkDir:-1,
-               devAll:false, mdRaw:false, lvInit:false, evQ:'', slowOnly:false,
-               lkKw:'', lkType:'', lkSide:'', lkSort:'t', lkShown:500,
-               lkAppKw:'', lkSortK:'chg', lkSortD:-1, pdLkShown:200,
+               devAll:false, mdRaw:false, lvInit:false, evQ:'',
                expanded:new Set(), lvGapMin:DATA.meta.gap_abs, trSel:null};
 function parseHash(){
   const q = new URLSearchParams(location.hash.replace(/^#/,''));
   return {tab:q.get('tab'), proc:q.get('proc'), q:q.get('q'), metric:q.get('metric'), cached:q.get('cached'),
-          slow:q.get('slow'), mm:q.get('mm'), mr:q.get('mr'), ms:q.get('ms')};
+          mm:q.get('mm'), mr:q.get('mr'), ms:q.get('ms')};
 }
 function setHash(patch){
   const q = new URLSearchParams(location.hash.replace(/^#/,''));
@@ -796,15 +788,13 @@ function applyMetric(m){
 }
 function syncSetDot(){
   document.getElementById('setDot').style.display =
-    (includeCached||state.slowOnly) ? 'block' : 'none';
+    includeCached ? 'block' : 'none';
 }
 function route(){
   const p = parseHash();
   if (p.metric) applyMetric(p.metric);
   includeCached = p.cached==='1';
-  state.slowOnly = p.slow==='1';
   document.getElementById('incCached').checked = includeCached;
-  document.getElementById('slowOnly').checked = state.slowOnly;
   syncSetDot();
   if (p.proc){ openProc(p.proc); return; }
   document.getElementById('procOverlay').classList.remove('open');
@@ -864,11 +854,6 @@ document.addEventListener('mousedown', e=>{
 setPanel.addEventListener('keydown', e=>{
   if (e.key === 'Escape'){ setPanel.style.display='none'; setBtn.setAttribute('aria-expanded','false'); setBtn.focus(); }
 });
-document.getElementById('setThr').innerHTML =
-  '慢启动门限：冷/温启动 &gt; '+DATA.launch.thr.cold+' ms，热启动 &gt; '+DATA.launch.thr.hot+' ms';
-document.getElementById('slowOnly').onchange = e=>{
-  setHash({slow: e.target.checked ? 1 : null});
-};
 document.getElementById('incCached').onchange = e=>{
   setHash({cached: e.target.checked ? 1 : null});
 };
@@ -1008,10 +993,6 @@ RENDER.overview = function(){
   h += kpiCard('ANR + crash', 'events_log', ev.a.anr.length+ev.a.crash.length,
                ev.b.anr.length+ev.b.crash.length, '次', false, 0);
   h += kpiCard('重启次数', 'uptime 回退', DS[0].reboots.length, DS[1].reboots.length, '次', false, 0);
-  { const lk = DL();
-    if (lk.a.available || lk.b.available)
-      h += kpiCard('慢启动次数', 'APP_TRANSITION', lk.a.slow, lk.b.slow, '次', false, 0,
-                   sparkSvg(lk.a.buckets.slow, lk.b.buckets.slow)); }
   h += '</div></div>';
   // 自动结论 #4–#8（Top3 已在 .verdict；Cached 条目按开关过滤）
   const hidden = DATA.findings.length - fsv.length;
@@ -1852,7 +1833,6 @@ function openProc(name){
     }
     h += '</tbody></table></div></div>';
   }
-  h += pdLaunchCard(name);
   // 相关事件（仅当事件明细内嵌时）
   if (hasEv){
     h += '<div class="card">'+cardHd('相关事件','含该进程启动/消亡，及作为调用方拉起其他进程')
@@ -1866,11 +1846,6 @@ function openProc(name){
     h += (any?'':'<tr><td colspan="8" class="muted">无相关事件</td></tr>')+'</tbody></table></div></div>';
   }
   inner.innerHTML = h;
-  if (document.getElementById('pdLkBody')){
-    state.pdLkShown = 200;
-    fillPdLk(name);
-    document.getElementById('pdLkMore').onclick = ()=>{ state.pdLkShown += 200; fillPdLk(name); };
-  }
   document.getElementById('procBack').onclick = ()=>setHash({proc:null, tab:state.tab});
   const pdm = document.getElementById('pdMetric');
   if (pdm) pdm.querySelectorAll('.seg').forEach(b=>b.onclick=()=>setHash({metric:b.dataset.m}));
@@ -2391,301 +2366,6 @@ function initAppmem(name, wrap){
   rIn.value = amRangeStr(ranges);
   drawChips(); drawRibbon(); drawCov(); drawChart(); drawHeap();
 }
-
-/* ============ 7b. 应用启动 ============ */
-const LT_CN = {cold:'冷启动', warm:'温启动', hot:'热启动'};
-const LR_CN = {1:'启动窗口', 2:'窗口绘制', 3:'超时', 4:'快照', 5:'返回桌面动画'};
-const LT_SYM = {cold:'circle', warm:'rect', hot:'triangle'};
-const DL = () => DATA.launch || {thr:{cold:3000,warm:3000,hot:1000},
-  a:{available:false,excluded:{recents:0,no_delay:0},by_type:{},buckets:{total:[],slow:[]},apps:[],list:null},
-  b:{available:false,excluded:{recents:0,no_delay:0},by_type:{},buckets:{total:[],slow:[]},apps:[],list:null}};
-function lkRows(sd){
-  const s = DL()[sd], l = s.list; const out = [];
-  if (!l) return out;
-  l.t.forEach((tm,i)=>{
-    if (state.slowOnly && !l.slow[i]) return;
-    out.push({sd, t:tm, ri:l.ri[i], pkg:l.pkgs[l.pkg[i]], act:l.acts[l.act[i]],
-      type:l.type[i], ms:l.ms[i], delay:l.delay[i], reason:l.reason[i],
-      caller:l.caller[i]||'', slow:l.slow[i], h:l.h[i]});
-  });
-  return out;
-}
-function lkTr(r, withPkg){
-  return '<tr><td><span class="sc sc-'+r.sd+'">'+r.sd.toUpperCase()+'</span>'
-    +(r.slow?'<span class="tag tag-sig" style="margin-left:2px">慢</span>':'')+'</td>'
-    +'<td>'+esc(r.t.slice(5))+'</td><td class="num">'+(r.ri!=null?r.ri+1:'—')+'</td>'
-    +(withPkg?'<td class="name">'+esc(r.pkg)+'</td>':'')
-    +'<td title="'+esc(r.act)+'" style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
-    +esc(r.pkg&&r.act.indexOf(r.pkg)===0?'.'+r.act.slice(r.pkg.length):r.act)+'</td><td>'+LT_CN[r.type]+'</td>'
-    +'<td class="num"'+(r.slow?' style="color:var(--flag);font-weight:600"':'')+'>'+fmt0(r.ms)+'</td>'
-    +'<td class="num">'+fmt0(r.delay)+'</td><td>'+(LR_CN[r.reason]||esc(r.reason))+'</td>'
-    +'<td>'+esc(r.caller||'—')+'</td></tr>';
-}
-/* 进程详情页「应用启动记录」卡片 */
-function pdLaunchCard(name){
-  const L = DL();
-  const inA = L.a.list && L.a.list.pkgs.indexOf(name)>=0;
-  const inB = L.b.list && L.b.list.pkgs.indexOf(name)>=0;
-  if (!inA && !inB) return '';
-  const stat = s=>{
-    const app = (s.apps||[]).find(x=>x.pkg===name);
-    return app ? '次数 '+app.n+'，慢启动 '+app.slow+'，冷/温/热 '
-      +app.cold+'/'+app.warm+'/'+app.hot+'，P90 '+fmt(app.p90,0)+' ms' : '无记录';
-  };
-  return '<div class="card">'+cardHd('应用启动记录',
-      ['跨应用启动（APP_TRANSITION）','<span class="sc sc-a">A</span> '+esc(stat(L.a)),
-       '<span class="sc sc-b">B</span> '+esc(stat(L.b))])
-    +'<div class="tbl-wrap no-max"><table><thead><tr><th>侧</th><th>时间</th><th>轮次</th><th>Activity</th>'
-    +'<th>类型</th><th class="num">时延 ms</th><th class="num">转场 ms</th><th>结束原因</th><th>调用方</th></tr></thead>'
-    +'<tbody id="pdLkBody"></tbody></table></div>'
-    +'<button class="btn ghost" id="pdLkMore" style="margin-top:10px;display:none"></button></div>';
-}
-function fillPdLk(name){
-  const rows = lkRows('a').concat(lkRows('b'))
-    .filter(r=>r.pkg===name).sort((x,y)=>x.t<y.t?-1:1);
-  const vis = rows.slice(0, state.pdLkShown);
-  document.getElementById('pdLkBody').innerHTML =
-    vis.map(r=>lkTr(r,false)).join('') || '<tr><td colspan="9" class="empty">无匹配记录</td></tr>';
-  const more = document.getElementById('pdLkMore');
-  const rest = rows.length - vis.length;
-  more.style.display = rest>0 ? '' : 'none';
-  if (rest>0) more.textContent = '再显示 200 行（剩余 '+rest+'）';
-}
-RENDER.launch = function(){
-  const el = document.getElementById('page-launch');
-  const L = DL(), a = L.a, b = L.b, thr = L.thr;
-  if (!a.available && !b.available){
-    el.innerHTML = '<div class="card"><div class="empty">两侧 events 日志中都没有跨应用启动记录（APP_TRANSITION），无法统计慢启动。</div></div>';
-    return;
-  }
-  let h = '';
-  if (!a.available || !b.available)
-    h += '<div class="warn">'+(a.available?'B':'A')+' 侧 events 日志中没有跨应用启动记录，下面只有另一侧的数据。</div>';
-  // 1. 口径说明
-  h += '<div class="card" style="padding:12px 20px"><div style="font-size:13px;color:var(--graphite);line-height:1.7">'
-    +'统计跨应用启动（APP_TRANSITION），时延取 windowsDrawnDelayMs。'
-    +'慢启动：冷/温启动 &gt; '+thr.cold+' ms，热启动 &gt; '+thr.hot+' ms。'
-    +'已排除返回桌面动画 A '+a.excluded.recents+' / B '+b.excluded.recents+' 条、'
-    +'无绘制时延 A '+a.excluded.no_delay+' / B '+b.excluded.no_delay+' 条。'
-    +(a.outside||b.outside?'测试窗口外 A '+a.outside+' / B '+b.outside+' 条未计入。':'')
-    +'</div>'
-    +(state.slowOnly?'<div style="margin-top:8px"><span class="tag tag-a">仅显示慢启动</span>'
-      +'<a href="#" id="lkShowAll" style="font-size:12px;margin-left:8px">显示全部</a></div>':'')
-    +'</div>';
-  // 2. 指标板
-  const bt = (sd,ty)=>(sd.by_type||{})[ty]||{};
-  h += '<div class="card">'+cardHd('关键指标',['跨应用启动','时延 = windowsDrawnDelayMs'])+'<div class="grid-kpi auto">';
-  h += kpiCard('启动次数','APP_TRANSITION',a.total,b.total,'次',false,0);
-  h += kpiCard('慢启动次数','> '+thr.cold+' / '+thr.hot+' ms',a.slow,b.slow,'次',false,0,
-               sparkSvg(a.buckets.slow,b.buckets.slow));
-  h += kpiCard('慢启动率','慢/有效',a.slow_rate==null?null:a.slow_rate*100,
-               b.slow_rate==null?null:b.slow_rate*100,'%',false,1);
-  h += kpiCard('冷启动慢启动','cold',bt(a,'cold').slow,bt(b,'cold').slow,'次',false,0);
-  h += kpiCard('温启动慢启动','warm',bt(a,'warm').slow,bt(b,'warm').slow,'次',false,0);
-  h += kpiCard('热启动慢启动','hot',bt(a,'hot').slow,bt(b,'hot').slow,'次',false,0);
-  h += kpiCard('冷启动 P90','cold',bt(a,'cold').p90,bt(b,'cold').p90,'ms',false,0);
-  h += kpiCard('热启动 P90','hot',bt(a,'hot').p90,bt(b,'hot').p90,'ms',false,0);
-  h += '</div></div>';
-  // 3. 散点
-  h += '<div class="card">'+cardHd('启动时延分布',
-      ['x='+(AXIS==='round'?'轮次':'测试小时')+'，y = windowsDrawnDelayMs ms','点击点 → 明细筛选'])
-    +'<div id="lkSc" class="chart chart-tall"></div>'
-    +'<div class="legend" style="margin-top:8px"><span class="muted">○ 冷启动&nbsp;&nbsp;□ 温启动&nbsp;&nbsp;△ 热启动&nbsp;&nbsp;实心 = 慢启动</span></div></div>';
-  // 4. 慢启动次数 bar
-  const segHtml = state.slowOnly ? ''
-    : '<span class="segtrack" id="lkSeg"><button class="seg active" data-v="slow">慢启动</button><button class="seg" data-v="all">全部启动</button></span>';
-  h += '<div class="card">'+cardHd('慢启动次数',
-      a.buckets.unit==='round'?'x=轮次':'x=测试小时', segHtml)
-    +'<div id="lkBar" class="chart"></div></div>';
-  // 5. Top 应用
-  h += '<div class="card">'+cardHd('慢启动最多的应用',
-      'A+B 慢启动数降序，最多 100 个，点击条 → 明细筛选')
-    +'<div id="lkTop" class="chart"></div></div>';
-  // 6. 按应用汇总
-  h += '<div class="card">'+cardHd('按应用汇总','',
-      '<label style="font-size:12px;color:var(--graphite)">应用 <input type="text" id="lkAppKw" style="width:180px" value="'+esc(state.lkAppKw)+'" placeholder="包名关键词"></label>')
-    +'<div class="tbl-wrap"><table><thead><tr><th>应用</th>'
-    +'<th class="num sort" data-k="na">A 次数</th><th class="num sort" data-k="sa">A 慢启动</th><th class="num">A 冷/温/热</th><th class="num sort" data-k="pa">A P90</th>'
-    +'<th class="num sort" data-k="nb">B 次数</th><th class="num sort" data-k="sb">B 慢启动</th><th class="num">B 冷/温/热</th><th class="num sort" data-k="pb">B P90</th>'
-    +'<th class="num sort" data-k="chg">慢启动变化</th><th></th></tr></thead><tbody id="lkAppBody"></tbody></table></div></div>';
-  // 7. 启动明细
-  h += '<div class="card" id="lkDetailCard">'+cardHd('启动明细','共 <span id="lkCnt">0</span> 条')
-    +'<div class="controls">'
-    +'<label>应用 <input type="text" id="lkKw" style="width:220px" value="'+esc(state.lkKw)+'" placeholder="包名 / Activity 关键词"></label>'
-    +'<label>类型 <select id="lkType"><option value="">全部</option><option value="cold">冷启动</option><option value="warm">温启动</option><option value="hot">热启动</option></select></label>'
-    +'<label>侧 <select id="lkSide"><option value="">全部</option><option value="a">A</option><option value="b">B</option></select></label>'
-    +'<label>排序 <select id="lkSort"><option value="t">时间</option><option value="ms">时延降序</option></select></label>'
-    +'</div>'
-    +'<div class="tbl-wrap no-max"><table><thead><tr><th>侧</th><th>时间</th><th>轮次</th><th>应用</th><th>Activity</th>'
-    +'<th>类型</th><th class="num">时延 ms</th><th class="num">转场 ms</th><th>结束原因</th><th>调用方</th></tr></thead>'
-    +'<tbody id="lkBody"></tbody></table></div>'
-    +'<button class="btn ghost" id="lkMore" style="margin-top:10px;display:none"></button>'
-    +'</div>';
-  el.innerHTML = h;
-  const sa0 = document.getElementById('lkShowAll');
-  if (sa0) sa0.onclick = e=>{ e.preventDefault(); setHash({slow:null}); };
-  const setLkKw = pkg=>{
-    state.lkKw = pkg; state.lkShown = 500;
-    const inp = document.getElementById('lkKw');
-    if (inp) inp.value = pkg;
-    drawDetail();
-    document.getElementById('lkDetailCard').scrollIntoView({behavior:RM?'auto':'smooth',block:'start'});
-  };
-  // ---- 散点 ----
-  const mkSc = (sdIdx, s)=>{
-    const l = s.list; if (!l) return [];
-    const byType = {};
-    l.t.forEach((tm,i)=>{
-      if (state.slowOnly && !l.slow[i]) return;
-      const x = AXIS==='round' ? (l.ri[i]==null?null:l.ri[i]+1) : l.h[i];
-      if (x==null) return;
-      (byType[l.type[i]] = byType[l.type[i]]||[]).push({
-        value:[x, l.ms[i]], itemStyle:{opacity: l.slow[i] ? 1 : .35},
-        m:{t:tm, ri:l.ri[i], pkg:l.pkgs[l.pkg[i]], act:l.acts[l.act[i]],
-           ms:l.ms[i], delay:l.delay[i], reason:l.reason[i], caller:l.caller[i]||''}});
-    });
-    return Object.keys(byType).map(ty=>({
-      name: sdIdx?'B '+LB:'A '+LA, type:'scatter', symbol:LT_SYM[ty]||'circle', symbolSize:6,
-      itemStyle:{color: sdIdx?CB:CA}, data: byType[ty]}));
-  };
-  const scSeries = mkSc(0,a).concat(mkSc(1,b));
-  const ml = thrMarkLine([
-    {y:thr.hot, n:'热启动门限 '+thr.hot+' ms', c:'#5A6570'},
-    {y:thr.cold, n:'冷/温启动门限 '+thr.cold+' ms', c:'#5A6570'}]);
-  if (scSeries.length && ml) scSeries[0].markLine = ml;
-  const scCh = makeChart(document.getElementById('lkSc'));
-  scCh.setOption({
-    tooltip:{trigger:'item', formatter:p=>{
-      const m = p.data.m||{};
-      return '<b>'+esc(p.seriesName)+'</b><br>'+esc(m.t||'')+(m.ri!=null?' 第'+(m.ri+1)+'轮':'')
-        +'<br>'+esc(m.pkg||'')+'<br><span class="muted">'+esc(m.act||'')+'</span>'
-        +'<br>时延 <b>'+fmt0(m.ms)+'</b> ms，转场 '+fmt0(m.delay)+' ms'
-        +'<br>'+esc(LR_CN[m.reason]||m.reason||'')+(m.caller?'，'+esc(m.caller):'');}},
-    legend:{top:0,data:['A '+LA,'B '+LB]},
-    grid:{top:40,left:66,right:20,bottom:60},
-    xAxis: AXIS==='round'
-      ? {type:'value',min:1,minInterval:1,axisLabel:{formatter:v=>'第'+v+'轮'}}
-      : {type:'value',axisLabel:{formatter:v=>v+'h'}},
-    yAxis:{type:'value',name:'ms',scale:true},
-    series:scSeries});
-  zoomable(scCh, {axis:'xy', force:true});
-  scCh.on('click', p=>{ const m = p.data && p.data.m; if (m && m.pkg) setLkKw(m.pkg); });
-  // ---- 慢启动次数 bar ----
-  const drawLkBar = slowMode=>{
-    const n = Math.max(a.buckets.total.length, b.buckets.total.length);
-    const cats = a.buckets.unit==='round'
-      ? Array.from({length:n},(_,i)=>'第'+(i+1)+'轮')
-      : Array.from({length:n},(_,i)=>i+'h');
-    const key = slowMode ? 'slow' : 'total';
-    const ch = makeChart(document.getElementById('lkBar'));
-    ch.setOption({
-      tooltip:{trigger:'axis',axisPointer:{type:'shadow'}}, legend:{top:0},
-      grid:{top:36,left:50,right:20,bottom:30},
-      xAxis:{type:'category',data:cats}, yAxis:{type:'value',name:'次'},
-      series:[{name:'A '+LA,type:'bar',data:a.buckets[key],itemStyle:{color:CA}},
-              {name:'B '+LB,type:'bar',data:b.buckets[key],itemStyle:{color:CB}}]}, true);
-    zoomable(ch, {axis:'x', cats:n});
-  };
-  drawLkBar(true);
-  const lkSeg = document.getElementById('lkSeg');
-  if (lkSeg) lkSeg.querySelectorAll('.seg').forEach(x=>{
-    x.onclick = ()=>{
-      lkSeg.querySelectorAll('.seg').forEach(y=>y.classList.toggle('active',y===x));
-      drawLkBar(x.dataset.v==='slow');
-    };
-  });
-  // ---- Top 应用 ----
-  const am = {};
-  (a.apps||[]).forEach(x=>{ am[x.pkg]=am[x.pkg]||{a:0,b:0}; am[x.pkg].a=x.slow; });
-  (b.apps||[]).forEach(x=>{ am[x.pkg]=am[x.pkg]||{a:0,b:0}; am[x.pkg].b=x.slow; });
-  const tops = Object.keys(am).filter(k=>am[k].a+am[k].b>0)
-    .sort((x,y)=>(am[y].a+am[y].b)-(am[x].a+am[x].b)||x.localeCompare(y)).slice(0,100);
-  if (!tops.length){
-    document.getElementById('lkTop').innerHTML = '<div class="empty">两侧均无慢启动</div>';
-  } else {
-    const topEl = document.getElementById('lkTop');
-    topEl.style.height = (Math.min(tops.length,20)*28+90)+'px';
-    const ch = makeChart(topEl);
-    ch.setOption({
-      tooltip:{trigger:'axis',axisPointer:{type:'shadow'}}, legend:{top:0},
-      grid:{top:36,left:10,right:36,bottom:30,containLabel:true},
-      xAxis:{type:'value',name:'慢启动次'},
-      yAxis:{type:'category',data:tops,inverse:true,axisLabel:{width:190,overflow:'truncate',interval:0}},
-      series:[{name:'A '+LA,type:'bar',data:tops.map(k=>am[k].a),itemStyle:{color:CA}},
-              {name:'B '+LB,type:'bar',data:tops.map(k=>am[k].b),itemStyle:{color:CB}}]});
-    if (tops.length>20)
-      zoomable(ch, {axis:'y', force:true, initial:{startValue:0,endValue:19}});
-    else zoomable(ch, {axis:'y', cats:tops.length});
-    ch.on('click', p=>{ if (p.name) setLkKw(p.name); });
-  }
-  // ---- 按应用汇总 ----
-  const appMap = {};
-  (a.apps||[]).forEach(x=>{ appMap[x.pkg]={pkg:x.pkg,a:x,b:null}; });
-  (b.apps||[]).forEach(x=>{ const r=appMap[x.pkg]=appMap[x.pkg]||{pkg:x.pkg,a:null}; r.b=x; });
-  let appRows = Object.values(appMap);
-  if (state.slowOnly) appRows = appRows.filter(r=>(r.a&&r.a.slow>0)||(r.b&&r.b.slow>0));
-  const drawApps = ()=>{
-    const kw = (state.lkAppKw||'').toLowerCase();
-    const rows2 = appRows.filter(r=>!kw||r.pkg.toLowerCase().includes(kw));
-    const k = state.lkSortK, d = state.lkSortD;
-    const gv = r=>({na:r.a?r.a.n:null, sa:r.a?r.a.slow:null, pa:r.a?r.a.p90:null,
-                    nb:r.b?r.b.n:null, sb:r.b?r.b.slow:null, pb:r.b?r.b.p90:null,
-                    chg:(r.b?r.b.slow:0)-(r.a?r.a.slow:0)})[k];
-    rows2.sort((x,y)=>{
-      const vx=gv(x), vy=gv(y);
-      return ((vx==null?1:vy==null?-1:(vx-vy)*d))||x.pkg.localeCompare(y.pkg);});
-    const cwh = sd=>sd ? sd.cold+'/'+sd.warm+'/'+sd.hot : '—';
-    document.getElementById('lkAppBody').innerHTML = rows2.map(r=>{
-      const chg = (r.b?r.b.slow:0)-(r.a?r.a.slow:0);
-      return '<tr><td class="name">'+(MV().procs[r.pkg]?procLink(r.pkg):esc(r.pkg))+'</td>'
-        +'<td class="num">'+fmt0(r.a&&r.a.n)+'</td><td class="num">'+fmt0(r.a&&r.a.slow)+'</td>'
-        +'<td>'+cwh(r.a)+'</td><td class="num">'+fmt0(r.a&&r.a.p90)+'</td>'
-        +'<td class="num">'+fmt0(r.b&&r.b.n)+'</td><td class="num">'+fmt0(r.b&&r.b.slow)+'</td>'
-        +'<td>'+cwh(r.b)+'</td><td class="num">'+fmt0(r.b&&r.b.p90)+'</td>'
-        +'<td class="num">'+deltaBadge((chg>0?'+':'')+chg, deltaCls(chg,false,null), chg)+'</td>'
-        +'<td><button class="btn ghost lkDetail" data-pkg="'+esc(r.pkg)+'" style="height:26px;padding:0 10px;font-size:12px">看明细</button></td></tr>';
-    }).join('') || '<tr><td colspan="11" class="empty">无匹配应用</td></tr>';
-    document.getElementById('lkAppBody').querySelectorAll('.lkDetail')
-      .forEach(x=>x.onclick=()=>setLkKw(x.dataset.pkg));
-  };
-  document.getElementById('lkAppKw').oninput = e=>{ state.lkAppKw = e.target.value; drawApps(); };
-  el.querySelectorAll('th.sort').forEach(th=>{
-    th.style.cursor = 'pointer';
-    th.onclick = ()=>{
-      const k = th.dataset.k;
-      if (state.lkSortK===k) state.lkSortD = -state.lkSortD;
-      else { state.lkSortK = k; state.lkSortD = -1; }
-      drawApps();
-    };
-  });
-  drawApps();
-  // ---- 启动明细 ----
-  const drawDetail = ()=>{
-    const kw = (state.lkKw||'').toLowerCase(), ty = state.lkType||'', sd = state.lkSide||'';
-    let rr = lkRows('a').concat(lkRows('b'))
-      .filter(r=>(!kw||r.pkg.toLowerCase().includes(kw)||r.act.toLowerCase().includes(kw))
-        && (!ty||r.type===ty) && (!sd||r.sd===sd));
-    rr = state.lkSort==='ms' ? rr.sort((x,y)=>y.ms-x.ms)
-                           : rr.sort((x,y)=>x.t<y.t?-1:x.t>y.t?1:0);
-    document.getElementById('lkCnt').textContent = rr.length;
-    const vis = rr.slice(0, state.lkShown);
-    document.getElementById('lkBody').innerHTML =
-      vis.map(r=>lkTr(r,true)).join('') || '<tr><td colspan="10" class="empty">无匹配记录</td></tr>';
-    const more = document.getElementById('lkMore');
-    const rest = rr.length - vis.length;
-    more.style.display = rest>0 ? '' : 'none';
-    if (rest>0) more.textContent = '再显示 500 行（剩余 '+rest+'）';
-  };
-  document.getElementById('lkType').value = state.lkType;
-  document.getElementById('lkSide').value = state.lkSide;
-  document.getElementById('lkSort').value = state.lkSort;
-  document.getElementById('lkKw').oninput = e=>{ state.lkKw = e.target.value; state.lkShown=500; drawDetail(); };
-  document.getElementById('lkType').onchange = e=>{ state.lkType = e.target.value; state.lkShown=500; drawDetail(); };
-  document.getElementById('lkSide').onchange = e=>{ state.lkSide = e.target.value; state.lkShown=500; drawDetail(); };
-  document.getElementById('lkSort').onchange = e=>{ state.lkSort = e.target.value; drawDetail(); };
-  document.getElementById('lkMore').onclick = ()=>{ state.lkShown += 500; drawDetail(); };
-  drawDetail();
-};
 
 route();
 </script>

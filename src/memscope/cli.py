@@ -61,11 +61,6 @@ def _add_compare_args(c, kind):
                    help=f"层级/整机泄漏 delta 门限 MB（默认 {d['sys_leak_delta']:g}）")
     c.add_argument('--rate-pct', type=float, default=d['rate_pct'],
                    help=f"LMK/压力频率对比阈值 %%（默认 {d['rate_pct']:g}）")
-    c.add_argument('--slow-launch', nargs=2, type=int,
-                   metavar=('COLD_WARM', 'HOT'),
-                   default=[d['slow_cw'], d['slow_hot']],
-                   help=f"慢启动门限 ms：冷/温启动、热启动"
-                        f"（默认 {d['slow_cw']} {d['slow_hot']}）")
     c.add_argument('--tmpdir', default=None,
                    help='临时文件目录（嵌套包解压物化位置，默认系统临时目录）')
     c.add_argument('--model', nargs='+', action=_Pair,
@@ -180,7 +175,6 @@ def _cmd_compare(args, kind):
         resident=args.resident, leak_delta=args.leak_delta,
         leak_pct=args.leak_pct, leak_r2=args.leak_r2,
         sys_leak_delta=args.sys_leak_delta, rate_pct=args.rate_pct,
-        slow_cw=args.slow_launch[0], slow_hot=args.slow_launch[1],
         primary_metric=d['primary_metric'], trend_min=d['trend_min'],
         whitelist=whitelist, whitelist_src=wl_src,
         prefixes=tuple(prefixes), prefixes_src=px_src,

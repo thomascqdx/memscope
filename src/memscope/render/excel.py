@@ -326,48 +326,6 @@ def render(R: dict, out_path) -> Path:
             ws.append([lab, e['t'], e['phase'], e['kind'], e['proc'],
                        e['reason'], e['comp'], e['caller'], e['adj']])
 
-    # 应用启动（sysui_multi_action APP_TRANSITION 明细）
-    ws = _sheet(wb, '应用启动',
-                ['数据集', '时间', '轮次', '应用', 'Activity', '类型',
-                 '时延ms', '转场ms', '结束原因', '调用方', '慢启动'])
-    _LT_CN = {'cold': '冷', 'warm': '温', 'hot': '热'}
-    _LRS = {1: '启动窗口', 2: '窗口绘制', 3: '超时',
-            4: '快照', 5: '返回桌面动画'}
-    lau = R.get('launch') or {}
-    for side, lab, ds in (('a', 'A', dsA), ('b', 'B', dsB)):
-        s = lau.get(side) or {}
-        if not s.get('available'):
-            ws.append([lab, '(无应用启动记录)'] + [''] * 9)
-            continue
-        l = s['list']
-        for i in range(len(l['t'])):
-            ri = l['ri'][i]
-            code = l['reason'][i]
-            ws.append([lab, l['t'][i],
-                       ds['rounds'][ri] if ri is not None else '',
-                       l['pkgs'][l['pkg'][i]], l['acts'][l['act'][i]],
-                       _LT_CN.get(l['type'][i], l['type'][i]),
-                       l['ms'][i], l['delay'][i],
-                       (f'{code} {_LRS[code]}'
-                        if code in _LRS else (f'{code}' if code is not None
-                                             else '')),
-                       l['caller'][i], '是' if l['slow'][i] else '否'])
-
-    # 启动汇总（每应用聚合）
-    ws = _sheet(wb, '启动汇总',
-                ['数据集', '应用', '次数', '冷', '温', '热', '慢启动',
-                 '冷慢', '温慢', '热慢', 'P50', 'P90', 'Max'])
-    for side, lab in (('a', 'A'), ('b', 'B')):
-        s = lau.get(side) or {}
-        if not s.get('available'):
-            ws.append([lab, '(无应用启动记录)'] + [''] * 11)
-            continue
-        for a in s['apps']:
-            ws.append([lab, a['pkg'], a['n'], a['cold'], a['warm'], a['hot'],
-                       a['slow'], a['slow_cold'], a['slow_warm'],
-                       a['slow_hot'],
-                       _f(a['p50'], 0), _f(a['p90'], 0), _f(a['max'], 0)])
-
     # 内存压力
     ws = _sheet(wb, '内存压力',
                 ['计数器', '单位', 'A 总量', 'A /小时', 'A P90/轮',
