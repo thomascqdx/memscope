@@ -14,6 +14,7 @@ import zipfile
 from datetime import timedelta
 from pathlib import Path
 
+from .model import test_window
 from .parsers import ylog as ylogp
 from .parsers.events import dedupe_lines, parse_events
 
@@ -37,6 +38,8 @@ def load_events(src, ds, names, tmp_path, opened, year):
     kind, lines, nfiles, ystats = _read_lines(src, ds, names, tmp_path, opened)
     ds.event_source = {'kind': kind, 'files': nfiles, 'lines': len(lines),
                        'events': 0, 'first': None, 'last': None,
+                       'outside': 0,
+                       'window': {'start': None, 'end': None},
                        'ylog': ystats}
     if kind is None:
         ds.warnings.append(
@@ -71,12 +74,29 @@ def load_events(src, ds, names, tmp_path, opened, year):
     except Exception as e:  # noqa: BLE001
         ds.warnings.append(f'{kind} 事件解析失败: {e}')
         return
+    _apply_window(ds)
     ds.event_source['lines'] = len(uniq)
     ds.event_source['events'] = len(ds.events)
     test_ts = [e.t for e in ds.events if e.phase == 'test']
     if test_ts:
         ds.event_source['first'] = min(test_ts).isoformat(sep=' ')
         ds.event_source['last'] = max(test_ts).isoformat(sep=' ')
+
+
+def _apply_window(ds):
+    """丢弃测试窗口之后的 test 事件；记 event_source['outside']/['window']。"""
+    start, end = test_window(ds.rounds)
+    fmt = '%Y-%m-%d %H:%M:%S'
+    ds.event_source['window'] = {
+        'start': start.strftime(fmt) if start else None,
+        'end': end.strftime(fmt) if end else None}
+    if end is None:
+        ds.event_source['outside'] = 0
+        return
+    keep = [e for e in ds.events
+            if not (e.phase == 'test' and e.t > end)]
+    ds.event_source['outside'] = len(ds.events) - len(keep)
+    ds.events = keep
 
 
 def _read_lines(src, ds, names, tmp_path, opened):

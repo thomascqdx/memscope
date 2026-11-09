@@ -41,6 +41,8 @@ def ev_src_text(ds, ev):
     evh, ht = ev.get('ev_hours'), ds.get('hours_total')
     if evh is not None and ht is not None and abs(evh - ht) > 0.05:
         t += f"；LMK 频率按事件覆盖时长 {evh:.1f} h 计"
+    if es.get('outside'):
+        t += f"；测试窗口外 {es['outside']} 条事件未计入"
     return t
 
 

@@ -1386,6 +1386,7 @@ function evSrcLine(i){
   if (DS[i].lmk_total!=null) t += '；lmkcnt 累计 '+DS[i].lmk_total+' 次 / killinfo 解析 '+ev.lmk.total+' 次';
   const evh=ev.ev_hours, ht=DS[i].hours_total;
   if (evh!=null && ht!=null && Math.abs(evh-ht)>0.05) t += '；LMK 频率按事件覆盖时长 '+evh.toFixed(1)+' h 计';
+  if (es.outside) t += '；测试窗口外 '+es.outside+' 条事件未计入';
   return t;
 }
 RENDER.events = function(){

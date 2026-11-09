@@ -68,7 +68,9 @@ def test_ev_hours_gap_without_events():
     ds = _mk(n=10, gap_after=5, gap_h=2.0)
     _, _, total, gaps, _ = da._hours(ds)
     e = da.build_events(ds, total, gaps=gaps, iv_s=4.6 * 60)
-    assert e['ev_hours'] == pytest.approx(total - gaps[0]['hours'] + 4.6 / 60)
+    # 分母 = 窗口时长（末轮 start + 中位间隔），再扣零覆盖中断
+    win = total + 4.6 / 60
+    assert e['ev_hours'] == pytest.approx(win - gaps[0]['hours'] + 4.6 / 60)
 
 
 def test_ev_hours_gap_with_events_kept():
@@ -77,7 +79,7 @@ def test_ev_hours_gap_with_events_kept():
     gs = datetime.strptime(gaps[0]['start'], '%Y-%m-%d %H:%M:%S')
     ds.events = [_E(gs + timedelta(minutes=30))]
     e = da.build_events(ds, total, gaps=gaps, iv_s=4.6 * 60)
-    assert e['ev_hours'] == pytest.approx(total)
+    assert e['ev_hours'] == pytest.approx(total + 4.6 / 60)
 
 
 def test_standards_level_groups():

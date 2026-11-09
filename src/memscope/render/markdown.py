@@ -504,6 +504,9 @@ def render(R: dict) -> str:
         '- 时间轴：轮次少（≤30）时按轮类目轴，否则 x = 距测试开始的小时数；'
         'start 缺失按序号×平均间隔回退。',
         '- 事件阶段：boot=开机至第 1 轮前；test=测试窗口内；早于本次开机的日志已丢弃。',
+        '- 事件统计（LMK/am_kill/died/进程启动/ANR/crash/low_memory）只计'
+        '测试窗口内：第 1 轮开始 ~ max(末轮结束时间, 末轮开始 + 采样间隔中位数)；'
+        '窗口外事件不计入，次/小时分母为窗口时长（扣除中断区间）。',
         f"- 自研判定：{wl} + 前缀匹配 `{ih['prefixes_src']}`"
         f"（{len(ih['prefixes'])} 条）。",
         f"- Google 判定：前缀匹配 `{R['google']['prefixes_src']}`"

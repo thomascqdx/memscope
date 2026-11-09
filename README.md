@@ -81,6 +81,7 @@ memscope.exe static compare A.zip B.zip -o outdir
 - **PSS** 数据：dumpsys meminfo OOM 层（含 swap，层为总值）→ 默认静态主口径；**RSS** 数据：procStatus 的 VmRSS+VmSwap，OomScore 映射层级（用于标准对照，默认动态主口径）。
 - 轮均 = 非空轮合计 ÷ 总轮数（缺席按 0）；值均 = 仅出现轮均值；出现率 = 出现轮数 ÷ 总轮数。
 - GAP = B − A（轮均）；显著差异：|GAP| ≥ gap-abs 且（新增/消失或 |GAP|/A ≥ gap-pct）视为显著变化。
+- 事件统计只计测试窗口内（第 1 轮开始 ~ max(末轮结束时间, 末轮开始+采样间隔中位数)）的 events_log 事件；窗口外事件不计入，LMK 等次/小时分母为窗口时长。
 - 报告共 13 节（口径说明见末节）：测试信息 / 结论摘要 / 健康标准对照 / 整机内存 / 层级内存（RSS+PSS）/ 进程 GAP Top20 / 独有进程与层级变化 / 自研与 Google / 疑似泄漏 / 进程 meminfo 明细 / 进程事件 / 内存压力 / 口径说明。
 
 ## 开发

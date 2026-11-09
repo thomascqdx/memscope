@@ -1,8 +1,9 @@
 """数据模型：测试包解析结果。所有内存数值单位均为 MB，保留完整精度。"""
 from __future__ import annotations
 
+import statistics
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 
@@ -76,3 +77,30 @@ class Dataset:
     @property
     def n(self) -> int:
         return len(self.rounds)
+
+
+def round_interval_s(rounds) -> Optional[float]:
+    """相邻轮 start 差的中位数（秒）；无相邻可用对返回 None。"""
+    diffs = [(c.start - p.start).total_seconds()
+             for p, c in zip(rounds, rounds[1:])
+             if p.start and c.start]
+    return statistics.median(diffs) if diffs else None
+
+
+def test_window(rounds):
+    """测试窗口 (start, end)。
+
+    start = rounds[0].start；end = max(各轮 end, 末轮 start + 采样间隔中位数)，
+    中位数缺失时末轮 start 本身即为候选；rounds[0].start 缺失或两个
+    候选都无 → end 为 None。
+    """
+    start = rounds[0].start if rounds else None
+    if start is None:
+        return start, None
+    ends = [r.end for r in rounds if r.end]
+    end = max(ends) if ends else None
+    if rounds[-1].start is not None:
+        w2 = (rounds[-1].start
+              + timedelta(seconds=round_interval_s(rounds) or 0))
+        end = max(end, w2) if end is not None else w2
+    return start, end

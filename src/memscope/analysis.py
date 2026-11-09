@@ -14,7 +14,7 @@ from math import ceil
 
 from . import __version__
 from .inhouse import classify, is_google
-from .model import Dataset, RoundData
+from .model import Dataset, RoundData, round_interval_s, test_window
 from .parsers.procstatus import oom_to_level
 
 LEVEL_ORDER = ['Native', 'System', 'Persistent', 'Persistent Service', 'Foreground',
@@ -219,8 +219,7 @@ def _hours(ds: Dataset):
     pairs = [(ds.rounds[j - 1], ds.rounds[j])
              for j in range(1, len(ds.rounds))
              if ds.rounds[j - 1].start and ds.rounds[j].start]
-    diffs = [(c.start - p.start).total_seconds() for p, c in pairs]
-    iv = statistics.median(diffs) if diffs else None  # 秒
+    iv = round_interval_s(ds.rounds)  # 秒
     starts = [r.start for r in ds.rounds if r.start]
     base = starts[0] if starts else None
     hours = []
@@ -612,7 +611,11 @@ def _lmk_reason(code):
 
 def build_events(ds: Dataset, hours_total: float, gaps=None, iv_s=None):
     # 事件覆盖率口径：仅剔除零事件覆盖的中断区间（日志可能在 adb 离线时继续）
-    ev_hours = hours_total
+    w_start, w_end = test_window(ds.rounds)
+    win_hours = ((w_end - w_start).total_seconds() / 3600.0
+                 if w_end is not None and w_start is not None
+                 else hours_total)
+    ev_hours = win_hours
     if gaps:
         iv_h = (iv_s or 0) / 3600.0
         test_ts = [e.t for e in ds.events if e.phase == 'test']
@@ -630,7 +633,7 @@ def build_events(ds: Dataset, hours_total: float, gaps=None, iv_s=None):
         h = int((t - t0).total_seconds() // 3600)
         return h if h >= 0 else None
 
-    nh = max(1, int(ceil(hours_total))) if hours_total else 0
+    nh = max(1, int(ceil(win_hours))) if win_hours else 0
     lmk_evs = [e for e in evs if e.kind == 'lmk']
     hourly = [0] * nh
     by_level = {}

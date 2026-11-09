@@ -174,6 +174,11 @@ def test_events_static_load_includes_extra(tmp_path):
     (root / 'device_info.txt').write_text(
         (root / 'device_info.txt').read_text(encoding='utf-8')
         .replace('Test Type: dynamic', 'Test Type: static'), encoding='utf-8')
+    # 事件行日期 10-22：轮次改到当天，使事件落在测试窗口内
+    (root / 'round_info.txt').write_text(
+        '[0001]     开始时间：2026-10-22 14:00:00     结束时间：2026-10-22 14:01:00\n'
+        '[0002]     开始时间：2026-10-22 15:00:00     结束时间：2026-10-22 15:01:00\n',
+        encoding='utf-8')
     with zipfile.ZipFile(root / 'mobilelog.zip', 'w') as z:
         z.writestr('events_log_2026', '\n'.join(LINES))
     ds = load_dataset(root, 'A', kind='static')
