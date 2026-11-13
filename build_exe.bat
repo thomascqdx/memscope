@@ -65,4 +65,11 @@ if errorlevel 1 (
 )
 for %%F in (dist\memscope-%VER%.exe) do set "EXESIZE=%%~zF"
 echo [build] OK: %CD%\dist\memscope-%VER%.exe ^(version %VER%, %EXESIZE% bytes^)
+
+rem ---- 7. stamp perfbox-tool.json manifest ----
+%VENV_PY% scripts\stamp_manifest.py --version-from src\memscope\__init__.py --artifact dist\memscope-%VER%.exe --out dist\perfbox-tool.json
+if errorlevel 1 (
+    echo [build] ERROR: stamp_manifest.py failed
+    exit /b 1
+)
 exit /b 0

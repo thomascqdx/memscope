@@ -1,0 +1,327 @@
+{
+  "schema": 1,
+  "id": "memscope",
+  "title": "内存测试包 A/B 对比",
+  "summary": "对比两个内存测试包，输出 HTML、Markdown 和 Excel 报告",
+  "domain": "memory",
+  "version": "",
+  "tag": "",
+  "artifact": {
+    "name": "",
+    "kind": "exe",
+    "size": 0,
+    "sha256": ""
+  },
+  "commands": [
+    {
+      "id": "static-compare",
+      "title": "静态内存包对比",
+      "kind": "job",
+      "args": ["static", "compare"],
+      "params": [
+        {
+          "name": "base",
+          "label": "基线 A",
+          "help": "平台 zip/rar 或已解压目录",
+          "type": "path",
+          "required": true,
+          "accept": ["file", "dir"],
+          "extensions": [".zip", ".rar"]
+        },
+        {
+          "name": "target",
+          "label": "对比 B",
+          "help": "平台 zip/rar 或已解压目录",
+          "type": "path",
+          "required": true,
+          "accept": ["file", "dir"],
+          "extensions": [".zip", ".rar"]
+        },
+        {
+          "name": "labels",
+          "label": "两侧标签",
+          "help": "自定义两侧标签",
+          "type": "string",
+          "flag": "--labels",
+          "count": 2
+        },
+        {
+          "name": "model",
+          "label": "体验模型",
+          "help": "1 值两侧同用，2 值对应 A B",
+          "type": "choice",
+          "flag": "--model",
+          "multiple": true,
+          "advanced": true,
+          "choices": ["auto", "2.0", "3.0"]
+        },
+        {
+          "name": "platform",
+          "label": "芯片平台",
+          "help": "1 值两侧同用，2 值对应 A B",
+          "type": "choice",
+          "flag": "--platform",
+          "multiple": true,
+          "advanced": true,
+          "choices": ["auto", "mtk", "unisoc", "qcom"]
+        },
+        {
+          "name": "tmpdir",
+          "label": "临时解压目录",
+          "help": "临时文件目录（嵌套包解压位置）",
+          "type": "path",
+          "flag": "--tmpdir",
+          "advanced": true,
+          "accept": ["dir"]
+        },
+        {
+          "name": "whitelist",
+          "label": "自研白名单",
+          "type": "path",
+          "flag": "--whitelist",
+          "advanced": true,
+          "accept": ["file"]
+        },
+        {
+          "name": "prefixes",
+          "label": "自研包名前缀",
+          "type": "path",
+          "flag": "--prefixes",
+          "advanced": true,
+          "accept": ["file"]
+        },
+        {
+          "name": "google_prefixes",
+          "label": "Google 包名前缀",
+          "type": "path",
+          "flag": "--google-prefixes",
+          "advanced": true,
+          "accept": ["file"]
+        },
+        {
+          "name": "gap_abs",
+          "label": "显著差异绝对阈值",
+          "help": "MB",
+          "type": "number",
+          "flag": "--gap-abs",
+          "advanced": true
+        },
+        {
+          "name": "gap_pct",
+          "label": "显著差异百分比阈值",
+          "help": "%",
+          "type": "number",
+          "flag": "--gap-pct",
+          "advanced": true
+        },
+        {
+          "name": "resident",
+          "label": "常驻出现率阈值",
+          "type": "number",
+          "flag": "--resident",
+          "advanced": true
+        },
+        {
+          "name": "leak_delta",
+          "label": "进程泄漏 delta 门限",
+          "help": "MB",
+          "type": "number",
+          "flag": "--leak-delta",
+          "advanced": true
+        },
+        {
+          "name": "leak_pct",
+          "label": "进程泄漏 delta 相对门限",
+          "help": "%",
+          "type": "number",
+          "flag": "--leak-pct",
+          "advanced": true
+        },
+        {
+          "name": "leak_r2",
+          "label": "泄漏判定 R2 阈值",
+          "type": "number",
+          "flag": "--leak-r2",
+          "advanced": true
+        },
+        {
+          "name": "sys_leak_delta",
+          "label": "层级/整机泄漏 delta 门限",
+          "help": "MB",
+          "type": "number",
+          "flag": "--sys-leak-delta",
+          "advanced": true
+        },
+        {
+          "name": "rate_pct",
+          "label": "LMK/压力频率对比阈值",
+          "help": "%",
+          "type": "number",
+          "flag": "--rate-pct",
+          "advanced": true
+        }
+      ],
+      "output": {"flag": "-o", "kind": "dir"},
+      "outputs": [
+        {"glob": "**/report.html", "role": "report", "primary": true},
+        {"glob": "**/report.md", "role": "report"},
+        {"glob": "**/data.xlsx", "role": "data"}
+      ]
+    },
+    {
+      "id": "dynamic-compare",
+      "title": "动态内存包对比",
+      "kind": "job",
+      "args": ["dynamic", "compare"],
+      "params": [
+        {
+          "name": "base",
+          "label": "基线 A",
+          "help": "平台 zip/rar 或已解压目录",
+          "type": "path",
+          "required": true,
+          "accept": ["file", "dir"],
+          "extensions": [".zip", ".rar"]
+        },
+        {
+          "name": "target",
+          "label": "对比 B",
+          "help": "平台 zip/rar 或已解压目录",
+          "type": "path",
+          "required": true,
+          "accept": ["file", "dir"],
+          "extensions": [".zip", ".rar"]
+        },
+        {
+          "name": "labels",
+          "label": "两侧标签",
+          "help": "自定义两侧标签",
+          "type": "string",
+          "flag": "--labels",
+          "count": 2
+        },
+        {
+          "name": "model",
+          "label": "体验模型",
+          "help": "1 值两侧同用，2 值对应 A B",
+          "type": "choice",
+          "flag": "--model",
+          "multiple": true,
+          "advanced": true,
+          "choices": ["auto", "2.0", "3.0"]
+        },
+        {
+          "name": "platform",
+          "label": "芯片平台",
+          "help": "1 值两侧同用，2 值对应 A B",
+          "type": "choice",
+          "flag": "--platform",
+          "multiple": true,
+          "advanced": true,
+          "choices": ["auto", "mtk", "unisoc", "qcom"]
+        },
+        {
+          "name": "tmpdir",
+          "label": "临时解压目录",
+          "help": "临时文件目录（嵌套包解压位置）",
+          "type": "path",
+          "flag": "--tmpdir",
+          "advanced": true,
+          "accept": ["dir"]
+        },
+        {
+          "name": "whitelist",
+          "label": "自研白名单",
+          "type": "path",
+          "flag": "--whitelist",
+          "advanced": true,
+          "accept": ["file"]
+        },
+        {
+          "name": "prefixes",
+          "label": "自研包名前缀",
+          "type": "path",
+          "flag": "--prefixes",
+          "advanced": true,
+          "accept": ["file"]
+        },
+        {
+          "name": "google_prefixes",
+          "label": "Google 包名前缀",
+          "type": "path",
+          "flag": "--google-prefixes",
+          "advanced": true,
+          "accept": ["file"]
+        },
+        {
+          "name": "gap_abs",
+          "label": "显著差异绝对阈值",
+          "help": "MB",
+          "type": "number",
+          "flag": "--gap-abs",
+          "advanced": true
+        },
+        {
+          "name": "gap_pct",
+          "label": "显著差异百分比阈值",
+          "help": "%",
+          "type": "number",
+          "flag": "--gap-pct",
+          "advanced": true
+        },
+        {
+          "name": "resident",
+          "label": "常驻出现率阈值",
+          "type": "number",
+          "flag": "--resident",
+          "advanced": true
+        },
+        {
+          "name": "leak_delta",
+          "label": "进程泄漏 delta 门限",
+          "help": "MB",
+          "type": "number",
+          "flag": "--leak-delta",
+          "advanced": true
+        },
+        {
+          "name": "leak_pct",
+          "label": "进程泄漏 delta 相对门限",
+          "help": "%",
+          "type": "number",
+          "flag": "--leak-pct",
+          "advanced": true
+        },
+        {
+          "name": "leak_r2",
+          "label": "泄漏判定 R2 阈值",
+          "type": "number",
+          "flag": "--leak-r2",
+          "advanced": true
+        },
+        {
+          "name": "sys_leak_delta",
+          "label": "层级/整机泄漏 delta 门限",
+          "help": "MB",
+          "type": "number",
+          "flag": "--sys-leak-delta",
+          "advanced": true
+        },
+        {
+          "name": "rate_pct",
+          "label": "LMK/压力频率对比阈值",
+          "help": "%",
+          "type": "number",
+          "flag": "--rate-pct",
+          "advanced": true
+        }
+      ],
+      "output": {"flag": "-o", "kind": "dir"},
+      "outputs": [
+        {"glob": "**/report.html", "role": "report", "primary": true},
+        {"glob": "**/report.md", "role": "report"},
+        {"glob": "**/data.xlsx", "role": "data"}
+      ]
+    }
+  ]
+}

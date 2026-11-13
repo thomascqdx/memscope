@@ -50,7 +50,9 @@ Outputs `report.md`, `report.html`, `data.xlsx` into `out/<static|dynamic>/<labe
 cmd /c build_exe.bat
 ```
 
-Produces `dist\memscope.exe` plus the versioned artifact `dist\memscope-<ver>.exe` (isolated venv `.venv-build\`, PyInstaller, entry `packaging\memscope_entry.py`; smoke-tested via `--version`).
+Produces `dist\memscope.exe` plus the versioned artifact `dist\memscope-<ver>.exe` (isolated venv `.venv-build\`, PyInstaller, entry `packaging\memscope_entry.py`; smoke-tested via `--version`), then `scripts\stamp_manifest.py` fills the repo-root `perfbox-tool.json` template into `dist\perfbox-tool.json` (version + artifact name/size/sha256). A release uploads **both** the artifact and `dist\perfbox-tool.json` as release assets.
+
+- `perfbox-tool.json`（仓库根）是 perfbox 清单模板，由 `tests/test_manifest_contract.py` 对照 `build_parser()` 守护：命令行（子命令、flag、位置参数、nargs、choices）有改动时，模板必须在同一个提交里同步更新。
 
 ## Versioning
 
